@@ -387,13 +387,14 @@ export function planParRegles(
     lignes_ignorees: [],
     colonnes: entetes.map((c: string) => {
       const rec = recognizedCols.get(c);
-      // If recognition is confident enough, assign the field name. 
-      // The canonicalKey maps roughly to the semantic field we want to extract.
       let champ = null;
-      if (rec && rec.confidence >= 0.5) {
-         // In GesCop, we need to map to the Base44 entity field. 
-         // For now, if the recognition finds a semantic type, we assume it's the field name.
-         champ = rec.canonicalKey !== 'unknown' ? rec.canonicalKey : null;
+      if (rec && rec.confidence >= 0.5 && rec.canonicalKey !== 'unknown') {
+         const k = rec.canonicalKey;
+         if (k === 'revenue_amount' && entite === 'Order') champ = 'total';
+         else if (k === 'revenue_amount' && entite === 'Campaign') champ = 'revenue';
+         else if (k === 'expense_amount' && entite === 'Expense') champ = 'amount';
+         else if (k === 'cash_balance' && entite === 'Cashflow') champ = 'closing_cash';
+         else champ = k;
       }
       return { colonne: c, champ };
     }),
@@ -408,7 +409,9 @@ export function planParRegles(
 
 /** Le plan de secours laisse le mapping au pipeline historique. */
 export function planSansRattachement(plan: PlanImport): boolean {
-  return plan.origine === "regles" && plan.colonnes.every((c) => !c.champ);
+  // Dans un plan par règles, on autorise toujours le rattrapage par synonymes 
+  // pour les colonnes dont le champ est resté à null.
+  return plan.origine === "regles";
 }
 
 // ---------------------------------------------------------------------------
