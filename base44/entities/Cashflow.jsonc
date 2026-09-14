@@ -1,0 +1,48 @@
+{
+  "name": "Cashflow",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "opening_cash": {
+      "type": "number"
+    },
+    "cash_in": {
+      "type": "number"
+    },
+    "cash_out": {
+      "type": "number"
+    },
+    "closing_cash": {
+      "type": "number"
+    },
+    "accounts_receivable": {
+      "type": "number"
+    },
+    "accounts_payable": {
+      "type": "number"
+    },
+    "net_cash_flow": {
+      "type": "number"
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "date"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

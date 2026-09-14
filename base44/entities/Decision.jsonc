@@ -1,0 +1,61 @@
+{
+  "name": "Decision",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "predicted_impact": {
+      "type": "number"
+    },
+    "actual_impact": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "a_decider",
+        "decidee",
+        "resultats"
+      ],
+      "default": "a_decider"
+    },
+    "decision_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "result_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "source_type": {
+      "type": "string"
+    },
+    "source_id": {
+      "type": "string"
+    },
+    "confidence_pct": {
+      "type": "number"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "name": "Goal",
+  "type": "object",
+  "properties": {
+    "goal_id": {
+      "type": "string"
+    },
+    "domain": {
+      "type": "string",
+      "enum": [
+        "finance",
+        "ventes",
+        "tresorerie",
+        "clients",
+        "operations",
+        "marketing"
+      ]
+    },
+    "metric": {
+      "type": "string"
+    },
+    "target": {
+      "type": "number"
+    },
+    "current": {
+      "type": "number"
+    },
+    "period": {
+      "type": "string"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "faible",
+        "moyenne",
+        "elevee",
+        "urgente"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "en_cours",
+        "atteint",
+        "depasse",
+        "non_atteint"
+      ]
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "metric"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

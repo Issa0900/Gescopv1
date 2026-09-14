@@ -1,0 +1,111 @@
+import React, { useState, useRef, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { useCompany } from "@/hooks/useCompany";
+import EmptyState from "@/components/EmptyState";
+import ReactMarkdown from "react-markdown";
+import { MessageSquare, Send, Loader2, Sparkles, Database } from "lucide-react";
+
+const suggestions = [
+  "Pourquoi mes ventes baissent-elles ?",
+  "Quels sont mes principaux risques ?",
+  "Où puis-je économiser ?",
+  "Que dois-je faire aujourd'hui ?",
+  "Prévoir ma trésorerie",
+  "Simuler une décision",
+];
+
+export default function Assistant() {
+  const { company } = useCompany();
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const endRef = useRef(null);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
+
+  const send = async (text) => {
+    const content = text || input;
+    if (!content || loading) return;
+    setMessages((m) => [...m, { role: "user", content }]);
+    setInput("");
+    setLoading(true);
+    try {
+      const res = await base44.functions.invoke("chatAssistant", { message: content, history: messages });
+      const data = res.data || res;
+      if (data.error) {
+        setMessages((m) => [...m, { role: "assistant", content: "Erreur: " + data.error }]);
+      } else {
+        setMessages((m) => [...m, { role: "assistant", content: data.response, sources: data.sources || [] }]);
+      }
+    } catch (e) {
+      setMessages((m) => [...m, { role: "assistant", content: "Erreur: " + (e.response?.data?.error || e.message) }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!company) return <EmptyState icon={Sparkles} title="Assistant non disponible" description="Configurez votre entreprise pour utiliser l'assistant conversationnel." />;
+
+  return (
+    <div className="flex h-[calc(100vh-7rem)] flex-col">
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold tracking-tight">Assistant GESCOP</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Posez vos questions en langage naturel. L'IA répond à partir de vos données et cite ses sources.</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto rounded-2xl border border-border bg-card p-4">
+        {messages.length === 0 && (
+          <div className="flex h-full flex-col items-center justify-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+              <MessageSquare className="h-7 w-7 text-primary" />
+            </div>
+            <p className="text-sm font-medium">Que voulez-vous comprendre ?</p>
+            <div className="grid w-full max-w-lg grid-cols-1 gap-2 sm:grid-cols-2">
+              {suggestions.map((s) => (
+                <button key={s} onClick={() => send(s)} className="rounded-lg border border-border bg-background px-4 py-3 text-left text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground">{s}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {messages.map((m, i) => (
+            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
+                {m.role === "assistant" ? (
+                  <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0.5">
+                    <ReactMarkdown>{m.content}</ReactMarkdown>
+                    {m.sources && m.sources.length > 0 && (
+                      <div className="mt-3 space-y-1 border-t border-border/50 pt-2">
+                        {m.sources.map((s, j) => (
+                          <p key={j} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                            <Database className="h-3 w-3 shrink-0 mt-0.5" /> {s}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : <p className="whitespace-pre-wrap">{m.content}</p>}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-3">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm text-muted-foreground">GESCOP réfléchit…</span>
+              </div>
+            </div>
+          )}
+          <div ref={endRef} />
+        </div>
+      </div>
+
+      <div className="mt-4 flex gap-2">
+        <input className="flex-1 rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary" placeholder="Posez votre question…" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} disabled={loading} />
+        <Button onClick={() => send()} disabled={loading || !input} className="rounded-xl px-5"><Send className="h-4 w-4" /></Button>
+      </div>
+    </div>
+  );
+}

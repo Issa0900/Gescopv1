@@ -1,0 +1,65 @@
+{
+  "name": "Competitor",
+  "type": "object",
+  "properties": {
+    "competitor_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "sector": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "price_position": {
+      "type": "string",
+      "enum": [
+        "inferieur",
+        "egal",
+        "superieur"
+      ]
+    },
+    "market_position": {
+      "type": "string",
+      "enum": [
+        "leader",
+        "challenger",
+        "suiveur",
+        "niche"
+      ]
+    },
+    "website": {
+      "type": "string"
+    },
+    "average_rating": {
+      "type": "number"
+    },
+    "employee_count": {
+      "type": "number"
+    },
+    "estimated_revenue": {
+      "type": "number"
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "competitor_id",
+    "name"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

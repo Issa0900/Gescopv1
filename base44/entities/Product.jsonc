@@ -1,0 +1,85 @@
+{
+  "name": "Product",
+  "type": "object",
+  "properties": {
+    "product_id": {
+      "type": "string"
+    },
+    "sku": {
+      "type": "string"
+    },
+    "product_name": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "decoration",
+        "cuisine",
+        "maison",
+        "accessoires",
+        "cadeaux",
+        "lifestyle",
+        "\u00e9quipement",
+        "accessoire",
+        "piece",
+        "entretien"
+      ]
+    },
+    "subcategory": {
+      "type": "string"
+    },
+    "supplier_id": {
+      "type": "string"
+    },
+    "purchase_cost": {
+      "type": "number"
+    },
+    "selling_price": {
+      "type": "number"
+    },
+    "gross_margin": {
+      "type": "number"
+    },
+    "launch_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "actif",
+        "discontinue",
+        "rupture",
+        "nouveau",
+        "dormant"
+      ]
+    },
+    "monthly_sales": {
+      "type": "number"
+    },
+    "inventory_level": {
+      "type": "number"
+    },
+    "reorder_point": {
+      "type": "number"
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "product_id"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

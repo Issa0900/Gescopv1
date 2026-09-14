@@ -1,0 +1,96 @@
+{
+  "name": "Customer",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string"
+    },
+    "first_name": {
+      "type": "string"
+    },
+    "last_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "region": {
+      "type": "string"
+    },
+    "customer_type": {
+      "type": "string",
+      "enum": [
+        "particulier",
+        "entreprise",
+        "b2b"
+      ]
+    },
+    "acquisition_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "first_purchase_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "last_purchase_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "total_orders": {
+      "type": "number"
+    },
+    "total_revenue": {
+      "type": "number"
+    },
+    "average_order_value": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "actif",
+        "inactif",
+        "perdu"
+      ]
+    },
+    "segment": {
+      "type": "string",
+      "enum": [
+        "nouveau",
+        "regulier",
+        "vip",
+        "inactif",
+        "b2b",
+        "haute_valeur",
+        "a_risque"
+      ]
+    },
+    "lifetime_value": {
+      "type": "number"
+    },
+    "churn_risk": {
+      "type": "number"
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "customer_id"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "name": "Interaction",
+  "type": "object",
+  "properties": {
+    "interaction_id": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "email",
+        "telephone",
+        "chat",
+        "boutique",
+        "reseau_social"
+      ]
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "email",
+        "telephone",
+        "chat",
+        "plainte",
+        "retour",
+        "question",
+        "support",
+        "avis",
+        "remerciement",
+        "reclamation",
+        "autre"
+      ]
+    },
+    "subject": {
+      "type": "string"
+    },
+    "sentiment": {
+      "type": "string",
+      "enum": [
+        "positif",
+        "neutre",
+        "negatif",
+        "tres_negatif"
+      ]
+    },
+    "resolution_time": {
+      "type": "number"
+    },
+    "resolved": {
+      "type": "boolean"
+    },
+    "satisfaction_score": {
+      "type": "number"
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "date",
+    "customer_id"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "name": "Expense",
+  "type": "object",
+  "properties": {
+    "expense_id": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "category": {
+      "type": "string"
+    },
+    "supplier": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "recurring": {
+      "type": "boolean"
+    },
+    "department": {
+      "type": "string"
+    },
+    "payment_method": {
+      "type": "string"
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "date",
+    "amount"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

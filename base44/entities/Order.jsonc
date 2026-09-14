@@ -1,0 +1,107 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "shopify",
+        "boutique",
+        "b2b",
+        "instagram"
+      ]
+    },
+    "product_id": {
+      "type": "string"
+    },
+    "quantity": {
+      "type": "number"
+    },
+    "unit_price": {
+      "type": "number"
+    },
+    "subtotal": {
+      "type": "number"
+    },
+    "discount": {
+      "type": "number"
+    },
+    "tax": {
+      "type": "number"
+    },
+    "shipping": {
+      "type": "number"
+    },
+    "total": {
+      "type": "number"
+    },
+    "cost": {
+      "type": "number"
+    },
+    "gross_margin": {
+      "type": "number"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "paye",
+        "en_attente",
+        "echoue",
+        "rembourse"
+      ]
+    },
+    "fulfillment_status": {
+      "type": "string",
+      "enum": [
+        "expedie",
+        "en_preparation",
+        "livre",
+        "annule",
+        "retourne"
+      ]
+    },
+    "return_status": {
+      "type": "string",
+      "enum": [
+        "aucun",
+        "demande",
+        "approuve",
+        "refuse"
+      ]
+    },
+    "region": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "order_id",
+    "date"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

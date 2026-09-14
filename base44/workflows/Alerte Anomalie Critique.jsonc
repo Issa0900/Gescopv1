@@ -1,0 +1,46 @@
+{
+  "name": "Alerte Anomalie Critique",
+  "description": "Notifie l'utilisateur par email et cr\u00e9e une alerte quand une anomalie critique est d\u00e9tect\u00e9e",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "Anomaly",
+      "events": [
+        "create"
+      ]
+    },
+    "condition": "${ .trigger.data.severity == \"critique\" }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "alerte_anomalie_critique",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "notify": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "notifyCriticalEvent",
+            "args": {
+              "entity_type": "anomaly",
+              "entity_id": "${ .trigger.entity_id }",
+              "title": "${ .trigger.data.title }",
+              "description": "${ .trigger.data.description }",
+              "detail": "${ .trigger.data.explanation }",
+              "financial_impact": "${ .trigger.data.financial_impact }",
+              "user_id": "${ .trigger.data.created_by_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Notifier l'utilisateur",
+            "description": "Email + alerte in-app"
+          }
+        }
+      }
+    ]
+  }
+}

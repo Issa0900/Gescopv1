@@ -1,0 +1,33 @@
+{
+  "name": "AnalysisRun",
+  "type": "object",
+  "properties": {
+    "health_score": {
+      "type": "number"
+    },
+    "dimension_scores": {
+      "type": "object"
+    },
+    "counts": {
+      "type": "object"
+    },
+    "run_date": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "run_date"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

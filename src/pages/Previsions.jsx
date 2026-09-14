@@ -1,0 +1,254 @@
+import React, { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import ForecastCard from "@/components/previsions/ForecastCard";
+import EmptyState from "@/components/EmptyState";
+import { TrendingUp, AlertTriangle, Upload } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { cn } from "@/lib/utils";
+import { monthlyAggComplete } from "@/lib/periods";
+import { fetchAll } from "@/lib/fetchAll";
+
+/**
+ * Ordinary least squares plus everything needed for a HONEST forecast band.
+ *
+ * The page used to draw `value ± stderr` at all three horizons: a flat ribbon
+ * that claimed the same precision 90 days out as 30 days out, and that was
+ * narrower than a real interval at every point. A prediction interval widens
+ * with distance from the centre of the data, and that is what is returned here.
+ * r2 is exposed so the UI can refuse to dress up a trend that explains nothing.
+ */
+function fit(xs, ys) {
+  const n = xs.length;
+  if (n < 2) return { slope: 0, intercept: ys[0] || 0, stderr: 0, r2: 0, mx: 0, sxx: 0, n };
+  const mx = xs.reduce((a, b) => a + b, 0) / n;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  const num = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0);
+  const sxx = xs.reduce((s, x) => s + (x - mx) ** 2, 0);
+  const slope = sxx === 0 ? 0 : num / sxx;
+  const intercept = my - slope * mx;
+  const residuals = xs.map((x, i) => ys[i] - (slope * x + intercept));
+  const ssRes = residuals.reduce((s, r) => s + r * r, 0);
+  const ssTot = ys.reduce((s, y) => s + (y - my) ** 2, 0);
+  const stderr = Math.sqrt(ssRes / Math.max(1, n - 2));
+  const r2 = ssTot > 0 ? Math.max(0, 1 - ssRes / ssTot) : 0;
+  return { slope, intercept, stderr, r2, mx, sxx, n };
+}
+
+/**
+ * Forecast at x with a prediction interval that grows with the horizon:
+ *   SE(x) = s * sqrt(1 + 1/n + (x - x̄)² / Sxx)
+ * The "1 +" is what makes it a PREDICTION interval (a future single month)
+ * rather than a confidence interval on the mean — the latter is far too narrow
+ * to put in front of someone making a cash decision.
+ */
+function forecastAt(f, x) {
+  const value = f.slope * x + f.intercept;
+  if (!f.n || f.n < 3 || f.sxx === 0) return { value, lower: value, upper: value, se: 0 };
+  const se = f.stderr * Math.sqrt(1 + 1 / f.n + ((x - f.mx) ** 2) / f.sxx);
+  return { value, lower: value - se, upper: value + se, se };
+}
+
+const metrics = [
+  { key: "ca", label: "Chiffre d'affaires" },
+  { key: "marge", label: "Marge nette" },
+  { key: "tresorerie", label: "Trésorerie" },
+];
+
+export default function Previsions() {
+  const [metric, setMetric] = useState("ca");
+
+  const { data: transactions, isLoading } = useQuery({
+    queryKey: ["transactions-forecast"],
+    // Paginated: capping at 500 rows truncated the OLDEST month in the window,
+    // leaving a partial month as the first point of the regression and tilting
+    // the whole trend upwards. The same care taken with the in-progress month
+    // has to be taken at the other end of the series.
+    queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
+  });
+  // Real imported cash position — the projection must start from the actual
+  // balance, not from an accumulation of transaction margins.
+  const { data: cashflow } = useQuery({
+    queryKey: ["cashflow-forecast"],
+    queryFn: () => fetchAll(base44.entities.Cashflow, "-date"),
+  });
+
+  const result = useMemo(() => {
+    if (!transactions || transactions.length === 0) return null;
+    // monthlyAggComplete drops the in-progress month AND fills missing months
+    // with zero. Indexing the array positions used to be the regression's x
+    // axis, so a month with no activity compressed the timeline and bent the
+    // slope; the x axis is now genuine calendar distance.
+    const incomeSeries = monthlyAggComplete(
+      transactions.filter((t) => t.type === "income"), "date", "amount",
+    );
+    const expenseSeries = monthlyAggComplete(
+      transactions.filter((t) => t.type === "expense"), "date", "amount",
+    );
+    const expByMonth = {};
+    expenseSeries.forEach((e) => { expByMonth[e.month] = e.val; });
+    const monthly = incomeSeries.map((r, i) => ({
+      month: r.month,
+      income: r.val,
+      expense: expByMonth[r.month] || 0,
+      margin: r.val - (expByMonth[r.month] || 0),
+      x: i,
+    }));
+    if (monthly.length < 3) return null;
+
+    const xs = monthly.map((d) => d.x);
+    const incomeFit = fit(xs, monthly.map((d) => d.income));
+    const marginFit = fit(xs, monthly.map((d) => d.margin));
+    const lastX = xs[xs.length - 1];
+    const incomeF = [1, 2, 3].map((i) => forecastAt(incomeFit, lastX + i));
+    const marginF = [1, 2, 3].map((i) => forecastAt(marginFit, lastX + i));
+
+    const cfSorted = (cashflow || []).slice().sort((a, b) => ((a.date || "") < (b.date || "") ? 1 : -1));
+    const hasCash = cfSorted.length > 0;
+    const cumulativeNow = hasCash
+      ? Number(cfSorted[0].closing_cash) || 0
+      : monthly.reduce((s, d) => s + d.margin, 0);
+    const cashDate = hasCash ? cfSorted[0].date : null;
+
+    // Cash projection: regress the REAL monthly net cash flow when the treasury
+    // file carries it. Accounting margin is not cash — receivables, payables,
+    // sales tax, capex and loan repayments all sit between the two — so adding
+    // projected margins to a bank balance was mixing two different quantities.
+    const netFlowSeries = monthlyAggComplete(cashflow || [], "date", "net_cash_flow");
+    const usesRealCashFlow = netFlowSeries.length >= 3;
+    const cashFlowFit = usesRealCashFlow
+      ? fit(netFlowSeries.map((_, i) => i), netFlowSeries.map((d) => d.val))
+      : marginFit;
+    const cashLastX = usesRealCashFlow ? netFlowSeries.length - 1 : lastX;
+    const cashF = [1, 2, 3].map((i) => forecastAt(cashFlowFit, cashLastX + i));
+    // Monthly closing balances give the treasury chart its real history.
+    const cashHistory = [];
+    if (hasCash) {
+      const byM = {};
+      cfSorted.slice().reverse().forEach((c) => {
+        const m = (c.date || "").slice(0, 7);
+        if (m) byM[m] = Number(c.closing_cash) || 0;
+      });
+      Object.keys(byM).sort().forEach((m) => cashHistory.push({ month: m, value: byM[m] }));
+    }
+    const cash30 = cumulativeNow + cashF[0].value;
+    const cash90 = cumulativeNow + cashF[0].value + cashF[1].value + cashF[2].value;
+    const currentIncome = monthly[monthly.length - 1].income;
+    const currentMargin = monthly[monthly.length - 1].margin;
+    const projected90Margin = marginF.reduce((s, f) => s + f.value, 0);
+    const shortfall = currentMargin * 3 - projected90Margin;
+    return {
+      monthly, incomeF, marginF, cashF, cash30, cash90, currentIncome, currentMargin,
+      cumulativeNow, cashDate, cashHistory, shortfall, incomeFit, marginFit,
+      cashFlowFit, usesRealCashFlow,
+    };
+  }, [transactions, cashflow]);
+
+  const chartData = useMemo(() => {
+    if (!result) return [];
+    const { monthly, incomeF, marginF, cashF, cashHistory } = result;
+    if (metric === "tresorerie") {
+      let cum = 0;
+      // Real monthly closing balances when treasury data was imported;
+      // otherwise fall back to the cumulative margin.
+      const hist = (cashHistory && cashHistory.length > 0)
+        ? cashHistory.slice(-monthly.length).map((c) => { cum = c.value; return { month: c.month.slice(5), value: Math.round(c.value), forecast: null, range: null }; })
+        : monthly.map((d) => { cum += d.margin; return { month: d.month.slice(5), value: Math.round(cum), forecast: null, range: null }; });
+      hist[hist.length - 1].forecast = hist[hist.length - 1].value;
+      hist[hist.length - 1].range = [hist[hist.length - 1].value, hist[hist.length - 1].value];
+      let runCum = cum;
+      const fcstMonths = ["+30j", "+60j", "+90j"];
+      // Uncertainty on a CUMULATIVE balance compounds: the errors of each
+      // projected month add up, so the band widens as sqrt of the sum of
+      // variances rather than by a flat multiple.
+      let varSum = 0;
+      const fcst = cashF.map((f, i) => {
+        runCum += f.value;
+        varSum += f.se * f.se;
+        const err = Math.sqrt(varSum);
+        return { month: fcstMonths[i], value: null, forecast: Math.round(runCum), range: [Math.round(runCum - err), Math.round(runCum + err)] };
+      });
+      return [...hist, ...fcst];
+    }
+    const f = metric === "ca" ? incomeF : marginF;
+    const key = metric === "ca" ? "income" : "margin";
+    const hist = monthly.map((d) => ({ month: d.month.slice(5), value: Math.round(d[key]), forecast: null, range: null }));
+    hist[hist.length - 1].forecast = hist[hist.length - 1].value;
+    hist[hist.length - 1].range = [hist[hist.length - 1].value, hist[hist.length - 1].value];
+    const fcstMonths = ["+30j", "+60j", "+90j"];
+    const fcst = f.map((p, i) => ({ month: fcstMonths[i], value: null, forecast: Math.round(p.value), range: [Math.round(p.lower), Math.round(p.upper)] }));
+    return [...hist, ...fcst];
+  }, [result, metric]);
+
+  if (isLoading) return <div className="flex h-96 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800" /></div>;
+  if (!transactions || transactions.length === 0) return <EmptyState icon={Upload} title="Aucune donnée à projeter" description="Importez vos transactions pour que GESCOP calcule des prévisions basées sur vos tendances." action={<Link to="/importer" className="text-primary hover:underline">Importer des données →</Link>} />;
+  if (!result) return <EmptyState icon={TrendingUp} title="Données insuffisantes" description="Il faut au moins 3 mois de données pour calculer des prévisions fiables." />;
+
+  const fmt = (v) => `${Math.round(v).toLocaleString("fr-CA")} $`;
+  const selectedLabel = metrics.find((m) => m.key === metric).label;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-primary" />
+          <h1 className="text-2xl font-bold tracking-tight">Prévisions</h1>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">Projections basées sur l'analyse de tendance de vos {result.monthly.length} derniers mois.</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <ForecastCard label="Chiffre d'affaires" current={fmt(result.currentIncome)} f30={fmt(result.incomeF[0].value)} f90={fmt(result.incomeF[2].value)} />
+        <ForecastCard label="Marge nette" current={fmt(result.currentMargin)} f30={fmt(result.marginF[0].value)} f90={fmt(result.marginF[2].value)} />
+        <ForecastCard label={result.cashDate ? `Trésorerie (solde au ${result.cashDate})` : "Trésorerie projetée"} current={fmt(result.cumulativeNow)} f30={fmt(result.cash30)} f90={fmt(result.cash90)} />
+      </div>
+
+      <div className="rounded-xl border border-border bg-muted/30 p-4 text-xs leading-relaxed text-muted-foreground">
+        <span className="font-semibold text-foreground">Fiabilité de ces projections.</span>{" "}
+        Tendance linéaire ajustée sur {result.monthly.length} mois complets, sans saisonnalité.
+        Qualité d'ajustement : R² de {(result.incomeFit.r2 * 100).toFixed(0)} % sur le chiffre d'affaires
+        et {(result.marginFit.r2 * 100).toFixed(0)} % sur la marge
+        {result.incomeFit.r2 < 0.5 || result.marginFit.r2 < 0.5
+          ? " — en dessous de 50 %, la tendance explique moins de la moitié des variations : lisez la fourchette, pas le chiffre central."
+          : " — la tendance explique l'essentiel des variations observées."}
+        {" "}La fourchette grise est un intervalle de prédiction : elle s'élargit avec l'horizon, car une
+        projection à 90 jours est mécaniquement moins précise qu'à 30 jours.
+        {" "}{result.usesRealCashFlow
+          ? "La trésorerie est projetée à partir des flux nets réels de votre fichier de trésorerie."
+          : "Faute de flux nets datés dans le fichier de trésorerie, la projection de trésorerie utilise la marge comptable : elle ignore délais de paiement, taxes et investissements, et reste donc indicative."}
+      </div>
+
+      {result.shortfall > 0 && result.currentMargin > 0 && (
+        <div className="flex items-start gap-3 rounded-xl border border-orange-200 bg-orange-50/50 p-4">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-orange-600" />
+          <div>
+            <p className="text-sm font-medium text-orange-900">Tendance à la baisse détectée</p>
+            <p className="mt-0.5 text-xs text-orange-700">La tendance actuelle pourrait créer un manque à gagner de {fmt(result.shortfall)} sur les 90 prochains jours si aucune action n'est prise.</p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        {metrics.map((m) => (
+          <button key={m.key} onClick={() => setMetric(m.key)} className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition-colors", metric === m.key ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground hover:bg-muted/50")}>{m.label}</button>
+        ))}
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">{selectedLabel}</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <ComposedChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+            <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+            <Tooltip formatter={(v) => (v != null ? `${Math.round(v).toLocaleString("fr-CA")} $` : "—")} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+            <Area dataKey="range" stroke="none" fill="rgba(59, 130, 246, 0.1)" />
+            <Line dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} connectNulls={false} />
+            <Line dataKey="forecast" stroke="rgba(59, 130, 246, 0.6)" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}

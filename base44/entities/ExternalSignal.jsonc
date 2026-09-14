@@ -1,0 +1,78 @@
+{
+  "name": "ExternalSignal",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "family": {
+      "type": "string",
+      "enum": [
+        "gouvernement",
+        "economie",
+        "marche",
+        "concurrence",
+        "fournisseurs",
+        "consommateurs",
+        "actualites"
+      ]
+    },
+    "relevance_score": {
+      "type": "number"
+    },
+    "impact": {
+      "type": "string",
+      "enum": [
+        "positif",
+        "neutre",
+        "negatif"
+      ]
+    },
+    "source": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "relevance_reason": {
+      "type": "string"
+    },
+    "recommended_action": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "nouveau",
+        "vu",
+        "archive"
+      ],
+      "default": "nouveau"
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title",
+    "family"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

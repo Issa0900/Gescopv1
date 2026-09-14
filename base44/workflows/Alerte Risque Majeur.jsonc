@@ -1,0 +1,46 @@
+{
+  "name": "Alerte Risque Majeur",
+  "description": "Notifie l'utilisateur par email et cr\u00e9e une alerte quand un risque \u00e0 urgence \u00e9lev\u00e9e est d\u00e9tect\u00e9",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "Risk",
+      "events": [
+        "create"
+      ]
+    },
+    "condition": "${ .trigger.data.urgency == \"elevee\" }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "alerte_risque_majeur",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "notify": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "notifyCriticalEvent",
+            "args": {
+              "entity_type": "risk",
+              "entity_id": "${ .trigger.entity_id }",
+              "title": "${ .trigger.data.title }",
+              "description": "${ .trigger.data.description }",
+              "detail": "${ .trigger.data.category }",
+              "financial_impact": "${ .trigger.data.financial_impact }",
+              "user_id": "${ .trigger.data.created_by_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Notifier l'utilisateur",
+            "description": "Email + alerte in-app"
+          }
+        }
+      }
+    ]
+  }
+}

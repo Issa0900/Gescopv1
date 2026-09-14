@@ -1,0 +1,63 @@
+{
+  "name": "Anomaly",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "dimension": {
+      "type": "string"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "critique",
+        "important",
+        "modere",
+        "faible"
+      ]
+    },
+    "deviation_pct": {
+      "type": "number"
+    },
+    "explanation": {
+      "type": "string"
+    },
+    "financial_impact": {
+      "type": "number"
+    },
+    "confidence_pct": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "nouveau",
+        "vu",
+        "resolu"
+      ],
+      "default": "nouveau"
+    },
+    "detected_date": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "required": [
+    "title"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

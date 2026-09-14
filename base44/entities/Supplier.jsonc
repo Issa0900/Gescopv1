@@ -1,0 +1,62 @@
+{
+  "name": "Supplier",
+  "type": "object",
+  "properties": {
+    "supplier_id": {
+      "type": "string"
+    },
+    "supplier_name": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "payment_terms": {
+      "type": "string"
+    },
+    "average_delivery_days": {
+      "type": "number"
+    },
+    "purchase_volume": {
+      "type": "number"
+    },
+    "quality_score": {
+      "type": "number"
+    },
+    "reliability_score": {
+      "type": "number"
+    },
+    "price_change_last_12_months": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "actif",
+        "inactif",
+        "problematique"
+      ]
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "supplier_id",
+    "supplier_name"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

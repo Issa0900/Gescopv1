@@ -1,0 +1,51 @@
+{
+  "name": "Payroll",
+  "type": "object",
+  "properties": {
+    "payroll_id": {
+      "type": "string"
+    },
+    "employee_id": {
+      "type": "string"
+    },
+    "period": {
+      "type": "string"
+    },
+    "hours": {
+      "type": "number"
+    },
+    "regular_pay": {
+      "type": "number"
+    },
+    "overtime": {
+      "type": "number"
+    },
+    "bonus": {
+      "type": "number"
+    },
+    "employer_cost": {
+      "type": "number"
+    },
+    "total_cost": {
+      "type": "number"
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "employee_id",
+    "period"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "name": "Kpi",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "domain": {
+      "type": "string",
+      "enum": [
+        "finance",
+        "ventes",
+        "operations",
+        "marketing"
+      ]
+    },
+    "value": {
+      "type": "number"
+    },
+    "target": {
+      "type": "number"
+    },
+    "previous": {
+      "type": "number"
+    },
+    "trend": {
+      "type": "string",
+      "enum": [
+        "up",
+        "down",
+        "stable"
+      ]
+    },
+    "unit": {
+      "type": "string"
+    },
+    "period": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "domain"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

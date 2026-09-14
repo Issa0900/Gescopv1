@@ -1,0 +1,69 @@
+{
+  "name": "Inventory",
+  "type": "object",
+  "properties": {
+    "inventory_id": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "product_id": {
+      "type": "string"
+    },
+    "opening_stock": {
+      "type": "number"
+    },
+    "purchases": {
+      "type": "number"
+    },
+    "units_sold": {
+      "type": "number"
+    },
+    "returns": {
+      "type": "number"
+    },
+    "damaged": {
+      "type": "number"
+    },
+    "closing_stock": {
+      "type": "number"
+    },
+    "inventory_value": {
+      "type": "number"
+    },
+    "days_in_inventory": {
+      "type": "number"
+    },
+    "stock_status": {
+      "type": "string",
+      "enum": [
+        "optimal",
+        "rupture",
+        "surstock",
+        "dormant",
+        "faible",
+        "proche_rupture"
+      ]
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "date",
+    "product_id"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

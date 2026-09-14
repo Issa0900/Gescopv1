@@ -1,0 +1,61 @@
+{
+  "name": "CampaignDaily",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "campaign_id": {
+      "type": "string"
+    },
+    "impressions": {
+      "type": "number"
+    },
+    "reach": {
+      "type": "number"
+    },
+    "clicks": {
+      "type": "number"
+    },
+    "ctr": {
+      "type": "number"
+    },
+    "cpc": {
+      "type": "number"
+    },
+    "conversions": {
+      "type": "number"
+    },
+    "conversion_rate": {
+      "type": "number"
+    },
+    "spend": {
+      "type": "number"
+    },
+    "revenue": {
+      "type": "number"
+    },
+    "roas": {
+      "type": "number"
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "date",
+    "campaign_id"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

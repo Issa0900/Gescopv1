@@ -1,0 +1,72 @@
+{
+  "name": "Import",
+  "properties": {
+    "entity_type": {
+      "type": "string"
+    },
+    "file_name": {
+      "type": "string"
+    },
+    "file_url": {
+      "type": "string"
+    },
+    "plan_confirmed": {
+      "default": false,
+      "description": "Vrai si un humain a valide ou corrige ce plan. Un plan confirme l'emporte sur une nouvelle analyse IA.",
+      "type": "boolean"
+    },
+    "plan_signature": {
+      "description": "Empreinte des intitules de colonnes. Permet de retrouver le plan deja valide pour le meme type d'export le mois suivant.",
+      "type": "string"
+    },
+    "quality_score": {
+      "type": "number"
+    },
+    "read_plan": {
+      "description": "Plan de lecture applique a ce fichier : ligne d'en-tetes, lignes ignorees, rattachement des colonnes, conventions de date, traductions de codes.",
+      "type": "object"
+    },
+    "rows_processed": {
+      "type": "number"
+    },
+    "rows_quarantined": {
+      "type": "number"
+    },
+    "source_type": {
+      "enum": [
+        "csv",
+        "xlsx",
+        "xls",
+        "tsv",
+        "pdf"
+      ],
+      "type": "string"
+    },
+    "status": {
+      "default": "en_cours",
+      "enum": [
+        "en_cours",
+        "complete",
+        "quarantaine",
+        "echoue"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "file_name",
+    "source_type"
+  ],
+  "type": "object",
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "name": "Company",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "website": {
+      "type": "string"
+    },
+    "sector": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
+    "employee_count": {
+      "type": "number"
+    },
+    "business_model": {
+      "type": "string"
+    },
+    "products": {
+      "type": "string"
+    },
+    "services": {
+      "type": "string"
+    },
+    "clientele": {
+      "type": "string"
+    },
+    "suppliers": {
+      "type": "string"
+    },
+    "revenue": {
+      "type": "number"
+    },
+    "tools": {
+      "type": "string"
+    },
+    "objectives": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "health_score": {
+      "type": "number"
+    },
+    "dimension_scores": {
+      "type": "object"
+    },
+    "last_analysis_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "onboarded": {
+      "type": "boolean",
+      "default": false
+    },
+    "stock_alert_threshold": {
+      "type": "number",
+      "default": 10
+    },
+    "stock_alert_use_reorder_point": {
+      "type": "boolean",
+      "default": true
+    },
+    "stock_dormant_months": {
+      "type": "number",
+      "default": 3
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

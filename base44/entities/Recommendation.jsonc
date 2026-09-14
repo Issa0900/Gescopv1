@@ -1,0 +1,72 @@
+{
+  "name": "Recommendation",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "situation": {
+      "type": "string"
+    },
+    "analysis": {
+      "type": "string"
+    },
+    "impact": {
+      "type": "string"
+    },
+    "action": {
+      "type": "string"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "faible",
+        "moyenne",
+        "elevee",
+        "urgente"
+      ]
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "risk",
+        "opportunity",
+        "anomaly"
+      ]
+    },
+    "source_id": {
+      "type": "string"
+    },
+    "financial_impact": {
+      "type": "number"
+    },
+    "confidence_pct": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "nouvelle",
+        "acceptee",
+        "convertie",
+        "rejetee"
+      ],
+      "default": "nouvelle"
+    }
+  },
+  "required": [
+    "title",
+    "action"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

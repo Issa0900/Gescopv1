@@ -1,0 +1,40 @@
+{
+  "name": "Event",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "event_type": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "impact_area": {
+      "type": "string"
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "date",
+    "event_type"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

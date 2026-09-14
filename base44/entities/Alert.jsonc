@@ -1,0 +1,55 @@
+{
+  "name": "Alert",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "level": {
+      "type": "string",
+      "enum": [
+        "critique",
+        "important",
+        "modere",
+        "info",
+        "faible"
+      ]
+    },
+    "category": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "non_lue",
+        "lue",
+        "archivee"
+      ],
+      "default": "non_lue"
+    },
+    "link_type": {
+      "type": "string"
+    },
+    "link_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title",
+    "level"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "name": "Campaign",
+  "type": "object",
+  "properties": {
+    "campaign_id": {
+      "type": "string"
+    },
+    "campaign_name": {
+      "type": "string"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "google_ads",
+        "meta_ads",
+        "instagram",
+        "email",
+        "tiktok"
+      ]
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "budget": {
+      "type": "number"
+    },
+    "spend": {
+      "type": "number"
+    },
+    "impressions": {
+      "type": "number"
+    },
+    "clicks": {
+      "type": "number"
+    },
+    "conversions": {
+      "type": "number"
+    },
+    "revenue": {
+      "type": "number"
+    },
+    "new_customers": {
+      "type": "number"
+    },
+    "cac": {
+      "type": "number"
+    },
+    "roas": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "terminee",
+        "pause",
+        "planifiee"
+      ]
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "campaign_id",
+    "campaign_name"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

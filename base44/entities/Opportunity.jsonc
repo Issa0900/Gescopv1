@@ -1,0 +1,70 @@
+{
+  "name": "Opportunity",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "potential": {
+      "type": "string",
+      "enum": [
+        "faible",
+        "moyen",
+        "eleve"
+      ]
+    },
+    "probability": {
+      "type": "number"
+    },
+    "horizon": {
+      "type": "string"
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "faible",
+        "moyenne",
+        "elevee"
+      ]
+    },
+    "score": {
+      "type": "number"
+    },
+    "financial_impact": {
+      "type": "number"
+    },
+    "confidence_pct": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "nouvelle",
+        "en_cours",
+        "saisie",
+        "expiree"
+      ],
+      "default": "nouvelle"
+    }
+  },
+  "required": [
+    "title"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

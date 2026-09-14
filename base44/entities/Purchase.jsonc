@@ -1,0 +1,67 @@
+{
+  "name": "Purchase",
+  "type": "object",
+  "properties": {
+    "purchase_id": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "supplier_id": {
+      "type": "string"
+    },
+    "product_id": {
+      "type": "string"
+    },
+    "quantity": {
+      "type": "number"
+    },
+    "unit_cost": {
+      "type": "number"
+    },
+    "total_cost": {
+      "type": "number"
+    },
+    "expected_delivery": {
+      "type": "string",
+      "format": "date"
+    },
+    "actual_delivery": {
+      "type": "string",
+      "format": "date"
+    },
+    "delay_days": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "recu",
+        "en_cours",
+        "retard",
+        "annule"
+      ]
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "date",
+    "supplier_id",
+    "product_id"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "name": "Employee",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string"
+    },
+    "department": {
+      "type": "string",
+      "enum": [
+        "direction",
+        "ventes",
+        "marketing",
+        "logistique",
+        "administration",
+        "service_client",
+        "atelier"
+      ]
+    },
+    "role": {
+      "type": "string"
+    },
+    "hire_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "employment_type": {
+      "type": "string",
+      "enum": [
+        "temps_plein",
+        "temps_partiel",
+        "contractuel",
+        "stagiaire"
+      ]
+    },
+    "hourly_rate": {
+      "type": "number"
+    },
+    "weekly_hours": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "actif",
+        "depart",
+        "conge",
+        "essai"
+      ]
+    },
+    "import_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "employee_id"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

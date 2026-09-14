@@ -1,0 +1,77 @@
+{
+  "name": "Risk",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "probability": {
+      "type": "number"
+    },
+    "impact": {
+      "type": "string",
+      "enum": [
+        "faible",
+        "moyen",
+        "eleve"
+      ]
+    },
+    "urgency": {
+      "type": "string",
+      "enum": [
+        "faible",
+        "moyenne",
+        "elevee"
+      ]
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "faible",
+        "moyenne",
+        "elevee"
+      ]
+    },
+    "horizon": {
+      "type": "string"
+    },
+    "score": {
+      "type": "number"
+    },
+    "financial_impact": {
+      "type": "number"
+    },
+    "confidence_pct": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "actif",
+        "attenuation",
+        "resolu"
+      ],
+      "default": "actif"
+    }
+  },
+  "required": [
+    "title"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

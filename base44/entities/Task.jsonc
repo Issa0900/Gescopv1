@@ -1,0 +1,67 @@
+{
+  "name": "Task",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "urgent",
+        "financier",
+        "commercial",
+        "marketing",
+        "operationnel",
+        "administratif",
+        "strategique"
+      ]
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "faible",
+        "moyenne",
+        "elevee",
+        "urgente"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "a_faire",
+        "en_cours",
+        "terminee",
+        "annulee"
+      ],
+      "default": "a_faire"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "assignee": {
+      "type": "string"
+    },
+    "recommendation_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}
