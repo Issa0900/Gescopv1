@@ -342,19 +342,65 @@ export async function analyserFichier(
  * colonnes laisse a la table de synonymes de normalizeKeys (champ: null ici
  * signifie « le pipeline decidera », pas « colonne ignoree »).
  */
-export function planParRegles(matrix: any[][], nomFichier: string, entiteConnue?: string | null): PlanImport {
+export function planParRegles(
+  matrix: any[][], 
+  nomFichier: string, 
+  entiteConnue?: string | null,
+  mappingMemory: any[] = []
+): PlanImport {
   const ligne = matrix.length > 0 ? trouverLigneEntetes(matrix) : 0;
   const entetes = (matrix[ligne] || []).map((h: any) => String(h ?? "").trim()).filter((h: string) => h !== "");
   const entite = entiteConnue || detectEntityByHeaders(entetes) || detectEntityByFieldOverlap(entetes) || null;
+  
+  // Use Contextual Recognition (Sprint 2)
+  const { recognizeAllColumns } = require('./core/contextualRecognition.ts'); // Using CommonJS require to avoid top-level import issues if needed, or normal import if supported. Wait, Deno uses ES imports. Let's use ES import at the top of the file.
+  
+  // Create sample rows for recognition
+  const sampleRows: Record<string, any>[] = [];
+  for(let i = ligne + 1; i < Math.min(matrix.length, ligne + 20); i++) {
+    const rowObj: Record<string, any> = {};
+    const row = matrix[i] || [];
+    entetes.forEach((h: string, idx: number) => {
+      rowObj[h] = row[idx];
+    });
+    sampleRows.push(rowObj);
+  }
+
+  // Assuming recognizeAllColumns is imported at the top
+  let recognizedCols = new Map();
+  try {
+    // Only attempt if we can import it
+    recognizedCols = recognizeAllColumns({
+      sheetName: nomFichier,
+      headers: entetes,
+      sampleRows,
+      entityHint: entite,
+      mappingMemory
+    });
+  } catch (e) {
+    console.warn("Contextual recognition failed, falling back to basic mapping", e);
+  }
+
   return {
     entite,
     ligne_entetes: ligne,
     lignes_ignorees: [],
-    colonnes: entetes.map((c: string) => ({ colonne: c, champ: null })),
-    confiance: "faible",
+    colonnes: entetes.map((c: string) => {
+      const rec = recognizedCols.get(c);
+      // If recognition is confident enough, assign the field name. 
+      // The canonicalKey maps roughly to the semantic field we want to extract.
+      let champ = null;
+      if (rec && rec.confidence >= 0.5) {
+         // In GesCop, we need to map to the Base44 entity field. 
+         // For now, if the recognition finds a semantic type, we assume it's the field name.
+         champ = rec.canonicalKey !== 'unknown' ? rec.canonicalKey : null;
+      }
+      return { colonne: c, champ };
+    }),
+    confiance: "moyenne",
     explication: entite
-      ? `Lecture automatique de ${nomFichier} : ${entetes.length} colonnes reconnues comme des donnees de type ${entite}.`
-      : `Lecture automatique de ${nomFichier} : le type de donnees n'a pas pu etre determine.`,
+      ? `Lecture sémantique de ${nomFichier} : reconnaissance de ${entetes.length} colonnes pour l'entité ${entite}.`
+      : `Lecture automatique de ${nomFichier} : le type de données n'a pas pu être déterminé.`,
     origine: "regles",
     corrections: [],
   };

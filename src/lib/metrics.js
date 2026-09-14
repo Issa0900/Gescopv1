@@ -9,6 +9,16 @@
 // dashboard, so every definition now lives here and every page imports it.
 
 import { sumLast, sumPrev, meanOf, trendPct } from "@/lib/periods";
+import { computeKpi, computeKpiBatch } from "@/lib/core/kpiEngine";
+import { KPI_REGISTRY, getKpiDefinition, getKpisByDomain } from "@/lib/core/kpiRegistry";
+
+export {
+  computeKpi,
+  computeKpiBatch,
+  KPI_REGISTRY,
+  getKpiDefinition,
+  getKpisByDomain
+};
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
