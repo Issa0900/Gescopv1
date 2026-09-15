@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { Plus, Trash2, ExternalLink, Loader2, Crosshair } from "lucide-react";
+import { Plus, Trash2, ExternalLink, Loader2, Crosshair, RotateCcw } from "lucide-react";
 
 const marketPositions = [
   { value: "leader", label: "Leader" },
@@ -85,6 +85,20 @@ export default function CompetitorsManager() {
     }
   };
 
+  const handleClear = async () => {
+    if (!competitors?.length || !window.confirm("Supprimer tous les concurrents enregistrés ?")) return;
+    setSaving(true);
+    try {
+      await Promise.all(competitors.map((competitor) => base44.entities.Competitor.delete(competitor.id)));
+      await qc.invalidateQueries({ queryKey: ["competitors"] });
+      toast({ title: "Suivi des concurrents réinitialisé" });
+    } catch (e) {
+      toast({ title: "Erreur: " + e.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -92,14 +106,19 @@ export default function CompetitorsManager() {
           <Crosshair className="h-5 w-5 text-muted-foreground" />
           <h2 className="font-semibold">Concurrents surveillés</h2>
         </div>
-        {!adding && (
+        {!adding && <div className="flex gap-2">
+          {competitors?.length > 0 && (
+            <Button size="sm" variant="ghost" onClick={handleClear} disabled={saving}>
+              <RotateCcw className="mr-1 h-4 w-4" /> Réinitialiser
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
             <Plus className="mr-1 h-4 w-4" /> Ajouter
           </Button>
-        )}
+        </div>}
       </div>
       <p className="mb-4 text-sm text-muted-foreground">
-        Ajoutez les liens de vos concurrents pour que GESCOP les intègre à son radar d'analyse.
+        Ajoutez uniquement les concurrents que vous souhaitez suivre. Aucun concurrent ni signal n'est généré automatiquement.
       </p>
 
       {adding && (

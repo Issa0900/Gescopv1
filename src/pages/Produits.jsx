@@ -66,15 +66,30 @@ export default function Produits() {
       || draft.dormantMonths !== savedSettings.dormantMonths);
   const { data: products, isLoading: lp, isError: productsError, refetch: refetchProducts } = useQuery({
     queryKey: ["products"],
-    queryFn: () => fetchAll(base44.entities.Product),
+    queryFn: async () => {
+      const rows = await fetchAll(base44.entities.Product);
+      return (Array.isArray(rows) ? rows : []).map((p) => ({
+        ...p,
+        product_id: p.product_id || p.id || p.sku || p.code,
+      }));
+    },
   });
   const { data: inventory, isLoading: li, isError: inventoryError, refetch: refetchInventory } = useQuery({
     queryKey: ["inventory-summary"],
-    queryFn: () => fetchAll(base44.entities.Inventory, "-date"),
+    queryFn: async () => {
+      const rows = await fetchAll(base44.entities.Inventory, "-date");
+      return (Array.isArray(rows) ? rows : []).map((i) => ({
+        ...i,
+        product_id: i.product_id || i.id_product || i.sku || i.product_code,
+      }));
+    },
   });
   const { data: orders, isLoading: lo, isError: ordersError, refetch: refetchOrders } = useQuery({
     queryKey: ["orders-produits"],
-    queryFn: () => fetchAll(base44.entities.Order, "-date"),
+    queryFn: async () => {
+      const rows = await fetchAll(base44.entities.Order, "-date");
+      return Array.isArray(rows) ? rows : [];
+    },
   });
 
   if (lp || li || lo) return <p className="text-sm text-muted-foreground">Chargement…</p>;
@@ -116,7 +131,6 @@ export default function Produits() {
   const stockOf = (p) => {
     const snap = invByProduct[p.product_id];
     return snap && snap.closing_stock != null ? Number(snap.closing_stock) : Number(p.inventory_level) || 0;
-    return invByProduct[p.product_id]?.stock || 0;
   };
   const dormantCount = stock.dormantCount;
   const nearRupture = stock.alerts.map((r) => r.product);
