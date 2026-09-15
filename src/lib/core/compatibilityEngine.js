@@ -138,7 +138,7 @@ export function validateAggregation(fieldSemantic, method) {
     if (temporalType === TEMPORAL_TYPES.FLOW) {
       return {
         valid: true,
-        reason: 'La moyenne d\\'un flux dilue l\\'information — préférez la somme.',
+        reason: "La moyenne d'un flux dilue l'information — préférez la somme.",
         suggestedMethod: 'sum'
       };
     }
@@ -283,7 +283,7 @@ export function explainIncompatibility(fieldA, fieldB) {
   }
   
   if (fieldA.dataType === DATA_TYPES.RATE || fieldB.dataType === DATA_TYPES.RATE) {
-    return 'L\\'un des champs est un taux. Les taux ne peuvent pas être additionnés directement.';
+    return "L'un des champs est un taux. Les taux ne peuvent pas être additionnés directement.";
   }
 
   if (fieldA.unit !== fieldB.unit) {

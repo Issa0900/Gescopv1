@@ -186,7 +186,9 @@ export default function Dashboard() {
 
     // Si le moteur sémantique est disponible ET retourne des données, on l'utilise
     const semRev = semanticEngine.kpis?.get("total_revenue")?.value || 0;
-    
+
+    let totalIncome, totalExpensesTxn, margin, marginPct, latestCash;
+
     if (semanticEngine.available && semRev > 0) {
       totalIncome = semRev;
       totalExpensesTxn = semRev - (semanticEngine.kpis.get("net_income")?.value || 0); // Approximation reverse
