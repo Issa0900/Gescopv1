@@ -74,7 +74,23 @@ function analyzeColumnName(columnName: string): { matches: { key: string, type: 
   if (AMBIGUOUS_NAMES.includes(normName)) {
     matches.push({ key: 'ambiguous_amount', type: 'ambiguous', score: 0.5 });
     justifications.push(`Name is ambiguous ('${normName}'), needs context.`);
-  } else if (['ca', 'chiffre_affaires', 'revenue', 'sales'].includes(normName)) {
+    return { matches, justifications };
+  }
+
+  // 1. Check direct aliases from importUtils
+  // Try raw lowercase first, then normalized
+  const rawLower = columnName.toLowerCase().trim();
+  const directAlias = FIELD_ALIASES[rawLower] || 
+                      FIELD_ALIASES[rawLower.replace(/[\s-]/g, "_")] || 
+                      FIELD_ALIASES[normName];
+
+  if (directAlias) {
+    matches.push({ key: directAlias, type: directAlias, score: 0.95 });
+    justifications.push(`Name matched known alias '${directAlias}'.`);
+  } 
+  
+  // 2. Check manual overrides for strong signals
+  if (['ca', 'chiffre_affaires', 'revenue', 'sales'].includes(normName)) {
     matches.push({ key: 'revenue_amount', type: 'revenue', score: 0.9 });
     justifications.push(`Name strongly implies revenue.`);
   } else if (['depense', 'expense', 'charge', 'frais'].includes(normName)) {
@@ -83,9 +99,48 @@ function analyzeColumnName(columnName: string): { matches: { key: string, type: 
   } else if (['solde', 'balance', 'closing_cash'].includes(normName)) {
     matches.push({ key: 'cash_balance', type: 'cash_balance', score: 0.9 });
     justifications.push(`Name strongly implies cash balance.`);
-  } else {
+  } else if (['produit', 'product'].includes(normName)) {
+    matches.push({ key: 'product_name', type: 'product_name', score: 0.8 });
+    justifications.push(`Name implies product.`);
+  } else if (['stock'].includes(normName)) {
+    matches.push({ key: 'inventory_level', type: 'inventory_level', score: 0.8 });
+    justifications.push(`Name implies inventory.`);
+  } else if (['campagne', 'campaign'].includes(normName)) {
+    matches.push({ key: 'campaign_name', type: 'campaign_name', score: 0.8 });
+    justifications.push(`Name implies campaign.`);
+  } else if (['employe', 'employee'].includes(normName)) {
+    matches.push({ key: 'employee_id', type: 'employee_id', score: 0.8 });
+    justifications.push(`Name implies employee.`);
+  } else if (['cout_acquisition', 'cac'].includes(normName)) {
+    matches.push({ key: 'cac', type: 'cac', score: 0.9 });
+    justifications.push(`Name implies CAC.`);
+  } else if (['roas'].includes(normName)) {
+    matches.push({ key: 'roas', type: 'roas', score: 0.9 });
+    justifications.push(`Name implies ROAS.`);
+  }
+
+  // 3. Check exact schema properties
+  if (matches.length === 0 || matches[0].score < 0.9) {
+    for (const [entityName, schema] of Object.entries(ENTITY_SCHEMAS)) {
+      if (schema.properties[normName]) {
+        matches.push({ key: normName, type: normName, score: 0.9 });
+        justifications.push(`Name exactly matches schema property '${normName}' in ${entityName}.`);
+        break; // Only need one exact match
+      }
+    }
+  }
+
+  if (matches.length === 0) {
     matches.push({ key: 'unknown', type: 'unknown', score: 0.1 });
     justifications.push(`No exact name match found for '${normName}'.`);
+  }
+
+  // Sort by score
+  matches.sort((a, b) => b.score - a.score);
+  
+  // Boost score to ensure it passes the 0.40 threshold even with missing context
+  if (matches[0] && matches[0].key !== 'unknown') {
+    matches[0].score = Math.max(matches[0].score, 0.9);
   }
 
   return { matches, justifications };
@@ -252,6 +307,11 @@ export function recognizeColumn(params: ColumnRecognitionParams): ColumnRecognit
   totalConfidence += ctxSignal.score * WEIGHTS.CONTEXT;
   totalConfidence += sibSignal.score * WEIGHTS.SIBLINGS;
   totalConfidence += memSignal.score * WEIGHTS.MEMORY;
+
+  // If the name is an exact match (score >= 0.9), ensure confidence is high enough to not be discarded
+  if (nameSignal.matches[0]?.score >= 0.9 && nameSignal.matches[0]?.key !== 'unknown') {
+    totalConfidence = Math.max(totalConfidence, 0.70);
+  }
 
   let resolvedKey = nameSignal.matches[0]?.key || 'unknown';
   let resolvedType = nameSignal.matches[0]?.type || 'unknown';

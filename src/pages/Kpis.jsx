@@ -141,8 +141,19 @@ export default function Kpis() {
     // All month-over-month figures use COMPLETE months: the in-progress month
     // holds only a few days of data and would look like a collapse.
     if ((transactions || []).length > 0) {
-      const incomes = transactions.filter((t) => t.type === "income");
-      const expenses = transactions.filter((t) => t.type === "expense");
+      const isIncome = (t) => {
+        if (!t.type) return false;
+        const s = String(t.type).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return ["income", "entree", "credit", "revenu", "encaissement"].includes(s);
+      };
+      const isExpense = (t) => {
+        if (!t.type) return false;
+        const s = String(t.type).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return ["expense", "sortie", "debit", "depense", "decaissement", "charge"].includes(s);
+      };
+
+      const incomes = transactions.filter(isIncome);
+      const expenses = transactions.filter(isExpense);
 
       const revMonthly = monthlyAggComplete(incomes, "date", "amount");
       const expMonthly = monthlyAggComplete(expenses, "date", "amount");

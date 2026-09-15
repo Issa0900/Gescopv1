@@ -55,10 +55,29 @@ export function computeDomainScores(data) {
   const scores = {};
 
   // === FINANCE — aggregated margin over 3 complete months ===
-  const incomes = (transactions || []).filter((t) => t.type === "income");
-  const txnExpenses = (transactions || []).filter((t) => t.type === "expense");
-  const revMonthly = monthlyAggComplete(incomes, "date", "amount");
-  const expMonthly = monthlyAggComplete(txnExpenses, "date", "amount");
+  const isIncome = (t) => {
+    if (!t.type) return false;
+    const s = String(t.type).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return ["income", "entree", "credit", "revenu", "encaissement"].includes(s);
+  };
+  const isExpense = (t) => {
+    if (!t.type) return false;
+    const s = String(t.type).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return ["expense", "sortie", "debit", "depense", "decaissement", "charge"].includes(s);
+  };
+
+  const incomes = (transactions || []).filter(isIncome);
+  const txnExpenses = (transactions || []).filter(isExpense);
+  const revMonthly = monthlyAggComplete(
+    incomes.map(t => ({ ...t, _amt: Number(t.amount) || Number(t.revenue_amount) || 0 })), 
+    "date", 
+    "_amt"
+  );
+  const expMonthly = monthlyAggComplete(
+    txnExpenses.map(t => ({ ...t, _amt: Number(t.amount) || Number(t.expense_amount) || 0 })), 
+    "date", 
+    "_amt"
+  );
 
   const recentMargin = aggregateMarginPct(revMonthly, expMonthly, 3);
   const priorMargin = previousMarginPct(revMonthly, expMonthly, 3);
@@ -123,7 +142,7 @@ export function computeDomainScores(data) {
 
   // === VENTES — complete-month revenue and basket trend ===
   const orderRevMonthly = monthlyAggComplete(
-    (orders || []).map(o => ({ ...o, _computed_rev: Number(o.total) || Number(o.revenue_amount) || 0 })),
+    (orders || []).map(o => ({ ...o, _computed_rev: Number(o.total) || Number(o.revenue_amount) || Number(o.amount) || 0 })),
     "date", 
     "_computed_rev"
   );

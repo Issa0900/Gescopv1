@@ -11,6 +11,7 @@ import { Sparkles, RefreshCw, ArrowRight, Check, Loader2, ChevronDown } from "lu
 import { Link, useNavigate } from "react-router-dom";
 
 import { useKpiEngine } from "@/lib/useKpiEngine";
+import { validateChartAggregation, METRIC_TYPES, AGG_METHODS } from "@/components/ChartValidation";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import HealthHero from "@/components/dashboard/HealthHero";
 import InsightCard from "@/components/dashboard/InsightCard";
@@ -225,17 +226,27 @@ export default function Dashboard() {
 
     // Flow metrics (sums/counts) use COMPLETE months only: the in-progress month
     // holds a few days of data and would read as a collapse.
-    const revenueMonthly = monthlyAggComplete(allIncomes, "date", "amount");
-    const expenseMonthly = monthlyAggComplete(allTxnExpenses, "date", "amount");
+    const revMode = validateChartAggregation(METRIC_TYPES.FLOW, "sum", "Revenue");
+    const revenueMonthly = monthlyAggComplete(allIncomes, "date", "amount", revMode.toLowerCase());
+    
+    const expMode = validateChartAggregation(METRIC_TYPES.FLOW, "sum", "Expenses");
+    const expenseMonthly = monthlyAggComplete(allTxnExpenses, "date", "amount", expMode.toLowerCase());
+    
     const marginMonthly = revenueMonthly.map((m) => {
       const exp = expenseMonthly.find((e) => e.month === m.month);
       const inc = m.val;
       const expVal = exp ? exp.val : 0;
       return { month: m.month, val: inc > 0 ? ((inc - expVal) / inc) * 100 : 0 };
     });
+    
     // Cash is a balance, not a flow: the running month's closing balance is valid.
-    const cashMonthly = monthlyAgg(cashflow || [], "date", "closing_cash", "last");
-    const costsMonthly = monthlyAggComplete(allExpenses, "date", "amount");
+    const cashMode = validateChartAggregation(METRIC_TYPES.STOCK, "last", "Cash");
+    const cashMonthly = monthlyAgg(cashflow || [], "date", "closing_cash", cashMode.toLowerCase());
+    
+    const costMode = validateChartAggregation(METRIC_TYPES.FLOW, "sum", "Costs");
+    const costsMonthly = monthlyAggComplete(allExpenses, "date", "amount", costMode.toLowerCase());
+    
+    const clientMode = validateChartAggregation(METRIC_TYPES.STOCK, "count", "Clients"); // or FLOW
     const clientsMonthly = monthlyAggComplete(customers || [], "acquisition_date", "customer_id", "count");
 
     const sparkCount = { day: 3, month: 3, quarter: 6, year: 12 }[period];
@@ -244,7 +255,9 @@ export default function Dashboard() {
     const revTrend = trendPct(lastVal(revenueMonthly), prevVal(revenueMonthly));
     const marginTrend = trendPct(lastVal(marginMonthly), prevVal(marginMonthly));
     const cashTrend = trendPct(lastVal(cashMonthly), prevVal(cashMonthly));
-    const aovRevMonthly = monthlyAggComplete(orders || [], "date", "total");
+    
+    const aovRevMode = validateChartAggregation(METRIC_TYPES.FLOW, "sum", "Order Revenue");
+    const aovRevMonthly = monthlyAggComplete(orders || [], "date", "total", aovRevMode.toLowerCase());
     const aovCntMonthly = monthlyAggComplete(orders || [], "date", "total", "count");
     const aovMonthly = aovRevMonthly.map((m) => {
       const cnt = aovCntMonthly.find((c) => c.month === m.month);
