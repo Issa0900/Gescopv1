@@ -122,11 +122,12 @@ export default function Previsions() {
       });
       Object.keys(byM).sort().forEach((m) => cashHistory.push({ month: m, value: byM[m] }));
     }
-    const cash30 = cumulativeNow + cashF[0].value;
-    const cash90 = cumulativeNow + cashF[0].value + cashF[1].value + cashF[2].value;
-    const currentIncome = monthly[monthly.length - 1].income;
-    const currentMargin = monthly[monthly.length - 1].margin;
-    const projected90Margin = marginF.reduce((s, f) => s + f.value, 0);
+    const cash30 = cumulativeNow + (cashF[0]?.value ?? 0);
+    const cash90 = cumulativeNow + (cashF[0]?.value ?? 0) + (cashF[1]?.value ?? 0) + (cashF[2]?.value ?? 0);
+    const lastMonth = monthly[monthly.length - 1];
+    const currentIncome = lastMonth?.income ?? 0;
+    const currentMargin = lastMonth?.margin ?? 0;
+    const projected90Margin = marginF.reduce((s, f) => s + (f?.value ?? 0), 0);
     const shortfall = currentMargin * 3 - projected90Margin;
     return {
       monthly, incomeF, marginF, cashF, cash30, cash90, currentIncome, currentMargin,
@@ -142,11 +143,13 @@ export default function Previsions() {
       let cum = 0;
       // Real monthly closing balances when treasury data was imported;
       // otherwise fall back to the cumulative margin.
-      const hist = (cashHistory && cashHistory.length > 0)
+    const hist = (cashHistory && cashHistory.length > 0)
         ? cashHistory.slice(-monthly.length).map((c) => { cum = c.value; return { month: c.month.slice(5), value: Math.round(c.value), forecast: null, range: null }; })
         : monthly.map((d) => { cum += d.margin; return { month: d.month.slice(5), value: Math.round(cum), forecast: null, range: null }; });
-      hist[hist.length - 1].forecast = hist[hist.length - 1].value;
-      hist[hist.length - 1].range = [hist[hist.length - 1].value, hist[hist.length - 1].value];
+      if (hist.length > 0) {
+        hist[hist.length - 1].forecast = hist[hist.length - 1].value;
+        hist[hist.length - 1].range = [hist[hist.length - 1].value, hist[hist.length - 1].value];
+      }
       let runCum = cum;
       const fcstMonths = ["+30j", "+60j", "+90j"];
       // Uncertainty on a CUMULATIVE balance compounds: the errors of each
@@ -164,8 +167,10 @@ export default function Previsions() {
     const f = metric === "ca" ? incomeF : marginF;
     const key = metric === "ca" ? "income" : "margin";
     const hist = monthly.map((d) => ({ month: d.month.slice(5), value: Math.round(d[key]), forecast: null, range: null }));
-    hist[hist.length - 1].forecast = hist[hist.length - 1].value;
-    hist[hist.length - 1].range = [hist[hist.length - 1].value, hist[hist.length - 1].value];
+    if (hist.length > 0) {
+      hist[hist.length - 1].forecast = hist[hist.length - 1].value;
+      hist[hist.length - 1].range = [hist[hist.length - 1].value, hist[hist.length - 1].value];
+    }
     const fcstMonths = ["+30j", "+60j", "+90j"];
     const fcst = f.map((p, i) => ({ month: fcstMonths[i], value: null, forecast: Math.round(p.value), range: [Math.round(p.lower), Math.round(p.upper)] }));
     return [...hist, ...fcst];

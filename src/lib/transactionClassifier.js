@@ -8,8 +8,8 @@
  * or accented labels.
  */
 
-const INCOME_TYPES = ["income", "entree", "credit", "revenu", "encaissement"];
-const EXPENSE_TYPES = ["expense", "sortie", "debit", "depense", "decaissement", "charge"];
+const INCOME_TYPES = ["income", "entree", "credit", "revenu", "encaissement", "vente", "ventes", "recette", "recettes", "revenue"];
+const EXPENSE_TYPES = ["expense", "sortie", "debit", "depense", "decaissement", "charge", "charges", "frais", "achat", "achats", "remboursement", "refund", "transfer", "transfert", "salaire", "salaires", "cout", "couts"];
 
 /**
  * Normalise a raw `type` string (strip accents, lowercase, trim) and return
@@ -28,14 +28,31 @@ export function classifyType(typeStr) {
   return null;
 }
 
+/**
+ * Classify a full transaction object.
+ * Falls back to the sign of `amount` when `type` is not a recognized financial keyword
+ * (e.g. "utilitaires", "salaires", "marketing") — this handles data imported before
+ * the backend normalization fix was deployed.
+ */
+export function classifyTransaction(t) {
+  if (!t) return null;
+  const byType = classifyType(t.type);
+  if (byType) return byType;
+  // Fallback: use the sign of the amount
+  const amt = Number(t.amount) || 0;
+  if (amt > 0) return "income";
+  if (amt < 0) return "expense";
+  return null;
+}
+
 /** Returns `true` when the transaction should count as revenue. */
 export function isIncome(t) {
-  return classifyType(t?.type) === "income";
+  return classifyTransaction(t) === "income";
 }
 
 /** Returns `true` when the transaction should count as an expense. */
 export function isExpense(t) {
-  return classifyType(t?.type) === "expense";
+  return classifyTransaction(t) === "expense";
 }
 
 /**

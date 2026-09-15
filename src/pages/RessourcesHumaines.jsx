@@ -24,7 +24,16 @@ export default function RessourcesHumaines() {
         base44.entities.Transaction.list(),
         base44.entities.Order.list()
       ]);
-      return { employees: employees || [], payrolls: payrolls || [], transactions: transactions || [], orders: orders || [] };
+      const normalizedPayrolls = (payrolls || []).map((payroll) => ({
+        ...payroll,
+        total_cost: Number(payroll.total_cost) || (
+          Number(payroll.regular_pay || 0) +
+          Number(payroll.overtime || 0) +
+          Number(payroll.bonus || 0) +
+          Number(payroll.employer_cost || 0)
+        ),
+      }));
+      return { employees: employees || [], payrolls: normalizedPayrolls, transactions: transactions || [], orders: orders || [] };
     }
   });
 
