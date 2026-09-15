@@ -122,8 +122,12 @@ export function computeDomainScores(data) {
   };
 
   // === VENTES — complete-month revenue and basket trend ===
-  const orderRevMonthly = monthlyAggComplete(orders || [], "date", "total");
-  const orderCntMonthly = monthlyAggComplete(orders || [], "date", "total", "count");
+  const orderRevMonthly = monthlyAggComplete(
+    (orders || []).map(o => ({ ...o, _computed_rev: Number(o.total) || Number(o.revenue_amount) || 0 })),
+    "date", 
+    "_computed_rev"
+  );
+  const orderCntMonthly = monthlyAggComplete(orders || [], "date", "order_id", "count");
   // 3-month blocks, but only when BOTH blocks are fully covered.
   const rev3 = sumLast(orderRevMonthly, 3);
   const revPrev3 = sumPrev(orderRevMonthly, 3);

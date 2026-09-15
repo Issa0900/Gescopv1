@@ -394,6 +394,10 @@ export function planParRegles(
          else if (k === 'revenue_amount' && entite === 'Campaign') champ = 'revenue';
          else if (k === 'expense_amount' && entite === 'Expense') champ = 'amount';
          else if (k === 'cash_balance' && entite === 'Cashflow') champ = 'closing_cash';
+         else if (k === 'employee_identifier' && entite === 'Employee') champ = 'employee_id';
+         else if (k === 'product_identifier' && entite === 'Product') champ = 'product_id';
+         else if (k === 'identifier' && entite === 'Product') champ = 'product_id';
+         else if (k === 'identifier' && entite === 'Employee') champ = 'employee_id';
          else champ = k;
       }
       return { colonne: c, champ };

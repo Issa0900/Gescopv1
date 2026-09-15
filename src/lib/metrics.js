@@ -129,8 +129,8 @@ function shiftMonthKey(key, n) {
 export function churnStats(customers, orders, inactiveMonths = DEFAULT_INACTIVE_MONTHS) {
   const rows = customers || [];
   const total = rows.length;
-  const churned = rows.filter((c) => c.status === "inactif" || c.status === "perdu").length;
-  const active = rows.filter((c) => c.status === "actif").length;
+  const churned = rows.filter((c) => ["inactif", "inactive", "perdu", "lost"].includes(String(c.status || "").toLowerCase())).length;
+  const active = rows.filter((c) => ["actif", "active"].includes(String(c.status || "").toLowerCase())).length;
   // Tracked separately: at-risk clients are a leading indicator, not churn.
   const atRisk = rows.filter((c) => {
     if (c.status !== "actif") return false;
@@ -196,7 +196,7 @@ export function churnStats(customers, orders, inactiveMonths = DEFAULT_INACTIVE_
  */
 export function customerValue(orders, customers, marginPct = null) {
   const ord = orders || [];
-  const totalRevenue = ord.reduce((s, o) => s + num(o.total), 0);
+  const totalRevenue = ord.reduce((s, o) => s + (Number(o.total) || Number(o.revenue_amount) || 0), 0);
   const buyers = new Set(ord.map((o) => o.customer_id).filter(Boolean)).size;
   const totalCustomers = (customers || []).length;
   // Prefer customers who actually ordered; fall back to the whole base.
