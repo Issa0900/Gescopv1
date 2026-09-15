@@ -12,6 +12,7 @@ import { financialMonthlySeries } from "@/lib/financialData";
 import { monthlyAggComplete } from "@/lib/periods";
 import { useCompany } from "@/hooks/useCompany";
 import { computeLiveAlerts } from "@/lib/liveAlerts";
+import DataErrorState from "@/components/DataErrorState";
 
 /**
  * Ordinary least squares plus everything needed for a HONEST forecast band.
@@ -62,11 +63,11 @@ const metrics = [
 export default function Previsions() {
   const [metric, setMetric] = useState("ca");
 
-  const { data: transactions, isLoading } = useQuery({
+  const { data: transactions, isLoading, isError: transactionsError, refetch: refetchTransactions } = useQuery({
     queryKey: ["transactions-summary"],
     queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
   });
-  const { data: cashflow } = useQuery({
+  const { data: cashflow, isError: cashflowError, refetch: refetchCashflow } = useQuery({
     queryKey: ["cashflow-summary"],
     queryFn: () => fetchAll(base44.entities.Cashflow, "-date"),
   });
@@ -178,6 +179,9 @@ export default function Previsions() {
   }, [result, metric]);
 
   if (isLoading) return <div className="flex h-96 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800" /></div>;
+  if (transactionsError || cashflowError) {
+    return <DataErrorState onRetry={() => Promise.all([refetchTransactions(), refetchCashflow()])} />;
+  }
   if (!transactions || transactions.length === 0) return <EmptyState icon={Upload} title="Aucune donnée à projeter" description="Importez vos transactions pour que GESCOP calcule des prévisions basées sur vos tendances." action={<Link to="/importer" className="text-primary hover:underline">Importer des données →</Link>} />;
   if (!result) return <EmptyState icon={TrendingUp} title="Données insuffisantes" description="Il faut au moins 3 mois de données pour calculer des prévisions fiables." />;
 

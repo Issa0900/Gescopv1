@@ -11,9 +11,10 @@ import {
 import { fetchAll } from "@/lib/fetchAll";
 import { financialMonthlySeries } from "@/lib/financialData";
 import { useKpiEngine } from "@/lib/useKpiEngine";
+import DataErrorState from "@/components/DataErrorState";
 
 export default function Finance() {
-  const { data: transactions, isLoading: ltx } = useQuery({
+  const { data: transactions, isLoading: ltx, isError, refetch } = useQuery({
     queryKey: ["transactions-summary"],
     queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
   });
@@ -22,6 +23,7 @@ export default function Finance() {
   const { kpis: engineKpis } = useKpiEngine({ transactions: transactions || [] }, ["total_revenue", "total_expense", "gross_margin_amount"]);
   
   if (ltx) return <p className="text-sm text-muted-foreground">Chargement...</p>;
+  if (isError) return <DataErrorState onRetry={refetch} />;
   if (!transactions || transactions.length === 0) {
     return (
       <EmptyState

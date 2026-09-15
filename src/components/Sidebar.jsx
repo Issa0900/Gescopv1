@@ -123,6 +123,7 @@ export default function Sidebar({ compact, onToggleCompact }) {
     <>
       <button
         onClick={() => setOpen(true)}
+        aria-label="Ouvrir le menu de navigation"
         className="fixed left-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card/70 shadow-md backdrop-blur transition-transform hover:scale-105 md:hidden"
       >
         <Menu className="h-5 w-5" />
@@ -148,7 +149,7 @@ export default function Sidebar({ compact, onToggleCompact }) {
             )}
           </div>
           {!compact && (
-            <button onClick={() => setOpen(false)} className="rounded-lg p-1 text-sidebar-foreground/80 hover:bg-white/10 hover:text-white md:hidden">
+            <button aria-label="Fermer le menu de navigation" onClick={() => setOpen(false)} className="rounded-lg p-1 text-sidebar-foreground/80 hover:bg-white/10 hover:text-white md:hidden">
               <X className="h-5 w-5" />
             </button>
           )}
@@ -177,6 +178,8 @@ export default function Sidebar({ compact, onToggleCompact }) {
                 {!compact ? (
                   <button
                     onClick={() => toggle(group.label)}
+                    aria-expanded={isExpanded}
+                    aria-label={`${isExpanded ? "Réduire" : "Développer"} le groupe ${group.label}`}
                     className={cn(
                       "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors duration-150",
                       isActiveGroup ? "text-[#10B981]" : "text-[#9CA3AF] hover:text-white"
@@ -244,6 +247,8 @@ export default function Sidebar({ compact, onToggleCompact }) {
         <div className="px-3 pb-3">
           <button
             onClick={onToggleCompact}
+            aria-label={compact ? "Développer la barre latérale" : "Réduire la barre latérale"}
+            aria-pressed={compact}
             className={cn(
               "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium text-sidebar-foreground/70 transition-colors duration-150 hover:bg-white/5 hover:text-white",
               compact && "justify-center px-0"

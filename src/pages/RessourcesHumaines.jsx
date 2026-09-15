@@ -7,6 +7,7 @@ import { Users, Banknote, Upload, PieChart, TrendingUp, Building2, UserCircle, B
 import { useKpiEngineTimeSeries } from "@/lib/useKpiEngine";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { motion } from "framer-motion";
+import DataErrorState from "@/components/DataErrorState";
 
 function formatCurrency(val) {
   if (val === null || val === undefined) return "-";
@@ -14,7 +15,7 @@ function formatCurrency(val) {
 }
 
 export default function RessourcesHumaines() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["rh-data"],
     queryFn: async () => {
       const [employees, payrolls, transactions, orders] = await Promise.all([
@@ -93,6 +94,7 @@ export default function RessourcesHumaines() {
       </div>
     );
   }
+  if (isError) return <DataErrorState onRetry={refetch} />;
 
   if (!data?.employees?.length && !data?.payrolls?.length && metrics.totalPayroll === 0) {
     return (
