@@ -344,7 +344,7 @@ export default function ImportPage() {
       </motion.div>
 
       {/* Entre la lecture et l'ecriture : l'utilisateur valide ce qui a ete compris. */}
-      {analyses && !processing && (
+      {analyses && !importResult && (
         <PlanConfirmation
           analyses={analyses}
           champsParEntite={champsParEntite}

@@ -81,7 +81,7 @@ export default function PlanConfirmation({ analyses, champsParEntite, entityOpti
         </div>
       </div>
 
-      <AnimatePresence>
+      <div className="space-y-6">
         {analyses.map((a, idx) => {
           const plan = plans[a.file_name];
           if (!plan) return null;
@@ -275,7 +275,7 @@ export default function PlanConfirmation({ analyses, champsParEntite, entityOpti
             </motion.section>
           );
         })}
-      </AnimatePresence>
+      </div>
     </motion.div>
   );
 }
