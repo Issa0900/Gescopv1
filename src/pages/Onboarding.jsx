@@ -302,18 +302,18 @@ export default function Onboarding() {
                         placeholder="Ex. www.monsite.ca"
                       />
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleEnrich}
-                      disabled={enriching}
-                    >
-                      {enriching ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Recherche…</>
-                      ) : (
-                        <><Wand2 className="mr-2 h-4 w-4" /> Auto-remplir</>
-                      )}
-                    </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleEnrich}
+                        disabled={enriching}
+                      >
+                        {enriching ? (
+                          <span className="flex items-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Recherche...</span>
+                        ) : (
+                          <span className="flex items-center"><Wand2 className="mr-2 h-4 w-4" /> Auto-remplir</span>
+                        )}
+                      </Button>
                   </div>
                   <p className="mt-1.5 text-xs text-muted-foreground">
                     Remplit uniquement les champs encore vides. Les champs ainsi complétés sont marqués : relisez-les avant de valider.
