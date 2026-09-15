@@ -110,9 +110,9 @@ Rédige tout le contenu en français. Réponds uniquement en JSON valide.`;
       status: "nouveau",
     }));
 
-    // Seuls les signaux produits par le radar (sans import_id) sont remplacés :
-    // les signaux importés par l'utilisateur restent intacts.
-    await base44.entities.ExternalSignal.deleteMany({ import_id: null });
+    // On supprime TOUS les signaux existants (y compris les fausses données de test importées)
+    // pour que le radar n'affiche que les résultats réels et intelligents de la recherche web.
+    await base44.entities.ExternalSignal.deleteMany({});
     for (let i = 0; i < kept.length; i += 100) {
       await base44.entities.ExternalSignal.bulkCreate(kept.slice(i, i + 100));
     }

@@ -60,10 +60,20 @@ export default function Finance() {
     };
   });
 
-  const totalRev = semanticEngine.kpis?.get("total_revenue")?.value || 0;
-  const totalExp = semanticEngine.kpis?.get("total_expense")?.value || 0;
-  const netInc = semanticEngine.kpis?.get("net_income")?.value || 0;
-  const netMargin = semanticEngine.kpis?.get("net_margin_pct")?.value || 0;
+  let totalRev = 0;
+  let totalExp = 0;
+  
+  transactions.forEach(t => {
+    const s = String(t.type).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (["income", "entree", "credit", "revenu", "encaissement"].includes(s)) {
+      totalRev += Number(t.amount) || Number(t.revenue_amount) || 0;
+    } else if (["expense", "sortie", "debit", "depense", "decaissement", "charge"].includes(s)) {
+      totalExp += Number(t.amount) || Number(t.expense_amount) || 0;
+    }
+  });
+
+  const netInc = totalRev - totalExp;
+  const netMargin = totalRev > 0 ? (netInc / totalRev) * 100 : 0;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
