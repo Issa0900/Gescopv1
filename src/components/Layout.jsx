@@ -11,7 +11,7 @@ export default function Layout() {
   const [compact, setCompact] = useState(false);
   const { user } = useAuth();
 
-  const needsConsent = user && !user.privacy_consent_accepted;
+  const needsConsent = user && (!user.public_metadata || !user.public_metadata.privacy_consent_accepted);
 
   return (
     <div className="min-h-screen bg-background">

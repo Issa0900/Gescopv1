@@ -100,8 +100,10 @@ export default function Register() {
       // vu cette case : pour eux, la modale reste le point de consentement.
       try {
         await base44.auth.updateMe({
-          privacy_consent_accepted: true,
-          privacy_consent_date: new Date().toISOString(),
+          public_metadata: {
+            privacy_consent_accepted: true,
+            privacy_consent_date: new Date().toISOString(),
+          }
         });
       } catch {
         // Echec d'enregistrement : la modale de consentement prendra le relais.

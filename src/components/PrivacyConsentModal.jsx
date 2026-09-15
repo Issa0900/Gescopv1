@@ -33,8 +33,11 @@ export default function PrivacyConsentModal() {
     setSaving(true);
     try {
       await base44.auth.updateMe({
-        privacy_consent_accepted: true,
-        privacy_consent_date: new Date().toISOString(),
+        public_metadata: {
+          ...user.public_metadata,
+          privacy_consent_accepted: true,
+          privacy_consent_date: new Date().toISOString(),
+        }
       });
       toast({ title: "Consentement enregistré. Bienvenue dans GESCOP." });
       // Reload to refresh user state
