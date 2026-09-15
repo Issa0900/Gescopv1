@@ -3,7 +3,7 @@ import { NavLink, useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard, Brain, Upload, BarChart3, AlertTriangle, ShieldAlert, Lightbulb,
   TrendingUp, Calculator, CheckSquare, Bell, Target, FileText, MessageSquare,
-  Radar as RadarIcon, History, Book, Settings, Menu, X, ChevronDown, Database,
+  Radar as RadarIcon, History, Book, Settings, Menu, X, ChevronDown,
   Users, Package, Megaphone, Wallet, PanelLeftClose, PanelLeftOpen, LogOut, ShieldCheck, Banknote
 } from "lucide-react";
 import { cn } from "@/lib/utils";

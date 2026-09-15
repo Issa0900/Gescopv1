@@ -9,13 +9,11 @@ import {
   BarChart, Bar, Legend,
 } from "recharts";
 import { fetchAll } from "@/lib/fetchAll";
-import { latestCashBalance } from "@/lib/metrics";
+import { useKpiEngine } from "@/lib/useKpiEngine";
 
 export default function Tresorerie() {
   const { data: cashflow, isLoading: lcf } = useQuery({
     queryKey: ["cashflow-summary"],
-    // list() caps at 500 rows whatever limit is passed, so "1000" read roughly
-    // 17 months of daily cash and silently dropped everything older.
     queryFn: () => fetchAll(base44.entities.Cashflow, "-date"),
   });
   const { data: expenses, isLoading: lex } = useQuery({
@@ -27,14 +25,15 @@ export default function Tresorerie() {
     queryFn: () => fetchAll(base44.entities.Payroll, "-period"),
   });
 
-  // These query keys are shared with the Dashboard, so this page can render
-  // before every list has resolved: default each one to an empty array.
-  const cashflowRows = cashflow || [];
-  const expenseRows = expenses || [];
-  const payrollRows = payroll || [];
+  // GESCOP Phase 4 SSOT
+  const { kpis: engineKpis } = useKpiEngine({ cashflow: cashflow || [] }, ["cash_closing", "net_burn_rate"]);
 
-  if (lcf || lex || lp) return <p className="text-sm text-muted-foreground">Chargement…</p>;
-  if (cashflowRows.length === 0) {
+  // These query keys are shared with the Dashboard, so this page can render
+  // instantly if the user just navigated from there.
+  const isLoading = lcf || lex || lp;
+  
+  if (isLoading) return <p className="text-sm text-muted-foreground">Chargement...</p>;
+  if (!cashflow || cashflow.length === 0) {
     return (
       <EmptyState
         icon={Wallet}
@@ -44,37 +43,43 @@ export default function Tresorerie() {
     );
   }
 
+  // Consommation officielle SSOT
+  const currentCash = engineKpis.get("cash_closing")?.value || 0;
+  // Le moteur retourne un burn rate pour la période; s'il est négatif, c'est un déficit moyen
+  // Tresorerie.jsx affichait le "flux net", on peut l'approximer depuis le burn rate en l'inversant.
+  const avgNet = -(engineKpis.get("net_burn_rate")?.value || 0);
+
+  const expenseRows = expenses || [];
+  const payrollRows = payroll || [];
+
   // Sorted explicitly rather than trusting the order the API happened to return.
-  const currentCash = latestCashBalance(cashflowRows) || 0;
-  const sorted = [...cashflowRows].sort((a, b) => ((a.date || "") < (b.date || "") ? -1 : 1));
-  const latestRow = sorted[sorted.length - 1];
   // Cashflow is imported one row per day. Showing the last 12 rows meant showing
   // 12 days labelled as an evolution, so flows are aggregated by month:
   // in/out are summed, the balance is the month's closing value.
+  const sorted = [...(cashflow || [])].sort((a, b) => ((a.date || "") < (b.date || "") ? -1 : 1));
+  const latestRow = sorted[sorted.length - 1];
+  
   const byMonthCash = {};
   sorted.forEach((c) => {
     const m = (c.date || "").slice(0, 7);
-    if (!m) return;
-    if (!byMonthCash[m]) byMonthCash[m] = { in: 0, out: 0, net: 0, solde: 0 };
+    if (!byMonthCash[m]) {
+      byMonthCash[m] = { in: 0, out: 0, solde: 0, net: 0 };
+    }
+    const flow = Number(c.net_flow) || ((Number(c.cash_in) || 0) - (Number(c.cash_out) || 0));
     byMonthCash[m].in += Number(c.cash_in) || 0;
     byMonthCash[m].out += Number(c.cash_out) || 0;
-    byMonthCash[m].net += Number(c.net_cash_flow) || 0;
+    byMonthCash[m].net += flow;
     byMonthCash[m].solde = Number(c.closing_cash) || 0;
   });
+
   const monthsCash = Object.keys(byMonthCash).sort();
   const chartData = monthsCash.slice(-12).map((m) => ({
-    date: m,
+    mois: m,
     entrées: Math.round(byMonthCash[m].in),
     sorties: Math.round(byMonthCash[m].out),
     flux_net: Math.round(byMonthCash[m].net),
     solde: Math.round(byMonthCash[m].solde),
   }));
-
-  // Net flow averaged over the last 3 complete months, not the last 3 days.
-  const cm = new Date().toISOString().slice(0, 7);
-  const completeMonths = monthsCash.filter((m) => m !== cm);
-  const last3 = completeMonths.slice(-3);
-  const avgNet = last3.length > 0 ? Math.round(last3.reduce((s, m) => s + byMonthCash[m].net, 0) / last3.length) : 0;
 
   // Payroll and recurring expenses span many months in the import: a raw sum
   // presented as a monthly figure inflates it by the number of months covered.

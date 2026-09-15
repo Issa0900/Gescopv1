@@ -10,9 +10,10 @@ import { useToast } from "@/components/ui/use-toast";
 import { Sparkles, RefreshCw, ArrowRight, Check, Loader2, ChevronDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { useKpiEngine } from "@/lib/useKpiEngine";
 import { financialSummary, financialMonthlySeries } from "@/lib/financialData";
 import { latestCashBalance } from "@/lib/metrics";
-import { validateChartAggregation, METRIC_TYPES, AGG_METHODS } from "@/components/ChartValidation";
+import { validateChartAggregation, METRIC_TYPES } from "@/components/ChartValidation";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import HealthHero from "@/components/dashboard/HealthHero";
 import InsightCard from "@/components/dashboard/InsightCard";
@@ -168,33 +169,38 @@ export default function Dashboard() {
     }
   };
 
+  // GESCOP Phase 4 SSOT : Centralisation
+  const fTxn = useMemo(() => (transactions || []).filter((t) => inPeriod(t.date)), [transactions, cutoffDate]);
+  const fOrders = useMemo(() => (orders || []).filter((o) => inPeriod(o.date)), [orders, cutoffDate]);
+  const fExpenses = useMemo(() => (expenseRecords || []).filter((e) => inPeriod(e.date)), [expenseRecords, cutoffDate]);
+  const fCustomers = useMemo(() => (customers || []).filter((c) => inPeriod(c.acquisition_date)), [customers, cutoffDate]);
+
+  const { kpis: engineKpis } = useKpiEngine({
+    transactions: fTxn,
+    orders: fOrders,
+    expenses: fExpenses,
+    customers: fCustomers,
+    cashflow: cashflow || []
+  }, ["total_revenue", "total_expense", "gross_margin_amount", "gross_margin_pct", "aov", "active_customers"]);
+
   // === COMPUTATIONS (Hybride : Ancien + Nouveau) ===
   const computed = useMemo(() => {
-    // Period-filtered totals (for KPI cards)
-    const fTxn = (transactions || []).filter((t) => inPeriod(t.date));
-    const fOrders = (orders || []).filter((o) => inPeriod(o.date));
-    const fExpenses = (expenseRecords || []).filter((e) => inPeriod(e.date));
-    const fCustomers = (customers || []).filter((c) => inPeriod(c.acquisition_date));
+    // Consommation officielle de la SSOT (KPI Engine)
+    const totalIncome = engineKpis.get("total_revenue")?.value || 0;
+    const totalExpensesTxn = engineKpis.get("total_expense")?.value || 0;
+    const margin = engineKpis.get("gross_margin_amount")?.value || 0;
+    const marginPct = engineKpis.get("gross_margin_pct")?.value || 0;
+    
+    const aov = engineKpis.get("aov")?.value || 0;
+    const activeCustomers = engineKpis.get("active_customers")?.value || 0;
+    const totalExpenseAmount = totalExpensesTxn;
 
-    const financial = financialSummary(fTxn);
-    let totalIncome = financial.revenue;
-    let totalExpensesTxn = financial.expense;
-    let margin = financial.netIncome;
-    let marginPct = financial.marginPct;
+    // Trésorerie : cashflow ne se filtre pas par période car c'est un stock continu
     let latestCash = latestCashBalance(cashflow) || 0;
-
-    // Fallback if no transactions but orders
-    if (totalIncome === 0 && (orders || []).length > 0) {
-      totalIncome = fOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
-      margin = totalIncome - totalExpensesTxn;
-      marginPct = totalIncome > 0 ? (margin / totalIncome) * 100 : 0;
-    }
-
-    const orderRevenue = fOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
+    
+    // Fallback temporaire pour les statistiques non couvertes
     const orderCount = fOrders.length;
-    const aov = orderCount > 0 ? orderRevenue / orderCount : 0;
-    const activeCustomers = (customers || []).filter((c) => ["actif", "active"].includes(String(c.status || "").toLowerCase())).length;
-    const totalExpenseAmount = fExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    const orderRevenue = fOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
 
     // Full monthly data (ALL records, not period-filtered) for charts and trends
     const financialMonthly = financialMonthlySeries(transactions || []);
@@ -455,7 +461,7 @@ export default function Dashboard() {
               <KpiCard label="Chiffre d'affaires" value={`${Math.round(computed.totalIncome).toLocaleString("fr-CA")} $`}
                 change={`${formatPct(Math.abs(computed.revTrend))}`} changeDir={computed.revTrend >= 0 ? "up" : "down"}
                 sparkline={computed.spark(computed.monthlyData.revenue)} status={computed.revTrend >= 0 ? "good" : "warning"} statusLabel={computed.revTrend >= 0 ? "Bon" : "Attention"} onClick={() => navigate("/kpis")} />
-              <KpiCard label="Marge brute" value={`${formatPct(computed.marginPct)}`}
+              <KpiCard label="Marge nette" value={`${formatPct(computed.marginPct)}`}
                 change={`${formatPct(Math.abs(computed.marginTrend))}`} changeDir={computed.marginTrend >= 0 ? "up" : "down"}
                 sparkline={computed.spark(computed.monthlyData.margin)} status={computed.marginPct >= 30 && computed.marginTrend >= 0 ? "good" : computed.marginPct < 10 ? "critical" : "warning"} statusLabel={computed.marginPct >= 30 && computed.marginTrend >= 0 ? "Bon" : computed.marginPct < 10 ? "Critique" : "Attention"} onClick={() => navigate("/kpis")} />
             </div>

@@ -1224,6 +1224,110 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "currency_code": "currency",
   "currency_type": "currency",
   "monnaie_utilisee": "currency",
+
+  // --- KAGGLE / STANDARD DATASETS ADDITIONS ---
+  // Kaggle Superstore / E-Commerce
+  "ship_date": "shipping_date",
+  "ship_mode": "shipping_method",
+  "customer_name": "customer_id", // Fallback to id or name
+  "segment": "customer_type",
+  "country": "country",
+  "city": "city",
+  "state": "region",
+  "postal_code": "zip_code",
+  "region": "region",
+  "sub_category": "category",
+  "sales": "revenue",
+  "profit": "gross_margin",
+  "discount": "discount",
+  "quantity": "sales_quantity",
+
+  // Kaggle Bank Transactions / Credit Card
+  "txn_date": "date",
+  "post_date": "date",
+  "value_date": "date",
+  "debit_amount": "expense_amount",
+  "credit_amount": "income_amount",
+  "txn_desc": "description",
+  "merch_name": "source",
+  "merchant": "source",
+  "mcc": "category",
+  "statement_bal": "closing_cash",
+  
+  // Kaggle Churn / CRM
+  "customerid": "customer_id",
+  "surname": "last_name",
+  "creditscore": "quality_score",
+  "geography": "country",
+  "gender": "gender",
+  "tenure": "customer_tenure",
+  "balance": "balance",
+  "numofproducts": "total_orders",
+  "hascrcard": "has_credit_card",
+  "isactivemember": "status",
+  "estimatedsalary": "estimated_revenue",
+  "exited": "churn_risk",
+
+  // Kaggle HR / Payroll
+  "employee_name": "employee_id",
+  "empid": "employee_id",
+  "salary": "regular_pay",
+  "position": "role",
+  "dob": "birth_date",
+  "sex": "gender",
+  "maritaldesc": "marital_status",
+  "employmentstatus": "status",
+  "managername": "manager_id",
+  "performancescore": "quality_score",
+  
+  // Kaggle Marketing / Ads
+  "campaign_id": "campaign_id",
+  "clicks": "clicks",
+  "impressions": "impressions",
+  "cost": "spend",
+  "conversions": "conversions",
+
+  // --- OPEN DATA / HUGGING FACE / DONNEES QUEBEC ADDITIONS ---
+  // Quebec / Canadian standard terminology (Tax, accounting, retail)
+  "tps": "tax_amount",
+  "tvq": "tax_amount",
+  "taxes": "tax_amount",
+  "rabais": "discount",
+  "escompte": "discount",
+  "no_facture": "order_id",
+  "date_vente": "date",
+  "article": "product_name",
+  "qte": "quantity",
+  "succursale": "location_id",
+  
+  // Finance / Accounting Data (Accounts receivable/payable, Cash flow)
+  "accounts_receivable": "amount", // Contextual mapping for debts
+  "creances": "amount",
+  "comptes_clients": "amount",
+  "accounts_payable": "expense_amount",
+  "comptes_fournisseurs": "expense_amount",
+  "encours": "balance",
+  "solde_bancaire": "closing_cash",
+  "available_cash": "closing_cash",
+  "cash_flow": "amount", // General money movement
+  
+  // Inventory & Supply Chain
+  "inventory": "stock_quantity",
+  "inventaire": "stock_quantity",
+  "stock_on_hand": "stock_quantity",
+  "fournisseur": "supplier_name",
+  "supplier": "supplier_name",
+  "lead_time": "delivery_time",
+  "cogs": "cogs", // Cost of Goods Sold
+  "cout_des_marchandises": "cogs",
+  "coutant": "unit_cost",
+  
+  // Store Performance & Business KPIs
+  "store_performance": "quality_score",
+  "store_id": "location_id",
+  "demand_forecast": "predicted_sales",
+  "economic_indicator": "external_metric",
+  "competitor_price": "competitor_price"
 };
 
 export function normalizeKeys(row: Record<string, any>, properties?: Record<string, any>): Record<string, any> {
@@ -1609,6 +1713,7 @@ export function normalizeRow(
       client: r.client || r.customer_id || "",
       product: r.product || r.product_id || "",
       import_id: importId,
+      original_data: JSON.stringify(row)
     };
   }
 
@@ -1620,8 +1725,8 @@ export function normalizeRow(
     if (cin !== null || cout !== null) r.net_cash_flow = (cin || 0) - (cout || 0);
   }
 
-  // Les exports de campagnes contiennent la dépense, le revenu et les
-  // conversions, mais presque jamais le ROAS ni le CAC : sans dérivation, la
+  // Les exports de campagnes contiennent la dǸpense, le revenu et les
+  // conversions, mais presque jamais le ROAS ni le CAC : sans dǸrivation, la
   // page Marketing affichait des colonnes vides alors que tout est calculable.
   if (entityName === "Campaign") {
     const spend = parseNumber(r.spend);
@@ -1659,5 +1764,6 @@ export function normalizeRow(
     // else: field not in schema, skip
   }
   if (importId) cleaned["import_id"] = importId;
+  if (properties && properties.original_data) cleaned["original_data"] = JSON.stringify(row);
   return cleaned;
 }

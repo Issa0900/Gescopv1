@@ -3,12 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import ForecastCard from "@/components/previsions/ForecastCard";
 import EmptyState from "@/components/EmptyState";
-import { TrendingUp, AlertTriangle, Upload, Info } from "lucide-react";
+import { TrendingUp, AlertTriangle, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 import { fetchAll } from "@/lib/fetchAll";
 import { financialMonthlySeries } from "@/lib/financialData";
+import { monthlyAggComplete } from "@/lib/periods";
 import { useCompany } from "@/hooks/useCompany";
 import { computeLiveAlerts } from "@/lib/liveAlerts";
 

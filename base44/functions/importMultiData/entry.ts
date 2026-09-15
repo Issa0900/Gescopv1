@@ -7,6 +7,7 @@ import {
   construireEchantillon, type PlanImport,
 } from "../../shared/importPlan.ts";
 import { insertRows, missingRequired } from "../../shared/bulkInsert.ts";
+import { deduplicateRows } from "../../shared/deduplication.ts";
 import { getSchema, ENTITY_SCHEMAS } from "../../shared/entitySchemas.ts";
 import * as XLSX from "npm:xlsx@0.18.5";
 
@@ -147,21 +148,6 @@ async function importRows(
   fileUrl = "",
   memoire?: { plan: PlanImport | null; signature: string; confirme: boolean },
 ) {
-  // Ré-importer le même fichier/feuille dupliquait chaque ligne : un fichier
-  // importé 6 fois donnait 6 copies et des chiffres contradictoires partout.
-  const already = await base44.entities.Import.filter({ file_name: fileLabel, entity_type: entityName }, null, 1);
-  if (already && already.length > 0) {
-    return {
-      entity: entityName,
-      status: "ignore",
-      rows_read: rows.length,
-      rows: 0,
-      quarantined: 0,
-      message: "Déjà importé — supprimez d'abord l'import existant pour le remplacer (évite les doublons).",
-      rateLimited: false,
-    };
-  }
-
   const schema = getSchema(entityName);
   const properties = schema ? schema.properties : null;
   const required = schema ? schema.required : [];
@@ -215,10 +201,17 @@ async function importRows(
     toCreate.push(normalized);
   });
 
-  const { created, quarantined: rejected, errors } = await insertRows(base44, entityName, toCreate);
-  quarantined += rejected;
-
   const messages: string[] = [];
+
+  // GESCOP Phase 5 SSOT: Deduplication
+  const { newRows, duplicateCount } = await deduplicateRows(base44, entityName, toCreate);
+  if (duplicateCount > 0) {
+    messages.push(`${duplicateCount} doublon(s) détecté(s) et ignoré(s).`);
+  }
+
+  const { created, quarantined: rejected, errors } = await insertRows(base44, entityName, newRows);
+  quarantined += rejected + duplicateCount;
+
   // Refused values first: this is the actionable one, and it used to be
   // reported as a missing field, which sent users looking for a column that
   // was right there in their file.
@@ -328,13 +321,64 @@ export default async function (req: Request) {
             const plan = analyse.plan;
 
             if (analyseSeule) {
+              const lecture = lignesSelonPlan(plan, matrix, file_name);
+              const totalRows = Math.max(matrix.length - plan.ligne_entetes - 1 - (plan.lignes_ignorees?.length || 0), 0);
+              
+              let validCount = 0;
+              let mappedCount = 0;
+              const quarantine: any[] = [];
+              const properties = getSchema(plan.entite)?.properties || null;
+              const required = getSchema(plan.entite)?.required || [];
+
+              if (plan.entite && properties) {
+                for (let i = 0; i < lecture.rows.length; i++) {
+                  const row = lecture.rows[i];
+                  const enumIssues: { field: string; value: string; allowed: string[] }[] = [];
+                  const normalized = normalizeRow(plan.entite, row, "tmp", properties, sourceType, enumIssues);
+                  
+                  const errors: string[] = [];
+                  const missing = missingRequired(normalized, required);
+                  if (missing.length > 0) errors.push(`Champs obligatoires manquants: ${missing.join(", ")}`);
+                  if (enumIssues.length > 0) {
+                    enumIssues.forEach(e => errors.push(`Valeur refusée pour ${e.field}: "${e.value}" (acceptées: ${e.allowed.join(", ")})`));
+                  }
+                  
+                  if (Object.keys(normalized).filter(k => k !== "import_id").length === 0) {
+                    errors.push("Ligne vide ou aucune colonne mappée.");
+                  } else {
+                    mappedCount++;
+                  }
+
+                  if (errors.length > 0) {
+                    if (quarantine.length < 50) {
+                      quarantine.push({ rowIndex: i + plan.ligne_entetes + 1, original: row, mapped: normalized, errors });
+                    }
+                  } else {
+                    validCount++;
+                  }
+                }
+              }
+
+              const completeness = lecture.rows.length > 0 ? (mappedCount / lecture.rows.length) * 100 : 0;
+              const validity = lecture.rows.length > 0 ? (validCount / lecture.rows.length) * 100 : 0;
+              const quality_score = Math.round((completeness + validity) / 2);
+
               results.push({
                 file_name: label, sheet: nomFeuille, entity: plan.entite,
                 plan, signature: analyse.signature, refus: analyse.refus, analyse_erreur: analyse.erreur,
                 apercu: lignesSelonPlan(plan, matrix, file_name).rows.slice(0, 5),
+                apercu: lecture.rows.slice(0, 5),
                 echantillon: construireEchantillon(matrix, 8),
                 rows_read: Math.max(matrix.length - plan.ligne_entetes - 1, 0),
+                rows_read: totalRows,
                 status: "analyse",
+                quality: {
+                  score: quality_score || 0,
+                  valid_rows: validCount,
+                  total_rows: totalRows,
+                  quarantined_rows: quarantine.length,
+                  quarantine_samples: quarantine
+                }
               });
               continue;
             }

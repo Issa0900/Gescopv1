@@ -3,8 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import EmptyState from "@/components/EmptyState";
 import StatCard from "@/components/StatCard";
-import { Users, Banknote, Upload, PieChart, TrendingUp, Building2, UserCircle, Briefcase, Calendar } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Users, Banknote, Upload, PieChart, TrendingUp, Building2, UserCircle, Briefcase } from "lucide-react";
 import { useKpiEngineTimeSeries } from "@/lib/useKpiEngine";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { motion } from "framer-motion";
@@ -65,6 +64,19 @@ export default function RessourcesHumaines() {
       });
     }
 
+    // Fallback: extract salaries from transactions if Payroll entity data is missing
+    if (totalPayroll === 0 && data.transactions && data.transactions.length > 0) {
+      const salaryKeywords = ["salaire", "salaires", "paie", "payroll", "masse salariale", "remuneration"];
+      data.transactions.forEach(t => {
+        const cat = (t.category || "").toLowerCase();
+        const type = (t.type || "").toLowerCase();
+        const desc = (t.description || "").toLowerCase();
+        if (salaryKeywords.some(k => cat.includes(k) || type.includes(k) || desc.includes(k))) {
+          totalPayroll += Math.abs(Number(t.amount) || 0);
+        }
+      });
+    }
+
     const revPerEmp = headcount > 0 ? (totalRev / headcount) : 0;
     const ratio = totalRev > 0 ? (totalPayroll / totalRev) : 0;
 
@@ -82,7 +94,7 @@ export default function RessourcesHumaines() {
     );
   }
 
-  if (!data?.employees?.length && !data?.payrolls?.length) {
+  if (!data?.employees?.length && !data?.payrolls?.length && metrics.totalPayroll === 0) {
     return (
       <EmptyState
         icon={Users}

@@ -223,7 +223,12 @@ export const KPI_REGISTRY = Object.freeze({
     calculate: (deps) => {
       if (!deps.cash_closing) return 0;
       if (deps.net_burn_rate >= 0) return Infinity; // Profitable, infinite runway
-      return deps.cash_closing / Math.abs(deps.net_burn_rate);
+      
+      const periodDays = deps.period_days || 30;
+      const dailyBurnRate = Math.abs(deps.net_burn_rate) / periodDays;
+      const monthlyBurnRate = dailyBurnRate * 30.416; // Average days in a month
+      
+      return deps.cash_closing / monthlyBurnRate;
     },
   },
 
@@ -272,6 +277,8 @@ export const KPI_REGISTRY = Object.freeze({
       // the engine should adjust the multiplier (e.g., * 30 instead of 365).
       // For now, we return a simple ratio, engine handles period normalization.
       return (deps.bfr / deps.total_revenue) * 365;
+      const periodDays = deps.period_days || 365;
+      return (deps.bfr / deps.total_revenue) * periodDays;
     },
   },
 
@@ -306,6 +313,89 @@ export const KPI_REGISTRY = Object.freeze({
     calculate: (deps) => {
       if (!deps.marketing_spend || deps.marketing_spend === 0) return 0;
       return (deps.campaign_revenue || 0) / deps.marketing_spend;
+    },
+  },
+
+  marketing_roi: {
+    id: "marketing_roi",
+    name: { fr: "ROI Marketing (%)", en: "Marketing ROI (%)" },
+    level: KPI_LEVELS.KPI_STRATEGIQUE,
+    domain: DOMAINS.MARKETING,
+    semanticType: "ratio",
+    economicRole: ECONOMIC_ROLES.RATIO,
+    dataType: DATA_TYPES.PERCENTAGE,
+    isAdditive: false,
+    dependencies: ["campaign_revenue", "marketing_spend"],
+    calculate: (deps) => {
+      if (!deps.marketing_spend || deps.marketing_spend === 0) return 0;
+      return ((deps.campaign_revenue - deps.marketing_spend) / deps.marketing_spend) * 100;
+    },
+  },
+
+  aov: {
+    id: "aov",
+    name: { fr: "Panier Moyen (AOV)", en: "Average Order Value" },
+    level: KPI_LEVELS.KPI,
+    domain: DOMAINS.VENTES,
+    semanticType: "ratio",
+    economicRole: ECONOMIC_ROLES.RATIO,
+    dataType: DATA_TYPES.CURRENCY,
+    isAdditive: false,
+    dependencies: ["total_revenue"], 
+    // GESCOP Phase 3 SSOT : On utilise context._records pour compter proprement les commandes valides
+    calculate: (deps) => {
+      const records = deps._records || [];
+      const orderCount = records.filter(r => r.order_id && (!r.status || !["annul", "cancel", "void", "draft"].some(s => String(r.status).toLowerCase().includes(s)))).length;
+      if (orderCount === 0) return 0;
+      return (deps.total_revenue || 0) / orderCount;
+    },
+  },
+
+  active_customers: {
+    id: "active_customers",
+    name: { fr: "Clients Actifs", en: "Active Customers" },
+    level: KPI_LEVELS.KPI,
+    domain: DOMAINS.VENTES,
+    semanticType: "count",
+    dataType: DATA_TYPES.NUMBER,
+    isAdditive: false,
+    dependencies: [],
+    calculate: (deps) => {
+      const records = deps._records || [];
+      return records.filter(r => r.customer_id && ["actif", "active"].includes(String(r.status).toLowerCase())).length;
+    },
+  },
+
+  churn_rate: {
+    id: "churn_rate",
+    name: { fr: "Taux d'Attrition (Churn)", en: "Churn Rate" },
+    level: KPI_LEVELS.KPI,
+    domain: DOMAINS.VENTES,
+    semanticType: "ratio",
+    dataType: DATA_TYPES.PERCENTAGE,
+    isAdditive: false,
+    dependencies: [],
+    calculate: (deps) => {
+      const records = deps._records || [];
+      const customers = records.filter(r => r.customer_id);
+      if (customers.length === 0) return 0;
+      const churned = customers.filter(r => ["inactif", "inactive", "perdu", "lost"].includes(String(r.status).toLowerCase())).length;
+      return churned / customers.length;
+    },
+  },
+
+  arpu: {
+    id: "arpu",
+    name: { fr: "Revenu Moyen par Utilisateur (ARPU)", en: "ARPU" },
+    level: KPI_LEVELS.KPI,
+    domain: DOMAINS.VENTES,
+    semanticType: "ratio",
+    dataType: DATA_TYPES.CURRENCY,
+    isAdditive: false,
+    dependencies: ["total_revenue", "active_customers"],
+    calculate: (deps) => {
+      if (!deps.active_customers || deps.active_customers === 0) return 0;
+      return (deps.total_revenue || 0) / deps.active_customers;
     },
   },
 

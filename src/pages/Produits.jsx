@@ -109,6 +109,7 @@ export default function Produits() {
   const stockOf = (p) => {
     const snap = invByProduct[p.product_id];
     return snap && snap.closing_stock != null ? Number(snap.closing_stock) : Number(p.inventory_level) || 0;
+    return invByProduct[p.product_id]?.stock || 0;
   };
   const dormantCount = stock.dormantCount;
   const nearRupture = stock.alerts.map((r) => r.product);
@@ -146,8 +147,19 @@ export default function Produits() {
     totalRevByProduct[pid] = (totalRevByProduct[pid] || 0) + rev;
     if (windowMonths.size > 0 && !windowMonths.has(m)) return;
     salesByProduct[pid] = (salesByProduct[pid] || 0) + qty;
+    if (!o.product_id) return;
+    const q = Number(o.quantity) || 0;
+    totalSalesByProduct[o.product_id] = (totalSalesByProduct[o.product_id] || 0) + q;
+    totalRevByProduct[o.product_id] = (totalRevByProduct[o.product_id] || 0) + (Number(o.total) || 0);
+
+    const key = o.date ? o.date.slice(0, 7) : null;
+    if (key && key >= "2024-01" && key <= currentKey) {
+      windowMonths.add(key);
+      salesByProduct[o.product_id] = (salesByProduct[o.product_id] || 0) + q;
+    }
   });
-  const topBySales = [...products]
+
+  const topBySales = products
     .map((p) => ({
       ...p,
       _recentSales: salesByProduct[p.product_id] || (windowMonths.size > 0 ? 0 : (p.monthly_sales || 0)),
@@ -177,11 +189,11 @@ export default function Produits() {
   const productById = {};
   products.forEach((p) => { productById[p.product_id] = p; });
   let inventoryValueEstimated = false;
-  const inventoryValue = latestInv.reduce((s, i) => {
-    const stated = Number(i.inventory_value);
+  const inventoryValue = products.reduce((s, p) => {
+    const stated = Number(latestInv.find(i => i.product_id === p.product_id)?.inventory_value);
     if (Number.isFinite(stated) && stated > 0) return s + stated;
-    const cost = Number(productById[i.product_id]?.purchase_cost) || 0;
-    const qty = Number(i.closing_stock) || 0;
+    const cost = Number(p.purchase_cost) || 0;
+    const qty = stockOf(p);
     if (cost > 0 && qty > 0) inventoryValueEstimated = true;
     return s + cost * qty;
   }, 0);
@@ -336,7 +348,9 @@ export default function Produits() {
               <th className="px-4 py-3 font-medium">Prix vente</th>
               <th className="px-4 py-3 font-medium">Marge</th>
               <th className="px-4 py-3 font-medium">Unités vendues</th>
-              <th className="px-4 py-3 font-medium">Stock</th>
+              <th className="px-4 py-3 font-medium text-blue-600" title="ESTIMATION : Stock observé - Ventes récentes admissibles">
+                Stock analytique estimé *
+              </th>
               <th className="px-4 py-3 font-medium">Statut</th>
             </tr>
           </thead>

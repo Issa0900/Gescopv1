@@ -201,3 +201,4 @@ if (failed > 0) {
   console.log("🎉 Tous les tests passent !");
   process.exit(0);
 }
+

@@ -1,4 +1,5 @@
 import { latestByKey, currentMonthKey } from "@/lib/periods";
+import { isValidOrderForStock } from "@/lib/transactionClassifier";
 
 export const DEFAULT_STOCK_THRESHOLD = 10;
 export const DEFAULT_DORMANT_MONTHS = 3;
@@ -87,9 +88,18 @@ export function computeStockAlerts(products, inventory, settings, orders) {
 
   const rows = base.map((p) => {
     const snap = invByProduct[p.product_id];
-    const stock = snap && snap.closing_stock != null
+    let stock = snap && snap.closing_stock != null
       ? Number(snap.closing_stock)
       : Number(p.inventory_level) || 0;
+
+    // GESCOP Phase 4 SSOT : Déduction temps réel des Ventes VALIDÉES analytiquement
+    if (snap && snap.date && orders) {
+      const qtySoldAfter = orders
+        .filter(o => o.product_id === p.product_id && o.date > snap.date && isValidOrderForStock(o))
+        .reduce((sum, o) => sum + (Number(o.quantity) || 0), 0);
+      stock -= qtySoldAfter;
+    }
+
     const status = snap?.stock_status || p.status;
     const byStatus = RUPTURE_STATUSES.includes(status);
     const byThreshold = isStockAlert(stock, p.reorder_point, settings);

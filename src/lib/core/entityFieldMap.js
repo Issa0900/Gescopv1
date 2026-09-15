@@ -141,20 +141,23 @@ export const ENTITY_FIELD_MAP = Object.freeze({
     budget:      { canonicalKey: "campaign_budget", semanticType: "budget", grain: GRAIN_TYPES.CAMPAIGN },
     spend:       { canonicalKey: "marketing_spend", semanticType: "expense", grain: GRAIN_TYPES.CAMPAIGN },
     impressions: { canonicalKey: "campaign_impressions", semanticType: "impressions", grain: GRAIN_TYPES.CAMPAIGN },
+    clicks:      { canonicalKey: "campaign_clicks", semanticType: "clicks", grain: GRAIN_TYPES.CAMPAIGN },
     conversions: { canonicalKey: "campaign_conversions", semanticType: "conversions", grain: GRAIN_TYPES.CAMPAIGN },
+    revenue:     { canonicalKey: "campaign_revenue", semanticType: "revenue", grain: GRAIN_TYPES.CAMPAIGN },
+    new_customers:{ canonicalKey: "new_customers", semanticType: "count", grain: GRAIN_TYPES.CAMPAIGN },
     roas:        { canonicalKey: "campaign_roas", semanticType: "ratio", grain: GRAIN_TYPES.CAMPAIGN },
     cac:         { canonicalKey: "campaign_cac", semanticType: "ratio", grain: GRAIN_TYPES.CAMPAIGN },
     status:      { canonicalKey: "campaign_status", semanticType: "status", grain: GRAIN_TYPES.CAMPAIGN },
   },
 
-  // ── CAMPAIGN DAILY ─────────────────────────────────────────────────────
+  // 📈 CAMPAIGN DAILY 📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈
   CampaignDaily: {
     campaign_id: { canonicalKey: "campaign_daily_campaign_id", semanticType: "identifier", grain: GRAIN_TYPES.CAMPAIGN_DAILY },
     date:        { canonicalKey: "campaign_daily_date", semanticType: "date", grain: GRAIN_TYPES.CAMPAIGN_DAILY },
-    spend:       { canonicalKey: "daily_ad_spend", semanticType: "expense", grain: GRAIN_TYPES.CAMPAIGN_DAILY },
-    clicks:      { canonicalKey: "daily_clicks", semanticType: "clicks", grain: GRAIN_TYPES.CAMPAIGN_DAILY },
-    conversions: { canonicalKey: "daily_conversions", semanticType: "conversions", grain: GRAIN_TYPES.CAMPAIGN_DAILY },
-    revenue:     { canonicalKey: "daily_ad_revenue", semanticType: "revenue", grain: GRAIN_TYPES.CAMPAIGN_DAILY },
+    spend:       { canonicalKey: "marketing_spend", semanticType: "expense", grain: GRAIN_TYPES.CAMPAIGN_DAILY }, // Rolled up with Campaign
+    clicks:      { canonicalKey: "campaign_clicks", semanticType: "clicks", grain: GRAIN_TYPES.CAMPAIGN_DAILY }, // Rolled up with Campaign
+    conversions: { canonicalKey: "campaign_conversions", semanticType: "conversions", grain: GRAIN_TYPES.CAMPAIGN_DAILY }, // Rolled up with Campaign
+    revenue:     { canonicalKey: "campaign_revenue", semanticType: "revenue", grain: GRAIN_TYPES.CAMPAIGN_DAILY }, // Rolled up with Campaign
     roas:        { canonicalKey: "daily_roas", semanticType: "ratio", grain: GRAIN_TYPES.CAMPAIGN_DAILY },
   },
 
@@ -260,6 +263,16 @@ export function resolveContextualField(fieldDef, record) {
           semanticType: rule.then.semanticType,
         };
       }
+    }
+  }
+
+  // Fallback for Transaction amounts when the type string was unrecognized: check the amount sign
+  if (fieldDef.defaultFallback?.canonicalKey === "transaction_amount" && record?.amount !== undefined) {
+    const amt = Number(record.amount);
+    if (amt < 0) {
+      return { canonicalKey: "expense_amount", semanticType: "expense" };
+    } else if (amt > 0) {
+      return { canonicalKey: "income_amount", semanticType: "revenue" };
     }
   }
 

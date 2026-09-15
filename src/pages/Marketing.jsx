@@ -28,22 +28,43 @@ export default function Marketing() {
     queryKey: ["customers-acquisition"],
     queryFn: () => fetchAll(base44.entities.Customer),
   });
+  const { data: transactions, isLoading: ltx } = useQuery({
+    queryKey: ["marketing-transactions"],
+    queryFn: () => fetchAll(base44.entities.Transaction),
+  });
 
-  if (lc || ld || lcu) return <p className="text-sm text-muted-foreground">Chargement…</p>;
-  if (!campaigns || campaigns.length === 0) {
+  if (lc || ld || lcu || ltx) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  
+  let totalSpend = (campaigns || []).reduce((s, c) => s + num(c.spend), 0);
+  let totalRevenue = (campaigns || []).reduce((s, c) => s + num(c.revenue), 0);
+  const totalNew = (campaigns || []).reduce((s, c) => s + num(c.new_customers), 0);
+  const totalConversions = (campaigns || []).reduce((s, c) => s + num(c.conversions), 0);
+  
+  // Fallback: extract marketing spend from transactions if campaign data is missing
+  if (totalSpend === 0 && Array.isArray(daily) && daily.length === 0) {
+    const marketingKeywords = ["marketing", "pub", "publicite", "ads", "advertising", "commercialisation"];
+    (transactions || []).forEach(t => {
+      const cat = (t.category || "").toLowerCase();
+      const type = (t.type || "").toLowerCase();
+      const desc = (t.description || "").toLowerCase();
+      if (marketingKeywords.some(k => cat.includes(k) || type.includes(k) || desc.includes(k))) {
+        totalSpend += Math.abs(Number(t.amount) || 0);
+      }
+    });
+  }
+
+  // If even after fallback we have absolutely NO data (no campaigns, no marketing transactions)
+  // we show the empty state.
+  if ((!campaigns || campaigns.length === 0) && totalSpend === 0) {
     return (
       <EmptyState
         icon={Megaphone}
-        title="Aucune campagne"
-        description="Importez vos données marketing pour analyser le ROAS, le CAC et la performance par canal."
+        title="Aucune donnée marketing"
+        description="Importez vos données de campagnes ou vos dépenses marketing pour analyser le ROAS et le CAC."
       />
     );
   }
 
-  const totalSpend = campaigns.reduce((s, c) => s + num(c.spend), 0);
-  const totalRevenue = campaigns.reduce((s, c) => s + num(c.revenue), 0);
-  const totalNew = campaigns.reduce((s, c) => s + num(c.new_customers), 0);
-  const totalConversions = campaigns.reduce((s, c) => s + num(c.conversions), 0);
   const overallRoas = totalSpend > 0 ? (totalRevenue / totalSpend).toFixed(2) : "—";
 
   // "new_customers" is often absent from ad exports. Dividing by it produced a

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2, AlertTriangle, Info, ScanLine, Table2, Brain } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 /**
  * « Voici ce que j'ai compris de votre fichier. »
@@ -156,6 +156,55 @@ export default function PlanConfirmation({ analyses, champsParEntite, entityOpti
                   )}
                 </dl>
               </div>
+
+              {a.quality && (
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-slate-900">Score de Qualité</h4>
+                      <p className="text-sm text-slate-500">Analyse de la complétude et de la validité métier.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-2xl font-bold ${a.quality.score >= 90 ? 'text-emerald-600' : a.quality.score >= 70 ? 'text-amber-500' : 'text-red-600'}`}>
+                        {a.quality.score} / 100
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-sm mt-4">
+                    <div className="flex flex-col gap-1 rounded-lg bg-emerald-50 p-3 border border-emerald-100">
+                      <span className="text-emerald-700 font-medium flex items-center gap-2"><CheckCircle2 className="h-4 w-4"/> Lignes valides</span>
+                      <span className="text-2xl font-bold text-emerald-900">{a.quality.valid_rows}</span>
+                    </div>
+                    <div className="flex flex-col gap-1 rounded-lg bg-rose-50 p-3 border border-rose-100">
+                      <span className="text-rose-700 font-medium flex items-center gap-2"><AlertTriangle className="h-4 w-4"/> Quarantaine (Rejetées)</span>
+                      <span className="text-2xl font-bold text-rose-900">{a.quality.quarantined_rows}</span>
+                    </div>
+                  </div>
+
+                  {a.quality.quarantine_samples && a.quality.quarantine_samples.length > 0 && (
+                    <div className="mt-4 border-t pt-4">
+                      <p className="text-sm font-semibold text-rose-800 mb-2">Exemples de lignes en erreur (ignorer ou corriger le mapping)</p>
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                        {a.quality.quarantine_samples.slice(0, 3).map((err, i) => (
+                          <div key={i} className="text-xs bg-rose-50/50 p-2 rounded border border-rose-100">
+                            <span className="font-semibold text-rose-700 block mb-1">Ligne {err.rowIndex}:</span>
+                            <ul className="list-disc list-inside text-rose-600 mb-2">
+                              {err.errors.map((e, j) => <li key={j}>{e}</li>)}
+                            </ul>
+                            <div className="text-slate-600 bg-white p-1 rounded overflow-hidden text-ellipsis whitespace-nowrap">
+                              {JSON.stringify(err.original)}
+                            </div>
+                          </div>
+                        ))}
+                        {a.quality.quarantine_samples.length > 3 && (
+                          <p className="text-xs text-center text-slate-500 italic mt-2">Et {a.quality.quarantine_samples.length - 3} autres...</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <p className="mb-3 text-sm font-semibold text-slate-900">Correspondance des colonnes</p>

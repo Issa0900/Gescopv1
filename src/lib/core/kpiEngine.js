@@ -84,7 +84,7 @@ export function computeKpi({ kpiId, records, fieldSemantics, context = {} }) {
   }
 
   // 3. Build lineage
-  return buildKpiLineage({
+  const lineage = buildKpiLineage({
     kpiKey: kpiId,
     name: kpiDef.name.fr,
     value,
@@ -92,13 +92,58 @@ export function computeKpi({ kpiId, records, fieldSemantics, context = {} }) {
     formula: `kpiRegistry.${kpiId}.calculate()`,
     sources: uniqueSources,
     status,
-    // Add custom warnings logic if needed
   });
+
+  // Trace Debug (Exigence 9)
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    console.debug(`[KPI DEBUG] ${kpiDef.name.fr}`, {
+      kpi: kpiId,
+      start_date: context.start_date,
+      end_date: context.end_date,
+      period_days: context.period_days,
+      formula: lineage.formula,
+      inputs: resolvedDeps
+    });
+  }
+
+  return lineage;
 }
 
 /**
- * Compute multiple KPIs efficiently by resolving dependencies in the right order.
- *
+ * Determine la période couverte par les données (start_date, end_date, period_days)
+ */
+function determineTemporalContext(records) {
+  let minDate = null;
+  let maxDate = null;
+  
+  for (const r of records) {
+    const dStr = r.date || r.created_at || r.acquisition_date;
+    if (dStr && typeof dStr === 'string' && dStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+      const d = new Date(dStr.slice(0, 10));
+      if (!isNaN(d.valueOf())) {
+        if (!minDate || d < minDate) minDate = d;
+        if (!maxDate || d > maxDate) maxDate = d;
+      }
+    }
+  }
+  
+  if (minDate && maxDate) {
+    const diffTime = Math.abs(maxDate - minDate);
+    // Inclusif : +1 jour pour éviter la division par zéro si un seul jour de données
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return {
+      start_date: minDate.toISOString().slice(0, 10),
+      end_date: maxDate.toISOString().slice(0, 10),
+      period_days: diffDays
+    };
+  }
+  
+  return {};
+}
+
+/**
+ * Compute multiple KPIs in dependency order
+ * 
  * @param {string[]} kpiIds 
  * @param {Array<Object>} records 
  * @param {Map<string, Object>} fieldSemantics 
@@ -106,7 +151,11 @@ export function computeKpi({ kpiId, records, fieldSemantics, context = {} }) {
  */
 export function computeKpiBatch(kpiIds, records, fieldSemantics) {
   const orderedIds = sortKpisTopologically(kpiIds);
-  const context = {};
+  // Injection de la temporalité et des données brutes (Phase 3 SSOT)
+  const context = determineTemporalContext(records);
+  context._records = records; // Permet aux KPI complexes de filtrer sémantiquement
+  context._semantics = fieldSemantics;
+
   const results = new Map();
 
   for (const id of orderedIds) {
@@ -183,7 +232,25 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
   const method = getAggregationMethod(targetSemantic, "period_total");
   let value = null;
   
+  // GESCOP Phase 3 : Validation Sémantique SSOT avant calcul
   const validValues = records
+    .filter(r => {
+      // Filtrage sémantique SSOT basé sur le statut et l'entité
+      if (targetSemantic.source === "Order") {
+        // Utilisation d'un helper rudimentaire ici si on ne peut pas l'importer en haut, 
+        // mais le mieux est de vérifier le status directement.
+        const st = String(r.status || r.payment_status || r.fulfillment_status || "").toLowerCase();
+        if (st.includes("annul") || st.includes("cancel") || st.includes("void") || st.includes("brouillon") || st.includes("draft") || st.includes("rembours")) {
+           return false;
+        }
+      } else if (targetSemantic.source === "Transaction") {
+        const st = String(r.status || "").toLowerCase();
+        if (st.includes("attente") || st.includes("pending") || st.includes("annul") || st.includes("draft")) {
+           return false;
+        }
+      }
+      return true;
+    })
     .map(r => Number(r[targetField]))
     .filter(n => Number.isFinite(n));
 

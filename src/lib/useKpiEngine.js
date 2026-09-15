@@ -51,6 +51,18 @@ export function useKpiEngine(data, kpiIds) {
       const sem = getEntitySemantics('Payroll');
       if (sem) sem.forEach((v, k) => allSemantics.set(k, v));
     }
+    
+    if (data.customers) {
+      allRecords.push(...data.customers);
+      const sem = getEntitySemantics('Customer');
+      if (sem) sem.forEach((v, k) => allSemantics.set(k, v));
+    }
+
+    if (data.products) {
+      allRecords.push(...data.products);
+      const sem = getEntitySemantics('Product');
+      if (sem) sem.forEach((v, k) => allSemantics.set(k, v));
+    }
 
     // 2. Lancer le calcul
     if (allRecords.length === 0 || kpiIds.length === 0) {
@@ -89,6 +101,8 @@ export function useKpiEngineTimeSeries(data, kpiIds, options = { includeCurrentM
     addData('CampaignDaily', data.campaignDaily);
     addData('Employee', data.employees);
     addData('Payroll', data.payrolls);
+    addData('Customer', data.customers);
+    addData('Product', data.products);
 
     if (allRecords.length === 0 || kpiIds.length === 0) {
       return { timeSeries: [], available: false };

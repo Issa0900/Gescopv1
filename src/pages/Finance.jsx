@@ -9,13 +9,17 @@ import {
   BarChart, Bar, Legend,
 } from "recharts";
 import { fetchAll } from "@/lib/fetchAll";
-import { financialSummary, financialMonthlySeries } from "@/lib/financialData";
+import { financialMonthlySeries } from "@/lib/financialData";
+import { useKpiEngine } from "@/lib/useKpiEngine";
 
 export default function Finance() {
   const { data: transactions, isLoading: ltx } = useQuery({
     queryKey: ["transactions-summary"],
     queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
   });
+  
+  // GESCOP Phase 4 SSOT
+  const { kpis: engineKpis } = useKpiEngine({ transactions: transactions || [] }, ["total_revenue", "total_expense", "gross_margin_amount"]);
   
   if (ltx) return <p className="text-sm text-muted-foreground">Chargement...</p>;
   if (!transactions || transactions.length === 0) {
@@ -28,7 +32,13 @@ export default function Finance() {
     );
   }
 
-  const summary = financialSummary(transactions);
+  // Consommation officielle de la SSOT
+  const summary = {
+    revenue: engineKpis.get("total_revenue")?.value || 0,
+    expense: engineKpis.get("total_expense")?.value || 0,
+    netIncome: engineKpis.get("gross_margin_amount")?.value || 0,
+    marginPct: (engineKpis.get("total_revenue")?.value || 0) > 0 ? ((engineKpis.get("gross_margin_amount")?.value || 0) / (engineKpis.get("total_revenue")?.value || 0)) * 100 : 0,
+  };
   const monthly = financialMonthlySeries(transactions);
   const chartData = monthly.slice(-12).map((point) => {
     return {

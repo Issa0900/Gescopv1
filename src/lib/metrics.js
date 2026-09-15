@@ -126,6 +126,10 @@ function shiftMonthKey(key, n) {
   return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, "0")}`;
 }
 
+/**
+ * @deprecated GESCOP Phase 3 SSOT : Ce calcul comportemental décentralisé doit être abandonné.
+ * Veuillez consommer `churn_rate` via `useKpiEngine()`.
+ */
 export function churnStats(customers, orders, inactiveMonths = DEFAULT_INACTIVE_MONTHS) {
   const rows = customers || [];
   const total = rows.length;
@@ -193,6 +197,10 @@ export function churnStats(customers, orders, inactiveMonths = DEFAULT_INACTIVE_
  * The numerator covers every customer that ordered, so the denominator must too.
  * Dividing all-customer revenue by ACTIVE customers only was inflating the
  * figure by 1/(share of active) — a 2x overstatement at 50% churn.
+ */
+/**
+ * @deprecated GESCOP Phase 3 SSOT : Utilisez `ltv` via `useKpiEngine()`.
+ * Le calcul historique sur l'ensemble de la base faussait l'analyse périodique.
  */
 export function customerValue(orders, customers, marginPct = null) {
   const ord = orders || [];
