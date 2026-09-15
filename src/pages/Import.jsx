@@ -344,7 +344,7 @@ export default function ImportPage() {
       </motion.div>
 
       {/* Entre la lecture et l'ecriture : l'utilisateur valide ce qui a ete compris. */}
-      {analyses && !importResult && (
+      {analyses && !importResult ? (
         <PlanConfirmation
           analyses={analyses}
           champsParEntite={champsParEntite}
@@ -353,7 +353,7 @@ export default function ImportPage() {
           onAnnuler={annulerAnalyse}
           enCours={processing}
         />
-      )}
+      ) : null}
 
       {importResult && (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50/30 p-6">
