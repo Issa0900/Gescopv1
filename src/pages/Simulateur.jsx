@@ -6,11 +6,10 @@ import EmptyState from "@/components/EmptyState";
 import { Calculator, Upload, TrendingUp, TrendingDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn, formatPct } from "@/lib/utils";
-import { currentMonthKey } from "@/lib/periods";
 import { fetchAll } from "@/lib/fetchAll";
+import { financialMonthlySeries } from "@/lib/financialData";
 import { isIncome } from "@/lib/transactionClassifier";
 import { useCompany } from "@/hooks/useCompany";
-import { useKpiEngineTimeSeries } from "@/lib/useKpiEngine";
 import { computeLiveAlerts } from "@/lib/liveAlerts";
 
 export default function Simulateur() {
@@ -20,7 +19,7 @@ export default function Simulateur() {
   const [variableShare, setVariableShare] = useState(60);
 
   const { data: transactions, isLoading } = useQuery({
-    queryKey: ["transactions-sim"],
+    queryKey: ["transactions-summary"],
     queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
   });
 
@@ -42,29 +41,21 @@ export default function Simulateur() {
     enabled: !!transactions
   });
 
-  const semanticTimeSeries = useKpiEngineTimeSeries(
-    { transactions: transactions || [] },
-    ["total_revenue", "total_expense"],
-    { includeCurrentMonth: false }
-  );
-
   const current = useMemo(() => {
-    if (!semanticTimeSeries.available || semanticTimeSeries.timeSeries.length === 0) return null;
-    const ts = semanticTimeSeries.timeSeries;
-    // Prends le dernier mois complet calculé par le moteur sémantique
-    const last = ts[ts.length - 1];
-    const baseMonth = last.date;
-    const income = last.total_revenue || 0;
-    const expense = last.total_expense || 0;
+    const series = financialMonthlySeries(transactions || []);
+    if (series.length === 0) return null;
+    const last = series[series.length - 1];
+    const baseMonth = last.month;
+    const income = last.income || 0;
+    const expense = last.expense || 0;
     const margin = income - expense;
 
-    // Récupérer le volume depuis les transactions pour le mois de base (non fourni par le moteur financier)
-    const baseTxns = (transactions || []).filter(t => (t.date || "").startsWith(baseMonth) && isIncome(t));
+    const baseTxns = (transactions || []).filter((t) => (t.date || "").startsWith(baseMonth) && isIncome(t));
     const volume = baseTxns.length || 1;
     const avgPrice = income / volume;
     
     return { income, expense, margin, volume, avgPrice, baseMonth };
-  }, [semanticTimeSeries, transactions]);
+  }, [transactions]);
 
   const sim = useMemo(() => {
     if (!current) return null;

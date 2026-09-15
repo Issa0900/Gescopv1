@@ -10,7 +10,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { Sparkles, RefreshCw, ArrowRight, Check, Loader2, ChevronDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { useKpiEngine, useKpiEngineTimeSeries } from "@/lib/useKpiEngine";
+import { financialSummary, financialMonthlySeries } from "@/lib/financialData";
+import { latestCashBalance } from "@/lib/metrics";
 import { validateChartAggregation, METRIC_TYPES, AGG_METHODS } from "@/components/ChartValidation";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import HealthHero from "@/components/dashboard/HealthHero";
@@ -126,11 +127,11 @@ export default function Dashboard() {
     queryFn: () => fetchAll(base44.entities.Inventory, "-date"),
   });
   const { data: campaigns } = useQuery({
-    queryKey: ["campaigns-dashboard"],
+    queryKey: ["campaigns-summary"],
     queryFn: () => fetchAll(base44.entities.Campaign),
   });
   const { data: campaignDaily } = useQuery({
-    queryKey: ["campaign-daily-dashboard"],
+    queryKey: ["campaign-daily-summary"],
     queryFn: () => fetchAll(base44.entities.CampaignDaily, "-date"),
   });
   const [showDetails, setShowDetails] = useState(false);
@@ -167,23 +168,6 @@ export default function Dashboard() {
     }
   };
 
-  // --- NOUVEAU MOTEUR SÉMANTIQUE (GESCOP CORE) ---
-  const semanticEngine = useKpiEngine(
-    { 
-      transactions: (transactions || []).filter(t => inPeriod(t.date)), 
-      cashflow: cashflow, 
-      orders: orders,
-      expenses: (expenseRecords || []).filter(e => inPeriod(e.date))
-    },
-    ["total_revenue", "total_expense", "gross_margin_amount", "net_income", "cash_closing"]
-  );
-
-  const semanticTimeSeries = useKpiEngineTimeSeries(
-    { transactions: transactions || [], expenses: expenseRecords || [] },
-    ["total_revenue", "total_expense", "net_margin_pct"],
-    { includeCurrentMonth: false }
-  );
-
   // === COMPUTATIONS (Hybride : Ancien + Nouveau) ===
   const computed = useMemo(() => {
     // Period-filtered totals (for KPI cards)
@@ -192,11 +176,12 @@ export default function Dashboard() {
     const fExpenses = (expenseRecords || []).filter((e) => inPeriod(e.date));
     const fCustomers = (customers || []).filter((c) => inPeriod(c.acquisition_date));
 
-    let totalIncome = semanticEngine.kpis?.get("total_revenue")?.value || 0;
-    let totalExpensesTxn = semanticEngine.kpis?.get("total_expense")?.value || 0;
-    let margin = semanticEngine.kpis?.get("net_income")?.value || 0;
-    let marginPct = totalIncome > 0 ? (margin / totalIncome) * 100 : 0;
-    let latestCash = semanticEngine.kpis?.get("cash_closing")?.value || (cashflow || [])[0]?.closing_cash || 0;
+    const financial = financialSummary(fTxn);
+    let totalIncome = financial.revenue;
+    let totalExpensesTxn = financial.expense;
+    let margin = financial.netIncome;
+    let marginPct = financial.marginPct;
+    let latestCash = latestCashBalance(cashflow) || 0;
 
     // Fallback if no transactions but orders
     if (totalIncome === 0 && (orders || []).length > 0) {
@@ -212,9 +197,13 @@ export default function Dashboard() {
     const totalExpenseAmount = fExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
     // Full monthly data (ALL records, not period-filtered) for charts and trends
-    const revenueMonthly = semanticTimeSeries.timeSeries.map(pt => ({ month: pt.date, val: pt.total_revenue || 0 }));
-    const expenseMonthly = semanticTimeSeries.timeSeries.map(pt => ({ month: pt.date, val: pt.total_expense || 0 }));
-    const marginMonthly = semanticTimeSeries.timeSeries.map(pt => ({ month: pt.date, val: pt.net_margin_pct || 0 }));
+    const financialMonthly = financialMonthlySeries(transactions || []);
+    const revenueMonthly = financialMonthly.map((pt) => ({ month: pt.month, val: pt.income }));
+    const expenseMonthly = financialMonthly.map((pt) => ({ month: pt.month, val: pt.expense }));
+    const marginMonthly = financialMonthly.map((pt) => ({
+      month: pt.month,
+      val: pt.income > 0 ? (pt.margin / pt.income) * 100 : 0,
+    }));
     
     // Cash is a balance, not a flow: the running month's closing balance is valid.
     const cashMode = validateChartAggregation(METRIC_TYPES.STOCK, "last", "Cash");
@@ -293,7 +282,7 @@ export default function Dashboard() {
       projectedRevenue, projectedCash, forecastRevData, forecastCashData,
       revProbability, cashRisk,
     };
-  }, [transactions, orders, customers, cashflow, expenseRecords, period, cutoffDate, semanticEngine]);
+  }, [transactions, orders, customers, cashflow, expenseRecords, period, cutoffDate]);
 
   // === INSIGHTS ===
   const insights = useMemo(() => {

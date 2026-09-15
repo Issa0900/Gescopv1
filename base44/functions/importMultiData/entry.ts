@@ -37,6 +37,19 @@ export function detect(label: string, headers: string[], fileGuess?: string | nu
   return { entity: null, via: null };
 }
 
+function forceTransactionColumns(plan: PlanImport): PlanImport {
+  if (plan.entite !== "Transaction") return plan;
+  return {
+    ...plan,
+    colonnes: plan.colonnes.map((col: any) => {
+      const key = String(col.colonne || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_");
+      if (key === "type") return { ...col, champ: "type" };
+      if (key === "category" || key === "categorie") return { ...col, champ: "category" };
+      return col;
+    }),
+  };
+}
+
 
 /**
  * Plan de lecture d'une feuille : memoire, puis IA, puis regles.
@@ -61,7 +74,7 @@ async function planPourFeuille(
       { plan_signature: signature, plan_confirmed: true }, "-created_date", 1,
     );
     if (memo && memo.length > 0 && memo[0].read_plan && memo[0].read_plan.colonnes) {
-      const plan: PlanImport = { ...memo[0].read_plan, origine: "memoire", corrections: [] };
+      const plan: PlanImport = forceTransactionColumns({ ...memo[0].read_plan, origine: "memoire", corrections: [] });
       if (manual) plan.entite = manual;
       return { plan, signature, refus: [] as string[], erreur: undefined as string | undefined };
     }
@@ -77,6 +90,17 @@ async function planPourFeuille(
     }),
     { matrix, nomFichier: label, entitesPossibles: Object.keys(ENTITY_SCHEMAS), planDeSecours: secours },
   );
+  const entiteParNom = detectEntityByName(label);
+  const entetesNormalisees = entetes.map((h) => String(h).trim());
+  if (entiteParNom && entiteCompatible(entiteParNom, entetesNormalisees)) {
+    res.plan.entite = entiteParNom;
+    if (entiteParNom === "Transaction") {
+      // The semantic recognizer can confuse Transaction.category with type.
+      // For this entity the two headers are unambiguous: preserve them before
+      // the plan reaches the write phase.
+      res.plan = forceTransactionColumns(res.plan);
+    }
+  }
   // Le type choisi explicitement par l'utilisateur n'est jamais discute.
   if (manual) res.plan.entite = manual;
   return { ...res, signature };

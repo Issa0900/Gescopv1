@@ -418,9 +418,24 @@ export function planParRegles(
     colonnes: entetes.map((c: string) => {
       const rec = recognizedCols.get(c);
       let champ = null;
+
+      // Exact schema fields always win over semantic guesses. This prevents
+      // ambiguous headers such as category, revenue, status, or type from
+      // being redirected to another valid field by the recognizer.
+      if (entite) {
+        const schema = getSchema(entite);
+        if (schema) {
+          const cleanC = c.toLowerCase().trim();
+          const noAccentC = cleanC.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_");
+          const fields = Object.keys(schema.properties);
+          if (fields.includes(c)) champ = c;
+          else if (fields.includes(cleanC)) champ = cleanC;
+          else if (fields.includes(noAccentC)) champ = noAccentC;
+        }
+      }
       
       // 1. Semantic contextual recognition
-      if (rec && rec.confidence >= 0.5 && rec.canonicalKey !== 'unknown') {
+      if (!champ && rec && rec.confidence >= 0.5 && rec.canonicalKey !== 'unknown') {
          const k = rec.canonicalKey;
          if (k === 'revenue_amount' && entite === 'Order') champ = 'total';
          else if (k === 'revenue_amount' && entite === 'Campaign') champ = 'revenue';

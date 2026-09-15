@@ -689,13 +689,13 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "product_name": "product_name",
   "item_name": "product_name",
   "product_description": "product_name",
-  "categorie": "type",
+  "categorie": "category",
   "categorie_produit": "category",
   "famille_produit": "category",
   "groupe_produit": "category",
   "classe_produit": "category",
   "segment_produit": "category",
-  "category": "type",
+  "category": "category",
   "product_category": "category",
   "product_family": "category",
   "product_group": "category",
@@ -1232,7 +1232,11 @@ export function normalizeKeys(row: Record<string, any>, properties?: Record<stri
   for (const [k, v] of Object.entries(row || {})) {
     const lower = k.toLowerCase().trim();
     const canon = cleCanonique(k);
-    const alias = FIELD_ALIASES[lower]
+    const direct = schemaFields.includes(k) ? k
+      : schemaFields.includes(lower) ? lower
+        : schemaFields.includes(canon) ? canon
+          : null;
+    const alias = direct || FIELD_ALIASES[lower]
       || FIELD_ALIASES[lower.replace(/[\s-]/g, "_")]
       || FIELD_ALIASES[canon]
       || ALIAS_CANONIQUES[canon]
@@ -1533,6 +1537,17 @@ export function normalizeRow(
 ): Record<string, any> {
   const r = normalizeKeys(row, properties);
 
+  // Preserve explicit Transaction headers before aliases or legacy plans can
+  // reinterpret them. This is intentionally based on the raw row: a previous
+  // version mapped `catégorie` to `type`, so looking only at `r` was already
+  // too late to recover the distinction.
+  if (entityName === "Transaction") {
+    const rawType = Object.entries(row || {}).find(([key]) => cleCanonique(key) === "type")?.[1];
+    const rawCategory = Object.entries(row || {}).find(([key]) => ["category", "categorie"].includes(cleCanonique(key)))?.[1];
+    if (rawType !== undefined) r.type = rawType;
+    if (rawCategory !== undefined) r.category = rawCategory;
+  }
+
   // A single "name"/"nom" column on an entity that stores first + last name would
   // otherwise be dropped entirely, leaving nameless records.
   if (properties?.first_name && r.name && !r.first_name) {
@@ -1550,11 +1565,30 @@ export function normalizeRow(
     // comptees dans les volumes, invisibles dans les sommes.
     const amount = parseNumber(r.amount);
     let type = (r.type || "").toLowerCase().trim();
+    const categoryType = (r.category || "").toLowerCase().trim();
+    const recognizedTypes = ["revenu", "revenue", "credit", "entree", "income", "depense", "expense", "debit", "sortie", "decaissement", "remboursement", "achat", "charge", "refund", "transfer", "transfert"];
+    const typeNormRaw = stripAccents(type);
+    const categoryNormRaw = stripAccents(categoryType);
+
+    if (!recognizedTypes.includes(typeNormRaw)) {
+      // Le champ "type" contient une catégorie métier (ex: "utilitaires", "salaires").
+      // On la sauvegarde dans category si category est vide, et on déduit le type
+      // financier réel à partir du signe du montant ou du contenu de category.
+      if (!categoryType) {
+        r.category = r.type; // ex: "utilitaires"
+      }
+      if (recognizedTypes.includes(categoryNormRaw)) {
+        type = categoryType; // category avait un type reconnu
+      } else {
+        // Déduction par signe du montant
+        type = (amount ?? 0) >= 0 ? "income" : "expense";
+      }
+    }
     if (!type) type = (amount ?? 0) >= 0 ? "income" : "expense";
     const typeNorm = stripAccents(type);
     if (["revenu", "revenue", "credit", "entree", "income"].includes(typeNorm)) type = "income";
     if (["depense", "expense", "debit", "sortie"].includes(typeNorm)) type = "expense";
-    if (["remboursement", "refund", "transfer", "transfert"].includes(typeNorm)) type = "expense";
+    if (["achat", "charge", "charges", "frais", "remboursement", "refund", "transfer", "transfert"].includes(typeNorm)) type = "expense";
     // An unparseable date must NOT silently become today. Those rows used to
     // land in the in-progress month, which every calculation excludes — so they
     // vanished from all analyses while still inflating the all-time totals, and
@@ -1562,12 +1596,13 @@ export function normalizeRow(
     // a date. Leaving the field empty sends the row to quarantine, where it is
     // counted and reported to the user.
     const parsedDate = parseDate(r.date);
+    const normalizedType = ["income", "expense"].includes(type) ? type : undefined;
     return {
       date: parsedDate,
       description: r.description || "",
       // undefined (et non 0) : missingRequired met alors la ligne en quarantaine.
       amount: amount === null ? undefined : Math.abs(amount),
-      type,
+      type: normalizedType,
       category: r.category || "",
       source: sourceType || "csv",
       currency: "CAD",

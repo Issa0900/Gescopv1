@@ -79,12 +79,12 @@ export default function Tresorerie() {
   // Payroll and recurring expenses span many months in the import: a raw sum
   // presented as a monthly figure inflates it by the number of months covered.
   const payrollPeriods = new Set(payrollRows.map((p) => p.period || (p.payroll_id || "").slice(0, 7)).filter(Boolean));
-  const totalPayroll = payrollRows.reduce((s, p) => s + (p.total_cost || 0), 0);
+  const totalPayroll = payrollRows.reduce((s, p) => s + (Number(p.total_cost) || 0), 0);
   const avgMonthlyPayroll = payrollPeriods.size > 0 ? totalPayroll / payrollPeriods.size : 0;
   const payrollByPeriod = {};
   payrollRows.forEach((p) => {
     const per = p.period || (p.payroll_id || "").slice(0, 7);
-    payrollByPeriod[per] = (payrollByPeriod[per] || 0) + (p.total_cost || 0);
+    payrollByPeriod[per] = (payrollByPeriod[per] || 0) + (Number(p.total_cost) || 0);
   });
   const payrollChart = Object.entries(payrollByPeriod).sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-8).map(([m, v]) => ({
     mois: m,
@@ -95,7 +95,7 @@ export default function Tresorerie() {
   const recurringByCat = {};
   recurring.forEach((e) => {
     const c = e.category || e.description || "Autre";
-    recurringByCat[c] = (recurringByCat[c] || 0) + (e.amount || 0);
+    recurringByCat[c] = (recurringByCat[c] || 0) + (Number(e.amount) || 0);
   });
   const recurringMonths = new Set(recurring.map((e) => (e.date || "").slice(0, 7)).filter(Boolean));
   const recDiv = Math.max(1, recurringMonths.size);

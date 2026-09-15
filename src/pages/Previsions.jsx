@@ -7,11 +7,9 @@ import { TrendingUp, AlertTriangle, Upload, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
-import { monthlyAggComplete } from "@/lib/periods";
 import { fetchAll } from "@/lib/fetchAll";
-import { isIncome, isExpense, txAmount } from "@/lib/transactionClassifier";
+import { financialMonthlySeries } from "@/lib/financialData";
 import { useCompany } from "@/hooks/useCompany";
-import { useKpiEngineTimeSeries } from "@/lib/useKpiEngine";
 import { computeLiveAlerts } from "@/lib/liveAlerts";
 
 /**
@@ -64,11 +62,11 @@ export default function Previsions() {
   const [metric, setMetric] = useState("ca");
 
   const { data: transactions, isLoading } = useQuery({
-    queryKey: ["transactions-forecast"],
+    queryKey: ["transactions-summary"],
     queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
   });
   const { data: cashflow } = useQuery({
-    queryKey: ["cashflow-forecast"],
+    queryKey: ["cashflow-summary"],
     queryFn: () => fetchAll(base44.entities.Cashflow, "-date"),
   });
   
@@ -89,22 +87,8 @@ export default function Previsions() {
     enabled: !!transactions && !!cashflow
   });
 
-  const semanticTimeSeries = useKpiEngineTimeSeries(
-    { transactions: transactions || [] },
-    ["total_revenue", "total_expense", "net_income"],
-    { includeCurrentMonth: false }
-  );
-
   const result = useMemo(() => {
-    if (!semanticTimeSeries.available || semanticTimeSeries.timeSeries.length === 0) return null;
-
-    const monthly = semanticTimeSeries.timeSeries.map((r, i) => ({
-      month: r.date,
-      income: r.total_revenue || 0,
-      expense: r.total_expense || 0,
-      margin: r.net_income || 0,
-      x: i,
-    }));
+    const monthly = financialMonthlySeries(transactions || []).map((point, i) => ({ ...point, x: i }));
     if (monthly.length < 3) return null;
 
     const xs = monthly.map((d) => d.x);
@@ -149,7 +133,7 @@ export default function Previsions() {
       cumulativeNow, cashDate, cashHistory, shortfall, incomeFit, marginFit,
       cashFlowFit, usesRealCashFlow,
     };
-  }, [semanticTimeSeries, cashflow]);
+  }, [transactions, cashflow]);
 
   const chartData = useMemo(() => {
     if (!result) return [];

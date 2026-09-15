@@ -10,9 +10,11 @@ import {
 } from "recharts";
 import { fetchAll } from "@/lib/fetchAll";
 
+const num = (value) => Number(value) || 0;
+
 export default function Marketing() {
   const { data: campaigns, isLoading: lc } = useQuery({
-    queryKey: ["campaigns"],
+    queryKey: ["campaigns-summary"],
     queryFn: () => fetchAll(base44.entities.Campaign),
   });
   const { data: daily, isLoading: ld } = useQuery({
@@ -38,10 +40,10 @@ export default function Marketing() {
     );
   }
 
-  const totalSpend = campaigns.reduce((s, c) => s + (c.spend || 0), 0);
-  const totalRevenue = campaigns.reduce((s, c) => s + (c.revenue || 0), 0);
-  const totalNew = campaigns.reduce((s, c) => s + (Number(c.new_customers) || 0), 0);
-  const totalConversions = campaigns.reduce((s, c) => s + (Number(c.conversions) || 0), 0);
+  const totalSpend = campaigns.reduce((s, c) => s + num(c.spend), 0);
+  const totalRevenue = campaigns.reduce((s, c) => s + num(c.revenue), 0);
+  const totalNew = campaigns.reduce((s, c) => s + num(c.new_customers), 0);
+  const totalConversions = campaigns.reduce((s, c) => s + num(c.conversions), 0);
   const overallRoas = totalSpend > 0 ? (totalRevenue / totalSpend).toFixed(2) : "—";
 
   // "new_customers" is often absent from ad exports. Dividing by it produced a
@@ -76,12 +78,12 @@ export default function Marketing() {
   campaigns.forEach((c) => {
     const ch = c.channel || "Autre";
     if (!byChannel[ch]) byChannel[ch] = { spend: 0, revenue: 0, conversions: 0, new_customers: 0, impressions: 0, clicks: 0 };
-    byChannel[ch].spend += c.spend || 0;
-    byChannel[ch].revenue += c.revenue || 0;
-    byChannel[ch].conversions += c.conversions || 0;
-    byChannel[ch].new_customers += c.new_customers || 0;
-    byChannel[ch].impressions += c.impressions || 0;
-    byChannel[ch].clicks += c.clicks || 0;
+    byChannel[ch].spend += num(c.spend);
+    byChannel[ch].revenue += num(c.revenue);
+    byChannel[ch].conversions += num(c.conversions);
+    byChannel[ch].new_customers += num(c.new_customers);
+    byChannel[ch].impressions += num(c.impressions);
+    byChannel[ch].clicks += num(c.clicks);
   });
   const channelData = Object.entries(byChannel).map(([ch, v]) => ({
     canal: ch,
@@ -102,8 +104,8 @@ export default function Marketing() {
     const m = (d.date || "").slice(0, 7);
     if (!m) return;
     if (!byMonth[m]) byMonth[m] = { spend: 0, revenue: 0 };
-    byMonth[m].spend += d.spend || 0;
-    byMonth[m].revenue += d.revenue || 0;
+    byMonth[m].spend += num(d.spend);
+    byMonth[m].revenue += num(d.revenue);
   });
   const trendData = Object.entries(byMonth).sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-8).map(([m, v]) => ({
     mois: m,
@@ -203,23 +205,27 @@ export default function Marketing() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {[...campaigns].sort((a, b) => (b.spend || 0) - (a.spend || 0)).map((c) => {
-              const roas = c.spend > 0 ? ((c.revenue || 0) / c.spend).toFixed(1) : "—";
-              const cac = c.new_customers > 0 ? Math.round(c.spend / c.new_customers)
-                : c.conversions > 0 ? Math.round(c.spend / c.conversions)
+            {[...campaigns].sort((a, b) => num(b.spend) - num(a.spend)).map((c) => {
+              const spend = num(c.spend);
+              const revenue = num(c.revenue);
+              const newCustomers = num(c.new_customers);
+              const conversions = num(c.conversions);
+              const roas = spend > 0 ? (revenue / spend).toFixed(1) : "—";
+              const cac = newCustomers > 0 ? Math.round(spend / newCustomers)
+                : conversions > 0 ? Math.round(spend / conversions)
                   : "—";
               return (
                 <tr key={c.id} className="hover:bg-muted/30">
                   <td className="max-w-[180px] truncate px-4 py-3 font-medium" title={c.campaign_name}>{c.campaign_name}</td>
                   <td className="px-4 py-3 uppercase text-muted-foreground">{c.channel}</td>
                   <td className="px-4 py-3">{Math.round(c.budget || 0).toLocaleString()} $</td>
-                  <td className="px-4 py-3">{Math.round(c.spend || 0).toLocaleString()} $</td>
-                  <td className="px-4 py-3">{Math.round(c.revenue || 0).toLocaleString()} $</td>
+                  <td className="px-4 py-3">{Math.round(spend).toLocaleString()} $</td>
+                  <td className="px-4 py-3">{Math.round(revenue).toLocaleString()} $</td>
                   <td className="px-4 py-3">
                     <span className={Number(roas) >= 2 ? "text-emerald-600 font-medium" : Number(roas) < 1 ? "text-red-600 font-medium" : ""}>{roas}</span>
                   </td>
                   <td className="px-4 py-3">{cac === "—" ? "—" : `${cac} $`}</td>
-                  <td className="px-4 py-3">{c.conversions || 0}</td>
+                  <td className="px-4 py-3">{conversions}</td>
                   <td className="px-4 py-3">
                     <span className={c.status === "active" ? "text-emerald-600" : c.status === "terminee" ? "text-muted-foreground" : "text-amber-600"}>
                       {c.status || "—"}

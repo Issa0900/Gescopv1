@@ -9,24 +9,13 @@ import {
   BarChart, Bar, Legend,
 } from "recharts";
 import { fetchAll } from "@/lib/fetchAll";
-import { useKpiEngine, useKpiEngineTimeSeries } from "@/lib/useKpiEngine";
+import { financialSummary, financialMonthlySeries } from "@/lib/financialData";
 
 export default function Finance() {
   const { data: transactions, isLoading: ltx } = useQuery({
     queryKey: ["transactions-summary"],
     queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
   });
-  
-  const semanticEngine = useKpiEngine(
-    { transactions: transactions || [] },
-    ["total_revenue", "total_expense", "net_income", "net_margin_pct"]
-  );
-
-  const semanticTimeSeries = useKpiEngineTimeSeries(
-    { transactions: transactions || [] },
-    ["total_revenue", "total_expense", "net_income", "net_margin_pct"],
-    { includeCurrentMonth: true }
-  );
   
   if (ltx) return <p className="text-sm text-muted-foreground">Chargement...</p>;
   if (!transactions || transactions.length === 0) {
@@ -39,20 +28,17 @@ export default function Finance() {
     );
   }
 
-  // Utilisation des séries temporelles générées par le moteur
-  const chartData = semanticTimeSeries.timeSeries.slice(-12).map((pt) => ({
-    date: pt.date,
-    revenus: Math.round(pt.total_revenue || 0),
-    dépenses: Math.round(pt.total_expense || 0),
-    résultat: Math.round(pt.net_income || 0),
-    marge: Math.round(pt.net_margin_pct || 0)
-  }));
-
-  // Totaux globaux
-  const totalRev = semanticEngine.kpis.get("total_revenue")?.value || 0;
-  const totalExp = semanticEngine.kpis.get("total_expense")?.value || 0;
-  const netInc = semanticEngine.kpis.get("net_income")?.value || 0;
-  const netMargin = semanticEngine.kpis.get("net_margin_pct")?.value || 0;
+  const summary = financialSummary(transactions);
+  const monthly = financialMonthlySeries(transactions);
+  const chartData = monthly.slice(-12).map((point) => {
+    return {
+      date: point.month,
+      revenus: Math.round(point.income),
+      dépenses: Math.round(point.expense),
+      résultat: Math.round(point.margin),
+      marge: point.income > 0 ? Math.round((point.margin / point.income) * 100) : 0,
+    };
+  });
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -62,10 +48,10 @@ export default function Finance() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Chiffre d'affaires" value={`${Math.round(totalRev).toLocaleString("fr-CA")} $`} icon={TrendingUp} accent="bg-emerald-50 text-emerald-600" />
-        <StatCard label="Dépenses totales" value={`${Math.round(totalExp).toLocaleString("fr-CA")} $`} icon={TrendingDown} accent="bg-red-50 text-red-600" />
-        <StatCard label="Résultat Net" value={`${Math.round(netInc).toLocaleString("fr-CA")} $`} icon={DollarSign} accent={netInc < 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"} />
-        <StatCard label="Marge Nette" value={`${netMargin.toFixed(1)} %`} icon={PieChart} accent={netMargin < 0 ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"} />
+        <StatCard label="Chiffre d'affaires" value={`${Math.round(summary.revenue).toLocaleString("fr-CA")} $`} icon={TrendingUp} accent="bg-emerald-50 text-emerald-600" />
+        <StatCard label="Dépenses totales" value={`${Math.round(summary.expense).toLocaleString("fr-CA")} $`} icon={TrendingDown} accent="bg-red-50 text-red-600" />
+        <StatCard label="Résultat Net" value={`${Math.round(summary.netIncome).toLocaleString("fr-CA")} $`} icon={DollarSign} accent={summary.netIncome < 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"} />
+        <StatCard label="Marge Nette" value={`${summary.marginPct.toFixed(1)} %`} icon={PieChart} accent={summary.marginPct < 0 ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"} />
       </div>
 
       <div className="rounded-xl border border-border bg-card p-6 shadow-sm">

@@ -13,6 +13,8 @@ import { computeDomainScores } from "@/lib/domainScores";
 import { fetchAll } from "@/lib/fetchAll";
 import { useCompany } from "@/hooks/useCompany";
 import { getStockAlertSettings, computeStockAlerts } from "@/lib/stockAlerts";
+import { prepareTransactions } from "@/lib/financialData";
+import { isIncome, isExpense, txAmount } from "@/lib/transactionClassifier";
 import {
   monthlyAggComplete,
   lastVal,
@@ -67,7 +69,7 @@ export default function Kpis() {
   });
 
   const { data: transactions } = useQuery({
-    queryKey: ["transactions-kpi"],
+    queryKey: ["transactions-summary"],
     queryFn: async () => {
       const list = await fetchAll(base44.entities.Transaction, "-date");
       return list || [];
@@ -91,7 +93,7 @@ export default function Kpis() {
     staleTime: 0,
   });
   const { data: campaigns } = useQuery({
-    queryKey: ["campaigns-kpi"],
+    queryKey: ["campaigns-summary"],
     queryFn: async () => {
       const list = await fetchAll(base44.entities.Campaign);
       return list || [];
@@ -115,7 +117,7 @@ export default function Kpis() {
     staleTime: 0,
   });
   const { data: cashflow } = useQuery({
-    queryKey: ["cashflow-kpi"],
+    queryKey: ["cashflow-summary"],
     queryFn: async () => {
       const list = await fetchAll(base44.entities.Cashflow, "-date");
       return list || [];
@@ -123,7 +125,7 @@ export default function Kpis() {
     staleTime: 0,
   });
   const { data: campaignDaily } = useQuery({
-    queryKey: ["campaign-daily-kpi"],
+    queryKey: ["campaign-daily-summary"],
     queryFn: async () => {
       const list = await fetchAll(base44.entities.CampaignDaily, "-date");
       return list || [];
@@ -141,22 +143,10 @@ export default function Kpis() {
     // All month-over-month figures use COMPLETE months: the in-progress month
     // holds only a few days of data and would look like a collapse.
     if ((transactions || []).length > 0) {
-      const isIncome = (t) => {
-        if (!t.type) return false;
-        const s = String(t.type).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        return ["income", "entree", "credit", "revenu", "encaissement"].includes(s);
-      };
-      const isExpense = (t) => {
-        if (!t.type) return false;
-        const s = String(t.type).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        return ["expense", "sortie", "debit", "depense", "decaissement", "charge"].includes(s);
-      };
+      const { incomes, expenses } = prepareTransactions(transactions);
 
-      const incomes = transactions.filter(isIncome);
-      const expenses = transactions.filter(isExpense);
-
-      const revMonthly = monthlyAggComplete(incomes, "date", "amount");
-      const expMonthly = monthlyAggComplete(expenses, "date", "amount");
+      const revMonthly = monthlyAggComplete(incomes, "date", "_amount");
+      const expMonthly = monthlyAggComplete(expenses, "date", "_amount");
       const currRev = lastVal(revMonthly);
       const prevRev = prevVal(revMonthly);
       const currExp = lastVal(expMonthly);
@@ -357,7 +347,15 @@ export default function Kpis() {
   // Merge: computed KPIs first, then LLM-generated ones that aren't duplicated
   const allKpis = useMemo(() => {
     const computedNames = new Set(computedKpis.map((k) => k.name.toLowerCase()));
-    const llmExtras = (kpisLLM || []).filter((k) => !computedNames.has((k.name || "").toLowerCase()));
+    const liveMetricNames = new Set([
+      "trésorerie actuelle",
+      "revenu total (commandes)",
+      "revenu commandes",
+    ]);
+    const llmExtras = (kpisLLM || []).filter((k) => {
+      const name = (k.name || "").toLowerCase();
+      return !computedNames.has(name) && !liveMetricNames.has(name);
+    });
     return [...computedKpis, ...llmExtras];
   }, [computedKpis, kpisLLM]);
 
@@ -377,8 +375,14 @@ export default function Kpis() {
   // Trend chart data: revenue, AOV, margin % by month.
   // The in-progress month is excluded — a partial month renders as a false cliff.
   const trendData = useMemo(() => {
-    const revMonthly = monthlyAggComplete((transactions || []).filter((t) => t.type === "income"), "date", "amount");
-    const expMonthly = monthlyAggComplete((transactions || []).filter((t) => t.type === "expense"), "date", "amount");
+    const revMonthly = monthlyAggComplete(
+      (transactions || []).filter(isIncome).map(t => ({ ...t, _amount: txAmount(t, "income") })),
+      "date", "_amount"
+    );
+    const expMonthly = monthlyAggComplete(
+      (transactions || []).filter(isExpense).map(t => ({ ...t, _amount: txAmount(t, "expense") })),
+      "date", "_amount"
+    );
     const orderRevMonthly = monthlyAggComplete(orders || [], "date", "total");
     const orderCntMonthly = monthlyAggComplete(orders || [], "date", "total", "count");
 
