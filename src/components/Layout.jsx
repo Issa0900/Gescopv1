@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "@/components/Sidebar";
-import PrivacyConsentModal from "@/components/PrivacyConsentModal";
 import { useAuth } from "@/lib/AuthContext";
 import { cn } from "@/lib/utils";
 
@@ -10,8 +9,6 @@ export default function Layout() {
   const location = useLocation();
   const [compact, setCompact] = useState(false);
   const { user } = useAuth();
-
-  const needsConsent = user && (!user.public_metadata || !user.public_metadata.privacy_consent_accepted);
 
   return (
     <div className="min-h-screen bg-background">
@@ -33,7 +30,6 @@ export default function Layout() {
           </AnimatePresence>
         </div>
       </main>
-      {needsConsent && <PrivacyConsentModal />}
     </div>
   );
 }
