@@ -157,13 +157,28 @@ export function validerPlan(brut: any, matrix: any[][]): { plan: PlanImport | nu
   const colonnes: PlanColonne[] = [];
   for (const c of Array.isArray(brut.colonnes) ? brut.colonnes : []) {
     if (!c || typeof c.colonne !== "string") continue;
-    const champ = typeof c.champ === "string" && c.champ.trim() !== "" ? c.champ.trim() : null;
+    let champ = typeof c.champ === "string" && c.champ.trim() !== "" ? c.champ.trim() : null;
     if (champ && champsConnus.length > 0 && !champsConnus.includes(champ)) {
-      // L'IA a invente un champ : on garde la colonne, sans rattachement.
+      // L'IA a invente un champ : on garde la colonne, mais on va tenter le rattrapage.
       refus.push(`champ inconnu ignore : ${c.colonne} -> ${champ}`);
-      colonnes.push({ colonne: c.colonne, champ: null });
-      continue;
+      champ = null;
     }
+    
+    // Rattrapage : si l'IA n'a pas su rattacher (ou s'est trompee), on cherche 
+    // une correspondance exacte ou via dictionnaire.
+    if (!champ && champsConnus.length > 0) {
+      const cleanC = c.colonne.toLowerCase().trim();
+      const noAccentC = cleanC.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_");
+      
+      if (champsConnus.includes(c.colonne)) champ = c.colonne;
+      else if (champsConnus.includes(cleanC)) champ = cleanC;
+      else if (champsConnus.includes(noAccentC)) champ = noAccentC;
+      else {
+          const alias = FIELD_ALIASES[cleanC] || FIELD_ALIASES[cleanC.replace(/[\s-]/g, "_")] || FIELD_ALIASES[noAccentC];
+          if (alias && champsConnus.includes(alias)) champ = alias;
+      }
+    }
+    
     const convention = c.convention_date === "JJ/MM" || c.convention_date === "MM/JJ" ? c.convention_date : null;
     const valeurs = c.valeurs && typeof c.valeurs === "object" && !Array.isArray(c.valeurs) ? c.valeurs : null;
     colonnes.push({ colonne: c.colonne, champ, convention_date: convention, valeurs });
