@@ -504,6 +504,6 @@ export default function ImportPage() {
           <Link to="/" className="font-medium underline">Aller au tableau de bord →</Link>
         </p>
       </div>
-    </div>
+    </motion.div>
   );
 }
