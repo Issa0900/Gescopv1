@@ -28,14 +28,31 @@ export function classifyType(typeStr) {
   return null;
 }
 
+function amountForClassification(t) {
+  if (!t) return null;
+  for (const value of [t.amount, t.revenue_amount, t.expense_amount]) {
+    const amount = Number(value);
+    if (Number.isFinite(amount)) return amount;
+  }
+  return null;
+}
+
+function classifyTransaction(t) {
+  const explicit = classifyType(t?.type);
+  if (explicit) return explicit;
+
+  const amount = amountForClassification(t);
+  return amount === null || amount >= 0 ? "income" : "expense";
+}
+
 /** Returns `true` when the transaction should count as revenue. */
 export function isIncome(t) {
-  return classifyType(t?.type) === "income";
+  return classifyTransaction(t) === "income";
 }
 
 /** Returns `true` when the transaction should count as an expense. */
 export function isExpense(t) {
-  return classifyType(t?.type) === "expense";
+  return classifyTransaction(t) === "expense";
 }
 
 /**
@@ -50,15 +67,14 @@ export function isExpense(t) {
 export function txAmount(t, classification) {
   if (!t) return 0;
   const base = Number(t.amount);
-  if (base) return base;
+  if (Number.isFinite(base)) return Math.abs(base);
 
   if (classification === "income") {
-    return Number(t.revenue_amount) || Number(t.expense_amount) || 0;
+    return Math.abs(Number(t.revenue_amount) || Number(t.expense_amount) || 0);
   }
   if (classification === "expense") {
-    return Number(t.expense_amount) || Number(t.revenue_amount) || 0;
+    return Math.abs(Number(t.expense_amount) || Number(t.revenue_amount) || 0);
   }
   // No hint — try both.
-  return Number(t.revenue_amount) || Number(t.expense_amount) || 0;
+  return Math.abs(Number(t.revenue_amount) || Number(t.expense_amount) || 0);
 }
-
