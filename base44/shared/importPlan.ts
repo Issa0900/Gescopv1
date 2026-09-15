@@ -19,7 +19,7 @@
 // la preuve gagne. Voir verifierAvecPreuves().
 
 import { getSchema } from "./entitySchemas.ts";
-import { parseDate, stripAccents, type ConventionDate } from "./importUtils.ts";
+import { parseDate, stripAccents, FIELD_ALIASES, type ConventionDate } from "./importUtils.ts";
 import { trouverLigneEntetes, detectEntityByHeaders, detectEntityByFieldOverlap } from "./sheetDetect.ts";
 import { recognizeAllColumns } from "./core/contextualRecognition.ts";
 
@@ -388,6 +388,8 @@ export function planParRegles(
     colonnes: entetes.map((c: string) => {
       const rec = recognizedCols.get(c);
       let champ = null;
+      
+      // 1. Semantic contextual recognition
       if (rec && rec.confidence >= 0.5 && rec.canonicalKey !== 'unknown') {
          const k = rec.canonicalKey;
          if (k === 'revenue_amount' && entite === 'Order') champ = 'total';
@@ -399,6 +401,24 @@ export function planParRegles(
          else if (k === 'identifier' && entite === 'Product') champ = 'product_id';
          else if (k === 'identifier' && entite === 'Employee') champ = 'employee_id';
          else champ = k;
+      }
+      
+      // 2. Fallback to schema fields so the UI doesn't show 'Ignorer' for valid columns
+      if (!champ && entite) {
+          const schema = getSchema(entite);
+          if (schema) {
+              const cleanC = c.toLowerCase().trim();
+              const noAccentC = cleanC.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_");
+              const fields = Object.keys(schema.properties);
+              
+              if (fields.includes(c)) champ = c;
+              else if (fields.includes(cleanC)) champ = cleanC;
+              else if (fields.includes(noAccentC)) champ = noAccentC;
+              else {
+                  const alias = FIELD_ALIASES[cleanC] || FIELD_ALIASES[cleanC.replace(/[\s-]/g, "_")] || FIELD_ALIASES[noAccentC];
+                  if (alias && fields.includes(alias)) champ = alias;
+              }
+          }
       }
       return { colonne: c, champ };
     }),
