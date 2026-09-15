@@ -309,9 +309,9 @@ export default function Onboarding() {
                         disabled={enriching}
                       >
                         {enriching ? (
-                          <span className="flex items-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Recherche...</span>
+                          <span key="loading" className="flex items-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Recherche...</span>
                         ) : (
-                          <span className="flex items-center"><Wand2 className="mr-2 h-4 w-4" /> Auto-remplir</span>
+                          <span key="idle" className="flex items-center"><Wand2 className="mr-2 h-4 w-4" /> Auto-remplir</span>
                         )}
                       </Button>
                   </div>
