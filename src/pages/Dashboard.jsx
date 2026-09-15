@@ -184,22 +184,28 @@ export default function Dashboard() {
     const fExpenses = (expenseRecords || []).filter((e) => inPeriod(e.date));
     const fCustomers = (customers || []).filter((c) => inPeriod(c.acquisition_date));
 
-    // Si le moteur sémantique est disponible, on l'utilise en priorité
-    let totalIncome, totalExpensesTxn, margin, marginPct, latestCash;
+    // Si le moteur sémantique est disponible ET retourne des données, on l'utilise
+    const semRev = semanticEngine.kpis?.get("total_revenue")?.value || 0;
     
-    if (semanticEngine.available && semanticEngine.kpis.has("total_revenue")) {
-      totalIncome = semanticEngine.kpis.get("total_revenue").value || 0;
-      totalExpensesTxn = (semanticEngine.kpis.get("total_revenue").value || 0) - (semanticEngine.kpis.get("net_income").value || 0); // Approximation reverse
-      margin = semanticEngine.kpis.get("gross_margin_amount").value || 0;
+    if (semanticEngine.available && semRev > 0) {
+      totalIncome = semRev;
+      totalExpensesTxn = semRev - (semanticEngine.kpis.get("net_income")?.value || 0); // Approximation reverse
+      margin = semanticEngine.kpis.get("gross_margin_amount")?.value || 0;
       marginPct = totalIncome > 0 ? (margin / totalIncome) * 100 : 0;
       // Trésorerie utilise toujours la dernière valeur (STOCK), validée par le moteur
       latestCash = semanticEngine.kpis.get("cash_closing")?.value || (cashflow || [])[0]?.closing_cash || 0;
     } else {
       // Fallback ancienne logique
-      const fIncomes = fTxn.filter((t) => t.type === "income");
-      const fTxnExpenses = fTxn.filter((t) => t.type === "expense");
+      const fIncomes = fTxn.filter((t) => t.type === "income" || t.type === "revenu" || t.type === "revenue");
+      const fTxnExpenses = fTxn.filter((t) => t.type === "expense" || t.type === "depense");
       totalIncome = fIncomes.reduce((s, t) => s + (t.amount || 0), 0);
       totalExpensesTxn = fTxnExpenses.reduce((s, t) => s + (t.amount || 0), 0);
+      
+      // Essayer d'ajouter les commandes si les transactions sont à 0
+      if (totalIncome === 0) {
+        totalIncome = fOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
+      }
+      
       margin = totalIncome - totalExpensesTxn;
       marginPct = totalIncome > 0 ? (margin / totalIncome) * 100 : 0;
       latestCash = (cashflow || [])[0]?.closing_cash || 0;
@@ -208,7 +214,7 @@ export default function Dashboard() {
     const orderRevenue = fOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
     const orderCount = fOrders.length;
     const aov = orderCount > 0 ? orderRevenue / orderCount : 0;
-    const activeCustomers = (customers || []).filter((c) => c.status === "actif").length;
+    const activeCustomers = (customers || []).filter((c) => ["actif", "active"].includes(String(c.status || "").toLowerCase())).length;
     const totalExpenseAmount = fExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
     // Full monthly data (ALL records, not period-filtered) for charts and trends
