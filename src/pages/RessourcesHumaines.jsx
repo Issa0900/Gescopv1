@@ -34,8 +34,6 @@ export default function RessourcesHumaines() {
         ...payroll,
         employee_id: payroll.employee_id || payroll.employee_number || payroll.matricule,
         period: payroll.period || payroll.date || payroll.pay_period,
-      const normalizedPayrolls = (payrolls || []).map((payroll) => ({
-        ...payroll,
         total_cost: Number(payroll.total_cost) || (
           Number(payroll.regular_pay || 0) +
           Number(payroll.overtime || 0) +
