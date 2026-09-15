@@ -10,7 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Sparkles, RefreshCw, ArrowRight, Check, Loader2, ChevronDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { useKpiEngine } from "@/lib/useKpiEngine";
+import { useKpiEngine, useKpiEngineTimeSeries } from "@/lib/useKpiEngine";
 import { validateChartAggregation, METRIC_TYPES, AGG_METHODS } from "@/components/ChartValidation";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import HealthHero from "@/components/dashboard/HealthHero";
@@ -172,9 +172,16 @@ export default function Dashboard() {
     { 
       transactions: (transactions || []).filter(t => inPeriod(t.date)), 
       cashflow: cashflow, 
-      orders: orders 
+      orders: orders,
+      expenses: (expenseRecords || []).filter(e => inPeriod(e.date))
     },
-    ["total_revenue", "gross_margin_amount", "net_income", "cash_closing"]
+    ["total_revenue", "total_expense", "gross_margin_amount", "net_income", "cash_closing"]
+  );
+
+  const semanticTimeSeries = useKpiEngineTimeSeries(
+    { transactions: transactions || [], expenses: expenseRecords || [] },
+    ["total_revenue", "total_expense", "net_margin_pct"],
+    { includeCurrentMonth: false }
   );
 
   // === COMPUTATIONS (Hybride : Ancien + Nouveau) ===
@@ -185,32 +192,17 @@ export default function Dashboard() {
     const fExpenses = (expenseRecords || []).filter((e) => inPeriod(e.date));
     const fCustomers = (customers || []).filter((c) => inPeriod(c.acquisition_date));
 
-    let totalIncome, totalExpensesTxn, margin, marginPct, latestCash;
-    // Si le moteur sémantique est disponible ET retourne des données, on l'utilise
-    const semRev = semanticEngine.kpis?.get("total_revenue")?.value || 0;
+    let totalIncome = semanticEngine.kpis?.get("total_revenue")?.value || 0;
+    let totalExpensesTxn = semanticEngine.kpis?.get("total_expense")?.value || 0;
+    let margin = semanticEngine.kpis?.get("net_income")?.value || 0;
+    let marginPct = totalIncome > 0 ? (margin / totalIncome) * 100 : 0;
+    let latestCash = semanticEngine.kpis?.get("cash_closing")?.value || (cashflow || [])[0]?.closing_cash || 0;
 
-    if (semanticEngine.available && semRev > 0) {
-      totalIncome = semRev;
-      totalExpensesTxn = semRev - (semanticEngine.kpis.get("net_income")?.value || 0); // Approximation reverse
-      margin = semanticEngine.kpis.get("gross_margin_amount")?.value || 0;
-      marginPct = totalIncome > 0 ? (margin / totalIncome) * 100 : 0;
-      // Trésorerie utilise toujours la dernière valeur (STOCK), validée par le moteur
-      latestCash = semanticEngine.kpis.get("cash_closing")?.value || (cashflow || [])[0]?.closing_cash || 0;
-    } else {
-      // Fallback ancienne logique
-      const fIncomes = fTxn.filter((t) => t.type === "income" || t.type === "revenu" || t.type === "revenue");
-      const fTxnExpenses = fTxn.filter((t) => t.type === "expense" || t.type === "depense");
-      totalIncome = fIncomes.reduce((s, t) => s + (t.amount || 0), 0);
-      totalExpensesTxn = fTxnExpenses.reduce((s, t) => s + (t.amount || 0), 0);
-      
-      // Essayer d'ajouter les commandes si les transactions sont à 0
-      if (totalIncome === 0) {
-        totalIncome = fOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
-      }
-      
+    // Fallback if no transactions but orders
+    if (totalIncome === 0 && (orders || []).length > 0) {
+      totalIncome = fOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
       margin = totalIncome - totalExpensesTxn;
       marginPct = totalIncome > 0 ? (margin / totalIncome) * 100 : 0;
-      latestCash = (cashflow || [])[0]?.closing_cash || 0;
     }
 
     const orderRevenue = fOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
@@ -220,24 +212,9 @@ export default function Dashboard() {
     const totalExpenseAmount = fExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
     // Full monthly data (ALL records, not period-filtered) for charts and trends
-    const allIncomes = (transactions || []).filter((t) => t.type === "income");
-    const allTxnExpenses = (transactions || []).filter((t) => t.type === "expense");
-    const allExpenses = expenseRecords || [];
-
-    // Flow metrics (sums/counts) use COMPLETE months only: the in-progress month
-    // holds a few days of data and would read as a collapse.
-    const revMode = validateChartAggregation(METRIC_TYPES.FLOW, "sum", "Revenue");
-    const revenueMonthly = monthlyAggComplete(allIncomes, "date", "amount", revMode.toLowerCase());
-    
-    const expMode = validateChartAggregation(METRIC_TYPES.FLOW, "sum", "Expenses");
-    const expenseMonthly = monthlyAggComplete(allTxnExpenses, "date", "amount", expMode.toLowerCase());
-    
-    const marginMonthly = revenueMonthly.map((m) => {
-      const exp = expenseMonthly.find((e) => e.month === m.month);
-      const inc = m.val;
-      const expVal = exp ? exp.val : 0;
-      return { month: m.month, val: inc > 0 ? ((inc - expVal) / inc) * 100 : 0 };
-    });
+    const revenueMonthly = semanticTimeSeries.timeSeries.map(pt => ({ month: pt.date, val: pt.total_revenue || 0 }));
+    const expenseMonthly = semanticTimeSeries.timeSeries.map(pt => ({ month: pt.date, val: pt.total_expense || 0 }));
+    const marginMonthly = semanticTimeSeries.timeSeries.map(pt => ({ month: pt.date, val: pt.net_margin_pct || 0 }));
     
     // Cash is a balance, not a flow: the running month's closing balance is valid.
     const cashMode = validateChartAggregation(METRIC_TYPES.STOCK, "last", "Cash");

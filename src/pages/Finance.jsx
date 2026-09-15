@@ -1,15 +1,15 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import StatCard from "@/components/StatCard";
 import EmptyState from "@/components/EmptyState";
-import { LineChart, DollarSign, PieChart, TrendingUp, TrendingDown } from "lucide-react";
+import { DollarSign, PieChart, TrendingUp, TrendingDown } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend,
 } from "recharts";
 import { fetchAll } from "@/lib/fetchAll";
-import { useKpiEngine } from "@/lib/useKpiEngine";
+import { useKpiEngine, useKpiEngineTimeSeries } from "@/lib/useKpiEngine";
 
 export default function Finance() {
   const { data: transactions, isLoading: ltx } = useQuery({
@@ -20,6 +20,12 @@ export default function Finance() {
   const semanticEngine = useKpiEngine(
     { transactions: transactions || [] },
     ["total_revenue", "total_expense", "net_income", "net_margin_pct"]
+  );
+
+  const semanticTimeSeries = useKpiEngineTimeSeries(
+    { transactions: transactions || [] },
+    ["total_revenue", "total_expense", "net_income", "net_margin_pct"],
+    { includeCurrentMonth: true }
   );
   
   if (ltx) return <p className="text-sm text-muted-foreground">Chargement...</p>;
@@ -33,47 +39,20 @@ export default function Finance() {
     );
   }
 
-  // Agregation par mois
-  const byMonth = {};
-  transactions.forEach((t) => {
-    const m = (t.date || "").slice(0, 7);
-    if (!m) return;
-    if (!byMonth[m]) byMonth[m] = { in: 0, out: 0 };
-    
-    const s = String(t.type).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    if (["income", "entree", "credit", "revenu", "encaissement"].includes(s)) {
-      byMonth[m].in += Number(t.amount) || Number(t.revenue_amount) || 0;
-    } else if (["expense", "sortie", "debit", "depense", "decaissement", "charge"].includes(s)) {
-      byMonth[m].out += Number(t.amount) || Number(t.expense_amount) || 0;
-    }
-  });
-  
-  const months = Object.keys(byMonth).sort();
-  const chartData = months.slice(-12).map((m) => {
-    const margin = byMonth[m].in > 0 ? ((byMonth[m].in - byMonth[m].out) / byMonth[m].in) * 100 : 0;
-    return {
-      date: m,
-      revenus: Math.round(byMonth[m].in),
-      dépenses: Math.round(byMonth[m].out),
-      résultat: Math.round(byMonth[m].in - byMonth[m].out),
-      marge: Math.round(margin)
-    };
-  });
+  // Utilisation des séries temporelles générées par le moteur
+  const chartData = semanticTimeSeries.timeSeries.slice(-12).map((pt) => ({
+    date: pt.date,
+    revenus: Math.round(pt.total_revenue || 0),
+    dépenses: Math.round(pt.total_expense || 0),
+    résultat: Math.round(pt.net_income || 0),
+    marge: Math.round(pt.net_margin_pct || 0)
+  }));
 
-  let totalRev = 0;
-  let totalExp = 0;
-  
-  transactions.forEach(t => {
-    const s = String(t.type).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    if (["income", "entree", "credit", "revenu", "encaissement"].includes(s)) {
-      totalRev += Number(t.amount) || Number(t.revenue_amount) || 0;
-    } else if (["expense", "sortie", "debit", "depense", "decaissement", "charge"].includes(s)) {
-      totalExp += Number(t.amount) || Number(t.expense_amount) || 0;
-    }
-  });
-
-  const netInc = totalRev - totalExp;
-  const netMargin = totalRev > 0 ? (netInc / totalRev) * 100 : 0;
+  // Totaux globaux
+  const totalRev = semanticEngine.kpis.get("total_revenue")?.value || 0;
+  const totalExp = semanticEngine.kpis.get("total_expense")?.value || 0;
+  const netInc = semanticEngine.kpis.get("net_income")?.value || 0;
+  const netMargin = semanticEngine.kpis.get("net_margin_pct")?.value || 0;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

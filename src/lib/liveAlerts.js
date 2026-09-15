@@ -191,5 +191,64 @@ export function computeLiveAlerts(data) {
     }
   }
 
+  // =====================================================================
+  // PHASE 4 : INTERCONNEXIONS MÉTIER SÉMANTIQUES (Croisement de domaines)
+  // =====================================================================
+  
+  // 1. Marketing -> Finance : La baisse de l'efficacité publicitaire détruit la marge
+  const roasPrevVal = previousRoasWindow(spendM, revM, 3);
+  const roasTrendVal = trendPct(roas, roasPrevVal);
+  if (roasTrendVal !== null && roasTrendVal < -15 && marginDrop !== null && marginDrop < -2) {
+    out.push(
+      alert(
+        "critique",
+        "Finance & Marketing",
+        "Le marketing dégrade votre marge nette",
+        `L'inefficacité publicitaire (ROAS en baisse de ${Math.abs(roasTrendVal).toFixed(0)}%) pèse directement sur votre rentabilité globale (marge en baisse de ${Math.abs(marginDrop).toFixed(1)} points). Optimisez vos campagnes en urgence.`
+      )
+    );
+  }
+
+  // 2. Produits -> Ventes : Rupture sur les produits phares
+  // Identifier si les ruptures concernent les produits qui génèrent le plus de CA
+  if (ruptures.length > 0 && orders && orders.length > 0) {
+    const revenueByProduct = {};
+    orders.forEach(o => {
+      const pid = o.product_id;
+      if (pid) revenueByProduct[pid] = (revenueByProduct[pid] || 0) + (Number(o.total) || 0);
+    });
+    // Trier les produits en rupture par leur revenu historique
+    const rupturesWithRev = ruptures.map(r => ({ ...r, rev: revenueByProduct[r.product_id] || 0 }));
+    rupturesWithRev.sort((a, b) => b.rev - a.rev);
+    
+    // Si le produit en rupture générait des revenus significatifs (> 5% du revenu total ou juste un top 5 absolu)
+    const totalOrderRev = orders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    if (totalOrderRev > 0 && rupturesWithRev[0].rev > (totalOrderRev * 0.02)) {
+      out.push(
+        alert(
+          "critique",
+          "Ventes & Opérations",
+          "Rupture sur un produit phare (Top Ventes)",
+          `Le produit "${rupturesWithRev[0].product_name}" est en rupture de stock. Il représente historiquement une part importante de vos revenus. L'impact sur les Ventes sera immédiat.`
+        )
+      );
+    }
+  }
+
+  // 3. Clients -> Trésorerie : L'attrition menace le runway
+  if (churn.behaviourRate !== null && churn.behaviourRate >= 30 && latestCash !== null && recentBurn !== null && recentBurn > 0) {
+    const runwayCheck = runwayMonths(latestCash, recentBurn);
+    if (runwayCheck < 6) {
+      out.push(
+        alert(
+          "critique",
+          "Trésorerie & Clients",
+          "Attrition dangereuse pour la trésorerie",
+          `Forte perte d'acheteurs actifs (${Math.round(churn.behaviourRate)}%) alors que votre couverture de trésorerie est tendue (${runwayCheck.toFixed(1)} mois). Priorité absolue : réactiver vos clients existants.`
+        )
+      );
+    }
+  }
+
   return out;
 }

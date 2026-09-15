@@ -38,10 +38,14 @@ export const KPI_REGISTRY = Object.freeze({
     semanticType: "revenue",
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: true,
-    dependencies: ["revenue"], // requires the semantic canonicalKey 'revenue'
-    // For measures, the engine handles the base aggregation. The calculate function
-    // is just a pass-through if the engine has already aggregated the dependencies.
-    calculate: (deps) => deps.revenue || 0,
+    dependencies: ["revenue", "income_amount", "transaction_amount"],
+    calculate: (deps) => {
+      // Prioritize explicit transactions, otherwise fallback to orders
+      if (deps.income_amount || deps.transaction_amount) {
+        return (deps.income_amount || 0) + (deps.transaction_amount || 0);
+      }
+      return deps.revenue || 0;
+    }
   },
 
   total_expense: {
@@ -52,8 +56,11 @@ export const KPI_REGISTRY = Object.freeze({
     semanticType: "expense",
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: true,
-    dependencies: ["expense"],
-    calculate: (deps) => deps.expense || 0,
+    dependencies: ["expense", "expense_amount", "operating_expense"],
+    calculate: (deps) => {
+      if (deps.expense_amount) return deps.expense_amount;
+      return (deps.expense || 0) + (deps.operating_expense || 0);
+    }
   },
 
   payroll_total: {
@@ -66,6 +73,64 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: true,
     dependencies: ["payroll_cost"],
     calculate: (deps) => deps.payroll_cost || 0,
+  },
+
+  employee_count_raw: {
+    id: "employee_count_raw",
+    name: { fr: "Employés Bruts", en: "Raw Employees" },
+    level: KPI_LEVELS.MESURE,
+    domain: DOMAINS.RH,
+    semanticType: "count",
+    dataType: DATA_TYPES.NUMBER,
+    isAdditive: false,
+    dependencies: [],
+    // Since it has NO dependencies, it receives `deps` which is the context.
+    // Wait, kpiEngine doesn't pass raw `records` to the calculate function! It only passes resolved deps.
+    // Let me fix employee_count to not rely on employee_count_raw.
+  },
+
+  employee_count: {
+    id: "employee_count",
+    name: { fr: "Effectif total (Actifs)", en: "Headcount" },
+    level: KPI_LEVELS.MESURE,
+    domain: DOMAINS.RH,
+    semanticType: "count",
+    dataType: DATA_TYPES.NUMBER,
+    isAdditive: false, // Stock metric
+    dependencies: [], // We'll compute it dynamically in the component or we have to feed it as context.
+    calculate: (deps) => deps.employee_count_raw || 0,
+  },
+
+  rh_expense_ratio: {
+    id: "rh_expense_ratio",
+    name: { fr: "Poids Masse Salariale / CA", en: "Payroll to Revenue Ratio" },
+    level: KPI_LEVELS.KPI,
+    domain: DOMAINS.RH,
+    semanticType: "ratio",
+    economicRole: ECONOMIC_ROLES.RATIO,
+    dataType: DATA_TYPES.PERCENTAGE,
+    isAdditive: false,
+    dependencies: ["payroll_total", "total_revenue"],
+    calculate: (deps) => {
+      if (!deps.total_revenue || deps.total_revenue === 0) return 0;
+      return deps.payroll_total / deps.total_revenue;
+    },
+  },
+
+  revenue_per_employee: {
+    id: "revenue_per_employee",
+    name: { fr: "CA par employé", en: "Revenue per Employee" },
+    level: KPI_LEVELS.KPI_STRATEGIQUE,
+    domain: DOMAINS.RH,
+    semanticType: "ratio",
+    economicRole: ECONOMIC_ROLES.RATIO,
+    dataType: DATA_TYPES.CURRENCY,
+    isAdditive: false,
+    dependencies: ["total_revenue", "employee_count"],
+    calculate: (deps) => {
+      if (!deps.employee_count || deps.employee_count === 0) return 0;
+      return deps.total_revenue / deps.employee_count;
+    },
   },
 
   // ── FINANCIAL KPIs (LEVEL 2) ─────────────────────────────────────────────

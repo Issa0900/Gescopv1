@@ -1,0 +1,272 @@
+import React, { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import EmptyState from "@/components/EmptyState";
+import StatCard from "@/components/StatCard";
+import { Users, Banknote, Upload, PieChart, TrendingUp, Building2, UserCircle, Briefcase, Calendar } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useKpiEngineTimeSeries } from "@/lib/useKpiEngine";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { motion } from "framer-motion";
+
+function formatCurrency(val) {
+  if (val === null || val === undefined) return "-";
+  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(val);
+}
+
+export default function RessourcesHumaines() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["rh-data"],
+    queryFn: async () => {
+      const [employees, payrolls, transactions, orders] = await Promise.all([
+        base44.entities.Employee.list(),
+        base44.entities.Payroll.list(),
+        base44.entities.Transaction.list(),
+        base44.entities.Order.list()
+      ]);
+      return { employees: employees || [], payrolls: payrolls || [], transactions: transactions || [], orders: orders || [] };
+    }
+  });
+
+  const { timeSeries, available } = useKpiEngineTimeSeries(
+    data || {},
+    ["payroll_total", "total_revenue"],
+    { includeCurrentMonth: true }
+  );
+
+  const { metrics, distribution } = useMemo(() => {
+    if (!data) return { metrics: {}, distribution: [] };
+    
+    const activeEmployees = data.employees.filter(e => e.status !== "depart");
+    const headcount = activeEmployees.length;
+    
+    const depts = {};
+    activeEmployees.forEach(e => {
+      const dept = e.department || "Non assigné";
+      depts[dept] = (depts[dept] || 0) + 1;
+    });
+    const dist = Object.keys(depts).map(name => ({ name, value: depts[name] })).sort((a,b) => b.value - a.value);
+
+    let totalPayroll = 0;
+    let totalRev = 0;
+    if (timeSeries && timeSeries.length > 0) {
+      timeSeries.forEach(pt => {
+        totalPayroll += (pt.payroll_total || 0);
+        totalRev += (pt.total_revenue || 0);
+      });
+    }
+
+    const revPerEmp = headcount > 0 ? (totalRev / headcount) : 0;
+    const ratio = totalRev > 0 ? (totalPayroll / totalRev) : 0;
+
+    return { 
+      metrics: { headcount, totalPayroll, revPerEmp, ratio, totalRev },
+      distribution: dist
+    };
+  }, [data, timeSeries]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-primary" />
+      </div>
+    );
+  }
+
+  if (!data?.employees?.length && !data?.payrolls?.length) {
+    return (
+      <EmptyState
+        icon={Users}
+        title="Aucune donnée RH"
+        description="Importez la liste de vos employés ou vos données de paie pour suivre vos effectifs et coûts salariaux."
+        action={{ label: "Importer des données", href: "/importer", icon: Upload }}
+      />
+    );
+  }
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-8 pb-10"
+    >
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Ressources Humaines</h1>
+        <p className="mt-2 text-muted-foreground max-w-2xl">
+          Suivi de vos effectifs, de votre masse salariale et du rendement par employé. Analysez l'impact de vos ressources sur votre chiffre d'affaires.
+        </p>
+      </div>
+
+      <div className="grid gap-5 md:grid-cols-4">
+        <StatCard 
+          label="Effectifs (actifs)" 
+          value={metrics.headcount} 
+          icon={Users} 
+          accent="bg-blue-100 text-blue-600" 
+        />
+        <StatCard 
+          label="Masse Salariale Cumulée" 
+          value={formatCurrency(metrics.totalPayroll)} 
+          icon={Banknote} 
+          accent="bg-rose-100 text-rose-600" 
+        />
+        <StatCard 
+          label="CA par Employé" 
+          value={formatCurrency(metrics.revPerEmp)} 
+          icon={TrendingUp} 
+          accent="bg-emerald-100 text-emerald-600" 
+        />
+        <StatCard 
+          label="Poids sur CA" 
+          value={`${(metrics.ratio * 100).toFixed(1)}%`} 
+          icon={PieChart} 
+          accent="bg-purple-100 text-purple-600" 
+        />
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-lg">Évolution Masse Salariale vs CA</h3>
+              <p className="text-sm text-muted-foreground">Comparaison temporelle</p>
+            </div>
+          </div>
+          <div className="h-72">
+            {available && timeSeries.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={timeSeries} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorPayroll" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="date" tick={{ fontSize: 12, fill: "#6b7280" }} tickMargin={10} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12, fill: "#6b7280" }} tickFormatter={(v) => `${v / 1000}k`} axisLine={false} tickLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
+                    formatter={(value) => formatCurrency(value)} 
+                  />
+                  <Area type="monotone" dataKey="total_revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" name="Chiffre d'affaires" />
+                  <Area type="monotone" dataKey="payroll_total" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorPayroll)" name="Masse salariale" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                Pas assez de données temporelles
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-lg">Répartition par département</h3>
+              <p className="text-sm text-muted-foreground">Effectifs actifs</p>
+            </div>
+            <Building2 className="h-5 w-5 text-slate-400" />
+          </div>
+          <div className="h-72">
+            {distribution.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={distribution} layout="vertical" margin={{ left: 10, right: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e5e7eb" />
+                  <XAxis type="number" tick={{ fontSize: 12, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                  <YAxis dataKey="name" type="category" tick={{ fontSize: 12, fill: "#374151", fontWeight: 500 }} width={110} axisLine={false} tickLine={false} />
+                  <Tooltip 
+                    cursor={{ fill: '#f8fafc' }}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
+                  />
+                  <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} name="Effectif" barSize={24} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                Aucun département renseigné
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-border bg-slate-50/50 flex justify-between items-center">
+          <div>
+            <h3 className="font-semibold text-lg">Annuaire des employés</h3>
+            <p className="text-sm text-muted-foreground mt-1">Liste détaillée du personnel enregistré</p>
+          </div>
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium shadow-sm">
+            <Users className="h-4 w-4 text-slate-500" />
+            <span>{data.employees.length} collaborateurs</span>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-white text-muted-foreground border-b border-slate-100">
+              <tr>
+                <th className="px-6 py-4 font-medium">Collaborateur</th>
+                <th className="px-6 py-4 font-medium">Département</th>
+                <th className="px-6 py-4 font-medium">Rôle</th>
+                <th className="px-6 py-4 font-medium">Contrat</th>
+                <th className="px-6 py-4 font-medium text-right">Statut</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border bg-white">
+              {data.employees.map((emp) => (
+                <tr key={emp.id} className="transition-colors hover:bg-slate-50/80 group">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold shadow-sm">
+                        {(emp.employee_id || "?").slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="font-medium text-slate-900">{emp.employee_id || "Inconnu"}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-slate-600">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-3.5 w-3.5 text-slate-400 hidden group-hover:block transition-all" />
+                      {emp.department || "-"}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 font-medium text-slate-700">{emp.role || "-"}</td>
+                  <td className="px-6 py-4 text-slate-600">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-3.5 w-3.5 text-slate-400" />
+                      {emp.employment_type ? emp.employment_type.replace('_', ' ') : "-"}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      emp.status === 'actif' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20' :
+                      emp.status === 'depart' ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/20' :
+                      'bg-slate-50 text-slate-700 ring-1 ring-slate-600/20'
+                    }`}>
+                      {emp.status === 'actif' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>}
+                      {emp.status === 'depart' && <span className="h-1.5 w-1.5 rounded-full bg-rose-500"></span>}
+                      {(emp.status || "Actif").toUpperCase()}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {data.employees.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center">
+                    <UserCircle className="mx-auto h-12 w-12 text-slate-200 mb-3" />
+                    <p className="text-muted-foreground">Aucun employé enregistré dans l'annuaire.</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </motion.div>
+  );
+}

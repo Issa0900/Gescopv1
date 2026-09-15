@@ -8,6 +8,9 @@
     "customer_id": {
       "type": "string"
     },
+    "customer_name": {
+      "type": "string"
+    },
     "date": {
       "type": "string",
       "format": "date"
@@ -22,6 +25,9 @@
       ]
     },
     "product_id": {
+      "type": "string"
+    },
+    "product_name": {
       "type": "string"
     },
     "quantity": {
@@ -48,8 +54,32 @@
     "cost": {
       "type": "number"
     },
+    "total_revenue": {
+      "type": "number"
+    },
+    "total_cost": {
+      "type": "number"
+    },
+    "unit_cost": {
+      "type": "number"
+    },
     "gross_margin": {
       "type": "number"
+    },
+    "gross_profit": {
+      "type": "number"
+    },
+    "employee_id": {
+      "type": "string"
+    },
+    "department": {
+      "type": "string"
+    },
+    "payment_method": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
     },
     "payment_status": {
       "type": "string",

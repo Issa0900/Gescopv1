@@ -77,6 +77,8 @@ export default function ImportPage() {
     if (files.length === 0) return;
 
     setUploading(true);
+    setAnalyses(null); // Unmount PlanConfirmation immediately so state resets for the new file
+    setImportResult(null);
     try {
       const uploadedFiles = [];
       for (const file of files) {
@@ -85,7 +87,6 @@ export default function ImportPage() {
       }
       setUploading(false);
       setAnalyzing(true);
-      setImportResult(null);
       const res = await base44.functions.invoke("importMultiData", {
         files: uploadedFiles,
         entity_override: manualEntity || null,
@@ -329,7 +330,10 @@ export default function ImportPage() {
                 accept={acceptedTypes}
                 multiple
                 className="hidden"
-                onChange={(e) => handleFiles(e.target.files)}
+                onChange={(e) => {
+                  handleFiles(e.target.files);
+                  e.target.value = null;
+                }}
               />
               <span className="inline-flex cursor-pointer items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">
                 Parcourir les fichiers

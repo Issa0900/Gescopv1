@@ -105,8 +105,21 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "revenus_des_ventes": "revenue",
   "montant_des_ventes": "revenue",
   "valeur_des_ventes": "revenue",
-  "total_des_ventes": "revenue",
   "ventes_nettes": "net_revenue",
+  "client": "customer_name",
+  "nom_client": "customer_name",
+  "nom_du_client": "customer_name",
+  "id_transaction": "order_id",
+  "code_produit": "product_id",
+  "description_produit": "product_name",
+  "sku": "product_id",
+  "raison_sociale": "supplier_name",
+  "nom_de_la_campagne": "campaign_name",
+  "nom_de_campagne": "campaign_name",
+  "nom_campagne": "campaign_name",
+  "profit_brut": "gross_profit",
+  "succursale": "department",
+  "mode_de_paiement": "payment_method",
   "chiffre_d_affaires_net": "net_revenue",
   "ca_net": "net_revenue",
   "revenu_commercial": "revenue",
@@ -1212,6 +1225,9 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "currency_type": "currency",
   "monnaie_utilisee": "currency",
 };
+
+export function normalizeKeys(row: Record<string, any>, properties?: Record<string, any>): Record<string, any> {
+  const out: Record<string, any> = {};
   const schemaFields = properties ? Object.keys(properties) : [];
   for (const [k, v] of Object.entries(row || {})) {
     const lower = k.toLowerCase().trim();

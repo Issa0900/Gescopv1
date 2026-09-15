@@ -36,6 +36,18 @@
     "days_in_inventory": {
       "type": "number"
     },
+    "unit_cost": {
+      "type": "number"
+    },
+    "selling_price": {
+      "type": "number"
+    },
+    "product_name": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
     "stock_status": {
       "type": "string",
       "enum": [

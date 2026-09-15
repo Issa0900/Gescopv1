@@ -8,6 +8,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { Brain, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useCompany } from "@/hooks/useCompany";
+import { fetchAll } from "@/lib/fetchAll";
+import { computeLiveAlerts } from "@/lib/liveAlerts";
 
 const formatImpact = (amount) => {
   if (!amount || amount === 0) return null;
@@ -48,8 +51,41 @@ export default function Insights() {
     queryFn: async () => { const l = await base44.entities.Recommendation.list("-created_date", 20); return l || []; },
   });
 
+  // Fetch full data for live interconnected alerts
+  const { company } = useCompany();
+  const { data: liveData, isLoading: llive } = useQuery({
+    queryKey: ["insights-live-alerts", company?.stock_alert_threshold],
+    queryFn: async () => {
+      const [transactions, customers, orders, campaignDaily, inventory, cashflow, products] = await Promise.all([
+        fetchAll(base44.entities.Transaction, "-date"),
+        fetchAll(base44.entities.Customer, "-created_date"),
+        fetchAll(base44.entities.Order, "-date"),
+        fetchAll(base44.entities.CampaignDaily, "-date"),
+        fetchAll(base44.entities.Inventory, "-date"),
+        fetchAll(base44.entities.Cashflow, "-date"),
+        fetchAll(base44.entities.Product),
+      ]);
+      return computeLiveAlerts({ transactions, orders, customers, campaignDaily, products, inventory, cashflow, company });
+    },
+  });
+
   const insights = useMemo(() => {
     const items = [];
+    (liveData || []).forEach((a) => {
+      // Les alertes croisées contiennent "&" dans la catégorie
+      const isCrossDomain = a.category.includes("&");
+      items.push({
+        id: a.id, 
+        type: "anomalie", 
+        typeLabel: isCrossDomain ? "Alerte Inter-Domaine (Live)" : "Alerte Live",
+        fait: `${a.category} : ${a.title}`, 
+        analyse: a.message,
+        impactLabel: null,
+        confiance: 100, 
+        recommandation: isCrossDomain ? "Vérifiez immédiatement les impacts en chaîne." : null, 
+        source: { severity: a.level, priority: a.level },
+      });
+    });
     (anomalies || []).forEach((a) => items.push({
       id: `a-${a.id}`, type: "anomalie", typeLabel: "Anomalie",
       fait: a.title, analyse: a.explanation || a.description,

@@ -6,12 +6,14 @@ import PriorityBadge from "@/components/PriorityBadge";
 import { computeLiveAlerts } from "@/lib/liveAlerts";
 import { fetchAll } from "@/lib/fetchAll";
 import { useCompany } from "@/hooks/useCompany";
-import { Bell, Check, Activity } from "lucide-react";
+import { Bell, Check, Activity, Plus } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 const levelOrder = { critique: 0, important: 1, modere: 2, info: 3, faible: 4 };
 
 export default function Alertes() {
   const qc = useQueryClient();
+  const { toast } = useToast();
   // Stock alerts honour the company threshold, like the Produits page and the KPIs.
   const { company } = useCompany();
 
@@ -109,15 +111,38 @@ export default function Alertes() {
                 </p>
               )}
             </div>
-            {!a.live && a.status === "non_lue" && (
+            <div className="flex shrink-0 flex-col gap-2">
               <button
-                onClick={() => markRead(a.id)}
-                className="shrink-0 rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted"
-                aria-label="Marquer comme lue"
+                onClick={async () => {
+                  try {
+                    await base44.entities.Task.create({
+                      title: a.title,
+                      description: a.message || "Généré depuis une alerte.",
+                      category: "operationnel",
+                      priority: a.level === "critique" ? "urgente" : a.level === "important" ? "elevee" : "moyenne",
+                      status: "a_faire",
+                    });
+                    toast({ title: "Action créée", description: "La tâche a été ajoutée à votre liste." });
+                    qc.invalidateQueries(["tasks"]);
+                  } catch(e) {
+                    toast({ title: "Erreur", variant: "destructive" });
+                  }
+                }}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted flex items-center gap-1.5"
+                aria-label="Créer une tâche"
               >
-                <Check className="h-4 w-4" />
+                <Plus className="h-3.5 w-3.5" /> Tâche
               </button>
-            )}
+              {!a.live && a.status === "non_lue" && (
+                <button
+                  onClick={() => markRead(a.id)}
+                  className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted flex justify-center items-center"
+                  aria-label="Marquer comme lue"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>

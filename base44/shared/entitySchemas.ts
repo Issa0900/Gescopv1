@@ -17,10 +17,11 @@ const E = (...values: string[]) => ({ type: "string", enum: values });
 export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; required: string[] }> = {
   Order: {
     properties: {
-      order_id: S, customer_id: S, date: D,
+      order_id: S, customer_id: S, customer_name: S, date: D,
       channel: E("shopify", "boutique", "b2b", "instagram"),
-      product_id: S, quantity: N, unit_price: N, subtotal: N, discount: N, tax: N,
-      shipping: N, total: N, cost: N, gross_margin: N,
+      product_id: S, product_name: S, quantity: N, unit_price: N, unit_cost: N, category: S, subtotal: N, discount: N, tax: N,
+      shipping: N, total: N, cost: N, total_revenue: N, total_cost: N, gross_margin: N, gross_profit: N, employee_id: S,
+      department: S, payment_method: S,
       payment_status: E("paye", "en_attente", "echoue", "rembourse"),
       fulfillment_status: E("expedie", "en_preparation", "livre", "annule", "retourne"),
       return_status: E("aucun", "demande", "approuve", "refuse"),
@@ -53,13 +54,13 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
   },
   Inventory: {
     properties: {
-      inventory_id: S, date: D, product_id: S, opening_stock: N, purchases: N,
+      inventory_id: S, date: D, product_id: S, product_name: S, category: S, opening_stock: N, purchases: N,
       units_sold: N, returns: N, damaged: N, closing_stock: N, inventory_value: N,
-      days_in_inventory: N,
+      days_in_inventory: N, unit_cost: N, selling_price: N,
       stock_status: E("optimal", "rupture", "surstock", "dormant", "faible", "proche_rupture"),
       import_id: S,
     },
-    required: ["date", "product_id"],
+    required: ["product_id"],
   },
   Cashflow: {
     properties: {

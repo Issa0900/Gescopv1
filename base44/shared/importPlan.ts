@@ -19,7 +19,7 @@
 // la preuve gagne. Voir verifierAvecPreuves().
 
 import { getSchema } from "./entitySchemas.ts";
-import { parseDate, stripAccents, FIELD_ALIASES, type ConventionDate } from "./importUtils.ts";
+import { parseDate, stripAccents, FIELD_ALIASES, cleCanonique, ALIAS_CANONIQUES, type ConventionDate } from "./importUtils.ts";
 import { trouverLigneEntetes, detectEntityByHeaders, detectEntityByFieldOverlap } from "./sheetDetect.ts";
 import { recognizeAllColumns } from "./core/contextualRecognition.ts";
 
@@ -174,7 +174,8 @@ export function validerPlan(brut: any, matrix: any[][]): { plan: PlanImport | nu
       else if (champsConnus.includes(cleanC)) champ = cleanC;
       else if (champsConnus.includes(noAccentC)) champ = noAccentC;
       else {
-          const alias = FIELD_ALIASES[cleanC] || FIELD_ALIASES[cleanC.replace(/[\s-]/g, "_")] || FIELD_ALIASES[noAccentC];
+          const canon = cleCanonique(c.colonne);
+          const alias = FIELD_ALIASES[cleanC] || FIELD_ALIASES[cleanC.replace(/[\s-]/g, "_")] || FIELD_ALIASES[noAccentC] || ALIAS_CANONIQUES[canon];
           if (alias && champsConnus.includes(alias)) champ = alias;
       }
     }
@@ -444,7 +445,8 @@ export function planParRegles(
               else if (fields.includes(cleanC)) champ = cleanC;
               else if (fields.includes(noAccentC)) champ = noAccentC;
               else {
-                  const alias = FIELD_ALIASES[cleanC] || FIELD_ALIASES[cleanC.replace(/[\s-]/g, "_")] || FIELD_ALIASES[noAccentC];
+                  const canon = cleCanonique(c);
+                  const alias = FIELD_ALIASES[cleanC] || FIELD_ALIASES[cleanC.replace(/[\s-]/g, "_")] || FIELD_ALIASES[noAccentC] || ALIAS_CANONIQUES[canon];
                   if (alias && fields.includes(alias)) champ = alias;
               }
           }

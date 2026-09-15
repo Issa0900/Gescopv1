@@ -3,12 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import ForecastCard from "@/components/previsions/ForecastCard";
 import EmptyState from "@/components/EmptyState";
-import { TrendingUp, AlertTriangle, Upload } from "lucide-react";
+import { TrendingUp, AlertTriangle, Upload, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 import { monthlyAggComplete } from "@/lib/periods";
 import { fetchAll } from "@/lib/fetchAll";
+import { isIncome, isExpense, txAmount } from "@/lib/transactionClassifier";
+import { useCompany } from "@/hooks/useCompany";
+import { useKpiEngineTimeSeries } from "@/lib/useKpiEngine";
+import { computeLiveAlerts } from "@/lib/liveAlerts";
 
 /**
  * Ordinary least squares plus everything needed for a HONEST forecast band.
@@ -61,38 +65,44 @@ export default function Previsions() {
 
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["transactions-forecast"],
-    // Paginated: capping at 500 rows truncated the OLDEST month in the window,
-    // leaving a partial month as the first point of the regression and tilting
-    // the whole trend upwards. The same care taken with the in-progress month
-    // has to be taken at the other end of the series.
     queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
   });
-  // Real imported cash position — the projection must start from the actual
-  // balance, not from an accumulation of transaction margins.
   const { data: cashflow } = useQuery({
     queryKey: ["cashflow-forecast"],
     queryFn: () => fetchAll(base44.entities.Cashflow, "-date"),
   });
+  
+  // Phase 7: Fetch live alerts to cross-reference with forecasts
+  const { company } = useCompany();
+  const { data: liveAlerts } = useQuery({
+    queryKey: ["forecast-alerts"],
+    queryFn: async () => {
+      const [customers, orders, campaignDaily, inventory, products] = await Promise.all([
+        fetchAll(base44.entities.Customer, "-created_date"),
+        fetchAll(base44.entities.Order, "-date"),
+        fetchAll(base44.entities.CampaignDaily, "-date"),
+        fetchAll(base44.entities.Inventory, "-date"),
+        fetchAll(base44.entities.Product),
+      ]);
+      return computeLiveAlerts({ transactions, orders, customers, campaignDaily, products, inventory, cashflow, company });
+    },
+    enabled: !!transactions && !!cashflow
+  });
+
+  const semanticTimeSeries = useKpiEngineTimeSeries(
+    { transactions: transactions || [] },
+    ["total_revenue", "total_expense", "net_income"],
+    { includeCurrentMonth: false }
+  );
 
   const result = useMemo(() => {
-    if (!transactions || transactions.length === 0) return null;
-    // monthlyAggComplete drops the in-progress month AND fills missing months
-    // with zero. Indexing the array positions used to be the regression's x
-    // axis, so a month with no activity compressed the timeline and bent the
-    // slope; the x axis is now genuine calendar distance.
-    const incomeSeries = monthlyAggComplete(
-      transactions.filter((t) => t.type === "income"), "date", "amount",
-    );
-    const expenseSeries = monthlyAggComplete(
-      transactions.filter((t) => t.type === "expense"), "date", "amount",
-    );
-    const expByMonth = {};
-    expenseSeries.forEach((e) => { expByMonth[e.month] = e.val; });
-    const monthly = incomeSeries.map((r, i) => ({
-      month: r.month,
-      income: r.val,
-      expense: expByMonth[r.month] || 0,
-      margin: r.val - (expByMonth[r.month] || 0),
+    if (!semanticTimeSeries.available || semanticTimeSeries.timeSeries.length === 0) return null;
+
+    const monthly = semanticTimeSeries.timeSeries.map((r, i) => ({
+      month: r.date,
+      income: r.total_revenue || 0,
+      expense: r.total_expense || 0,
+      margin: r.net_income || 0,
       x: i,
     }));
     if (monthly.length < 3) return null;
@@ -111,10 +121,6 @@ export default function Previsions() {
       : monthly.reduce((s, d) => s + d.margin, 0);
     const cashDate = hasCash ? cfSorted[0].date : null;
 
-    // Cash projection: regress the REAL monthly net cash flow when the treasury
-    // file carries it. Accounting margin is not cash — receivables, payables,
-    // sales tax, capex and loan repayments all sit between the two — so adding
-    // projected margins to a bank balance was mixing two different quantities.
     const netFlowSeries = monthlyAggComplete(cashflow || [], "date", "net_cash_flow");
     const usesRealCashFlow = netFlowSeries.length >= 3;
     const cashFlowFit = usesRealCashFlow
@@ -122,7 +128,7 @@ export default function Previsions() {
       : marginFit;
     const cashLastX = usesRealCashFlow ? netFlowSeries.length - 1 : lastX;
     const cashF = [1, 2, 3].map((i) => forecastAt(cashFlowFit, cashLastX + i));
-    // Monthly closing balances give the treasury chart its real history.
+    
     const cashHistory = [];
     if (hasCash) {
       const byM = {};
@@ -143,7 +149,7 @@ export default function Previsions() {
       cumulativeNow, cashDate, cashHistory, shortfall, incomeFit, marginFit,
       cashFlowFit, usesRealCashFlow,
     };
-  }, [transactions, cashflow]);
+  }, [semanticTimeSeries, cashflow]);
 
   const chartData = useMemo(() => {
     if (!result) return [];
@@ -188,6 +194,9 @@ export default function Previsions() {
   const fmt = (v) => `${Math.round(v).toLocaleString("fr-CA")} $`;
   const selectedLabel = metrics.find((m) => m.key === metric).label;
 
+  // Phase 7: Extract critical cross-domain alerts to warn the user
+  const criticalAlerts = (liveAlerts || []).filter(a => a.level === "critique" || (a.level === "important" && a.category.includes("&")));
+
   return (
     <div className="space-y-6">
       <div>
@@ -218,6 +227,21 @@ export default function Previsions() {
           ? "La trésorerie est projetée à partir des flux nets réels de votre fichier de trésorerie."
           : "Faute de flux nets datés dans le fichier de trésorerie, la projection de trésorerie utilise la marge comptable : elle ignore délais de paiement, taxes et investissements, et reste donc indicative."}
       </div>
+
+      {criticalAlerts.length > 0 && (
+        <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50/50 p-4">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-rose-600" />
+          <div>
+            <p className="text-sm font-medium text-rose-900">Attention : Hypothèses Menacées</p>
+            <p className="mt-0.5 text-xs text-rose-700">Ces prévisions mathématiques ignorent des événements métier critiques en cours :</p>
+            <ul className="mt-2 list-inside list-disc text-xs text-rose-700">
+              {criticalAlerts.map(a => (
+                <li key={a.id}><span className="font-medium">{a.title}</span> : {a.message}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {result.shortfall > 0 && result.currentMargin > 0 && (
         <div className="flex items-start gap-3 rounded-xl border border-orange-200 bg-orange-50/50 p-4">

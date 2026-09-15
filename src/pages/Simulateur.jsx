@@ -7,43 +7,64 @@ import { Calculator, Upload, TrendingUp, TrendingDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn, formatPct } from "@/lib/utils";
 import { currentMonthKey } from "@/lib/periods";
+import { fetchAll } from "@/lib/fetchAll";
+import { isIncome } from "@/lib/transactionClassifier";
+import { useCompany } from "@/hooks/useCompany";
+import { useKpiEngineTimeSeries } from "@/lib/useKpiEngine";
+import { computeLiveAlerts } from "@/lib/liveAlerts";
 
 export default function Simulateur() {
   const [priceChange, setPriceChange] = useState(0);
   const [volumeChange, setVolumeChange] = useState(0);
   const [expenseChange, setExpenseChange] = useState(0);
-  // Share of costs that follow volume (purchases, raw material, shipping,
-  // commissions). The rest is fixed (rent, salaries, software, insurance).
-  // Without this split, raising volume by +50% left costs untouched and the
-  // simulator reported a profit that cannot happen.
   const [variableShare, setVariableShare] = useState(60);
 
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["transactions-sim"],
-    queryFn: async () => { const l = await base44.entities.Transaction.list("-date", 500); return l || []; },
+    queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
   });
 
+  // Phase 7: Fetch live alerts to provide contextual recommendations
+  const { company } = useCompany();
+  const { data: liveAlerts } = useQuery({
+    queryKey: ["sim-alerts"],
+    queryFn: async () => {
+      const [customers, orders, campaignDaily, inventory, products, cashflow] = await Promise.all([
+        fetchAll(base44.entities.Customer, "-created_date"),
+        fetchAll(base44.entities.Order, "-date"),
+        fetchAll(base44.entities.CampaignDaily, "-date"),
+        fetchAll(base44.entities.Inventory, "-date"),
+        fetchAll(base44.entities.Product),
+        fetchAll(base44.entities.Cashflow, "-date")
+      ]);
+      return computeLiveAlerts({ transactions, orders, customers, campaignDaily, products, inventory, cashflow, company });
+    },
+    enabled: !!transactions
+  });
+
+  const semanticTimeSeries = useKpiEngineTimeSeries(
+    { transactions: transactions || [] },
+    ["total_revenue", "total_expense"],
+    { includeCurrentMonth: false }
+  );
+
   const current = useMemo(() => {
-    if (!transactions || transactions.length === 0) return null;
-    const byMonth = {};
-    transactions.forEach((t) => {
-      const m = (t.date || "").slice(0, 7);
-      if (!m) return;
-      if (!byMonth[m]) byMonth[m] = { income: 0, expense: 0, count: 0 };
-      if (t.type === "income") { byMonth[m].income += t.amount || 0; byMonth[m].count += 1; }
-      else byMonth[m].expense += t.amount || 0;
-    });
-    // Baseline = last COMPLETE month. The running month holds only a few days,
-    // which would understate the starting point of every simulation.
-    const cm = currentMonthKey();
-    const months = Object.keys(byMonth).filter((m) => m !== cm).sort();
-    if (months.length === 0) return null;
-    const baseMonth = months[months.length - 1];
-    const last = byMonth[baseMonth];
-    const income = last.income, expense = last.expense, margin = income - expense;
-    const volume = last.count || 1, avgPrice = income / volume;
+    if (!semanticTimeSeries.available || semanticTimeSeries.timeSeries.length === 0) return null;
+    const ts = semanticTimeSeries.timeSeries;
+    // Prends le dernier mois complet calculé par le moteur sémantique
+    const last = ts[ts.length - 1];
+    const baseMonth = last.date;
+    const income = last.total_revenue || 0;
+    const expense = last.total_expense || 0;
+    const margin = income - expense;
+
+    // Récupérer le volume depuis les transactions pour le mois de base (non fourni par le moteur financier)
+    const baseTxns = (transactions || []).filter(t => (t.date || "").startsWith(baseMonth) && isIncome(t));
+    const volume = baseTxns.length || 1;
+    const avgPrice = income / volume;
+    
     return { income, expense, margin, volume, avgPrice, baseMonth };
-  }, [transactions]);
+  }, [semanticTimeSeries, transactions]);
 
   const sim = useMemo(() => {
     if (!current) return null;
@@ -52,11 +73,9 @@ export default function Simulateur() {
     const newVolume = current.volume * volumeFactor;
     const newIncome = newPrice * newVolume;
 
-    // Costs split into a fixed part and a part that scales with volume.
     const share = Math.min(100, Math.max(0, variableShare)) / 100;
     const fixedCost = current.expense * (1 - share);
     const variableCost = current.expense * share * volumeFactor;
-    // The expense slider is a deliberate management action on top of that.
     const newExpense = (fixedCost + variableCost) * (1 + expenseChange / 100);
 
     const newMargin = newIncome - newExpense;
@@ -71,7 +90,7 @@ export default function Simulateur() {
 
   if (isLoading) return <div className="flex h-96 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800" /></div>;
   if (!transactions || transactions.length === 0) return <EmptyState icon={Upload} title="Aucune donnée à simuler" description="Importez vos transactions pour tester l'impact de vos décisions sur vos résultats." action={<Link to="/importer" className="text-primary hover:underline">Importer des données →</Link>} />;
-  if (!current || !sim) return null;
+  if (!current || !sim) return <EmptyState icon={Calculator} title="Données insuffisantes pour simuler" description="Il faut au moins un mois complet de données." action={<Link to="/importer" className="text-primary hover:underline">Vérifier l'import →</Link>} />;
 
   const fmt = (v) => `${Math.round(v).toLocaleString("fr-CA")} $`;
   const fmtPct = (v) => `${formatPct(v)}`;
@@ -152,6 +171,14 @@ export default function Simulateur() {
           </p>
         </div>
       </div>
+
+      {/* Phase 7: Contextual Recommendation based on Intelligence */}
+      {(liveAlerts || []).some(a => a.category.includes("Finance") && a.title.toLowerCase().includes("marge")) && positive && sim.profitChange > 1000 && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+          <p className="text-sm font-medium text-emerald-900">Recommandation validée</p>
+          <p className="mt-1 text-xs text-emerald-700">Ce scénario corrige l'alerte actuelle concernant la dégradation de votre marge nette. Poursuivez cette stratégie.</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -58,8 +58,8 @@ export const ENTITY_FIELD_MAP = Object.freeze({
       semanticType: null, // resolved by context
       grain: GRAIN_TYPES.TRANSACTION,
       contextRules: [
-        { when: { field: "type", equals: "income" },  then: { canonicalKey: "income_amount", semanticType: "revenue" } },
-        { when: { field: "type", equals: "expense" }, then: { canonicalKey: "expense_amount", semanticType: "expense" } },
+        { when: { field: "type", equals: ["income", "entree", "credit", "revenu", "encaissement"] },  then: { canonicalKey: "income_amount", semanticType: "revenue" } },
+        { when: { field: "type", equals: ["expense", "sortie", "debit", "depense", "decaissement", "charge"] }, then: { canonicalKey: "expense_amount", semanticType: "expense" } },
       ],
       defaultFallback: { canonicalKey: "transaction_amount", semanticType: "revenue" },
     },
@@ -245,9 +245,16 @@ export function resolveContextualField(fieldDef, record) {
   for (const rule of fieldDef.contextRules) {
     const contextValue = record?.[rule.when.field];
     if (contextValue != null) {
-      const normalizedValue = String(contextValue).toLowerCase().trim();
-      const expectedValue = String(rule.when.equals).toLowerCase().trim();
-      if (normalizedValue === expectedValue) {
+      const normalizedValue = String(contextValue).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      
+      let matched = false;
+      if (Array.isArray(rule.when.equals)) {
+        matched = rule.when.equals.some(v => String(v).toLowerCase().trim() === normalizedValue);
+      } else {
+        matched = normalizedValue === String(rule.when.equals).toLowerCase().trim();
+      }
+      
+      if (matched) {
         return {
           canonicalKey: rule.then.canonicalKey,
           semanticType: rule.then.semanticType,

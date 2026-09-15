@@ -3,10 +3,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import EmptyState from "@/components/EmptyState";
 import PriorityBadge from "@/components/PriorityBadge";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Plus, Check } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Anomalies() {
   const qc = useQueryClient();
+  const { toast } = useToast();
   const { data: anomalies, isLoading } = useQuery({
     queryKey: ["anomalies"],
     queryFn: async () => {
@@ -65,12 +67,35 @@ export default function Anomalies() {
                   </div>
                 )}
               </div>
-              <button
-                onClick={() => markResolved(a.id)}
-                className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
-              >
-                Marquer résolu
-              </button>
+              <div className="flex shrink-0 flex-col gap-2">
+                <button
+                  onClick={async () => {
+                    try {
+                      await base44.entities.Task.create({
+                        title: `Investiguer: ${a.title}`,
+                        description: a.explanation || a.description || "Anomalie IA",
+                        category: "strategique",
+                        priority: a.severity === "critique" ? "urgente" : "elevee",
+                        status: "a_faire",
+                      });
+                      toast({ title: "Action créée", description: "Tâche ajoutée pour investigation." });
+                      qc.invalidateQueries(["tasks"]);
+                    } catch(e) {
+                      toast({ title: "Erreur", variant: "destructive" });
+                    }
+                  }}
+                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
+                  aria-label="Créer une tâche"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Tâche
+                </button>
+                <button
+                  onClick={() => markResolved(a.id)}
+                  className="flex items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
           </div>
         ))}
