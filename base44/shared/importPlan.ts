@@ -344,7 +344,21 @@ export async function analyserFichier(
 
   const { plan, refus } = validerPlan(brut, matrix);
   if (!plan) return { plan: planDeSecours, refus, erreur: "plan refuse" };
-  return { plan: verifierAvecPreuves(plan, matrix), refus };
+  const verifie = verifierAvecPreuves(plan, matrix);
+
+  // Fallback: override missing mappings from LLM with our deterministic rules & memory
+  for (const col of verifie.colonnes) {
+      if (!col.champ) {
+          const secCol = planDeSecours.colonnes.find(c => c.colonne === col.colonne);
+          if (secCol && secCol.champ) {
+              col.champ = secCol.champ;
+              verifie.corrections.push(`colonne « ${col.colonne} » : rattrapage via memoire/reconnaissance -> ${col.champ}.`);
+              verifie.origine = "ia+preuves";
+          }
+      }
+  }
+
+  return { plan: verifie, refus };
 }
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import { stripAccents, FIELD_ALIASES } from '../importUtils.ts';
+import { stripAccents, FIELD_ALIASES, cleCanonique, ALIAS_CANONIQUES } from '../importUtils.ts';
 import { ENTITY_SCHEMAS } from '../entitySchemas.ts';
 
 // Local Semantic Types & Economic Roles
@@ -62,7 +62,7 @@ const WEIGHTS = {
 const AMBIGUOUS_NAMES = ['montant', 'amount', 'total', 'valeur', 'value'];
 
 function normalize(str: string): string {
-  return stripAccents(str.trim().toLowerCase()).replace(/[^a-z0-9]/g, '_');
+  return cleCanonique(str);
 }
 
 // 1. Column Name Signal
@@ -82,7 +82,8 @@ function analyzeColumnName(columnName: string): { matches: { key: string, type: 
   const rawLower = columnName.toLowerCase().trim();
   const directAlias = FIELD_ALIASES[rawLower] || 
                       FIELD_ALIASES[rawLower.replace(/[\s-]/g, "_")] || 
-                      FIELD_ALIASES[normName];
+                      FIELD_ALIASES[normName] ||
+                      ALIAS_CANONIQUES[normName];
 
   if (directAlias) {
     matches.push({ key: directAlias, type: directAlias, score: 0.95 });

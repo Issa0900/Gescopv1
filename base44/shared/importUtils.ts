@@ -80,7 +80,7 @@ export const FIELD_ALIASES: Record<string, string> = {
  * "Date d'acquisition" et "date-d-acquisition" donnent la meme cle, sans quoi
  * une apostrophe suffisait a faire perdre une colonne parfaitement lisible.
  */
-function cleCanonique(k: string): string {
+export function cleCanonique(k: string): string {
   return stripAccents(String(k).toLowerCase().trim())
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
@@ -89,7 +89,7 @@ function cleCanonique(k: string): string {
 // La table d'alias est elle-meme indexee sous forme canonique : ses cles sont
 // ecrites avec des espaces ("date d acquisition") et ne matchaient donc jamais
 // une colonne ponctuee ("Date d'acquisition").
-const ALIAS_CANONIQUES: Record<string, string> = Object.fromEntries(
+export const ALIAS_CANONIQUES: Record<string, string> = Object.fromEntries(
   Object.entries(FIELD_ALIASES).map(([k, v]) => [cleCanonique(k), v]),
 );
 
@@ -133,6 +133,8 @@ const ENUM_TRANSLATIONS: Record<string, string[]> = {
   "en retard": ["non_atteint"], "en attente": ["en_attente", "en_cours"],
   "avis": ["avis", "question"], "reclamation": ["reclamation", "plainte"], "rh": ["administration", "service_client"],
   "recu": ["recu"], "en cours": ["en_cours"],
+  "income": ["revenu", "revenue", "credit", "entree", "encaissement"],
+  "expense": ["depense", "debit", "sortie", "decaissement", "remboursement", "achat", "charge"],
 
   // --- Familles de veille (ExternalSignal.family) ---
   // Les fichiers de veille décrivent la famille en langage courant (« Engouement

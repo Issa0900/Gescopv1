@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, AlertTriangle, Info, ScanLine, Table2 } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Info, ScanLine, Table2, Brain } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 /**
  * « Voici ce que j'ai compris de votre fichier. »
@@ -34,10 +35,12 @@ export default function PlanConfirmation({ analyses, champsParEntite, entityOpti
     Object.fromEntries(analyses.map((a) => [a.file_name, a.plan])),
   );
 
+  const [manuallyChanged, setManuallyChanged] = useState({});
+
   const majPlan = (fichier, maj) =>
     setPlans((p) => ({ ...p, [fichier]: { ...p[fichier], ...maj } }));
 
-  const majColonne = (fichier, nomColonne, champ) =>
+  const majColonne = (fichier, nomColonne, champ) => {
     setPlans((p) => ({
       ...p,
       [fichier]: {
@@ -47,167 +50,232 @@ export default function PlanConfirmation({ analyses, champsParEntite, entityOpti
         ),
       },
     }));
+    
+    setManuallyChanged((prev) => ({
+      ...prev,
+      [`${fichier}-${nomColonne}`]: true
+    }));
+  };
 
   const rattaches = (plan) => plan.colonnes.filter((c) => c.champ).length;
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className="space-y-6"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Voici ce que j'ai compris</h2>
-          <p className="text-sm text-slate-600">
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Voici ce que j'ai compris</h2>
+          <p className="text-sm text-slate-600 mt-1">
             Rien n'est encore enregistré. Vérifiez la lecture, corrigez si besoin, puis lancez l'import.
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={onAnnuler} disabled={enCours}>Annuler</Button>
-          <Button onClick={() => onConfirmer(plans)} disabled={enCours}>
+          <Button variant="outline" onClick={onAnnuler} disabled={enCours} className="border-slate-200">Annuler</Button>
+          <Button onClick={() => onConfirmer(plans)} disabled={enCours} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
             {enCours ? "Import en cours…" : "Importer ces données"}
           </Button>
         </div>
       </div>
 
-      {analyses.map((a) => {
-        const plan = plans[a.file_name];
-        if (!plan) return null;
-        const champs = champsParEntite?.[plan.entite] || [];
-        const confiance = TON_CONFIANCE[plan.confiance] || TON_CONFIANCE.moyenne;
-        const { Icone } = confiance;
+      <AnimatePresence>
+        {analyses.map((a, idx) => {
+          const plan = plans[a.file_name];
+          if (!plan) return null;
+          const champs = champsParEntite?.[plan.entite] || [];
+          const confiance = TON_CONFIANCE[plan.confiance] || TON_CONFIANCE.moyenne;
+          const { Icone } = confiance;
 
-        return (
-          <section key={a.file_name} className="rounded-xl border border-slate-200 bg-white p-5 space-y-5">
-            <header className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-medium text-slate-900 break-words">{a.file_name}</p>
-                {plan.explication && <p className="mt-1 text-sm text-slate-600">{plan.explication}</p>}
-                <p className="mt-1 text-xs text-slate-500">{ORIGINE[plan.origine] || plan.origine}</p>
+          return (
+            <motion.section 
+              key={a.file_name}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              className="rounded-xl border border-slate-200 bg-white shadow-sm p-6 space-y-6"
+            >
+              <header className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-base font-semibold text-slate-900 break-words">{a.file_name}</h3>
+                  {plan.explication && <p className="mt-1 text-sm text-slate-600 leading-relaxed">{plan.explication}</p>}
+                  <p className="mt-1.5 text-xs font-medium text-slate-500">{ORIGINE[plan.origine] || plan.origine}</p>
+                </div>
+                <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm ${confiance.classe}`}>
+                  <Icone className="h-4 w-4" aria-hidden="true" />
+                  {confiance.libelle}
+                </span>
+              </header>
+
+              {/* Ce que le fichier a corrige dans l'analyse. */}
+              {plan.corrections?.length > 0 && (
+                <div className="rounded-xl border border-sky-200 bg-sky-50/50 p-4">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-sky-900">
+                    <ScanLine className="h-4 w-4" aria-hidden="true" />
+                    Corrigé d'après le contenu réel du fichier
+                  </p>
+                  <ul className="mt-2 space-y-1.5 text-sm text-sky-800">
+                    {plan.corrections.map((c, i) => <li key={i} className="flex items-start gap-2"><span className="text-sky-400">•</span> {c}</li>)}
+                  </ul>
+                </div>
+              )}
+
+              {a.analyse_erreur && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                  <p>{a.analyse_erreur}</p>
+                </div>
+              )}
+
+              <div className="grid gap-6 sm:grid-cols-2 rounded-xl bg-slate-50/50 p-5 border border-slate-100">
+                <div>
+                  <label className="text-sm font-semibold text-slate-900 mb-1.5 block" htmlFor={`type-${a.file_name}`}>
+                    Type de données
+                  </label>
+                  <Select value={plan.entite || ""} onValueChange={(val) => majPlan(a.file_name, { entite: val })}>
+                    <SelectTrigger id={`type-${a.file_name}`} className="bg-white">
+                      <SelectValue placeholder="Choisir un type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {entityOptions.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm self-end">
+                  <dt className="text-slate-500 font-medium">Lignes à importer</dt>
+                  <dd className="text-slate-900 font-semibold">{a.rows_read ?? "—"}</dd>
+                  <dt className="text-slate-500 font-medium">Colonnes rattachées</dt>
+                  <dd className="text-slate-900 font-semibold">{rattaches(plan)} <span className="text-slate-400 font-normal">/ {plan.colonnes.length}</span></dd>
+                  {plan.lignes_ignorees?.length > 0 && (
+                    <>
+                      <dt className="text-slate-500 font-medium">Lignes écartées</dt>
+                      <dd className="text-slate-900 font-semibold">{plan.lignes_ignorees.length} <span className="text-slate-400 font-normal">(totaux, commentaires)</span></dd>
+                    </>
+                  )}
+                </dl>
               </div>
-              <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${confiance.classe}`}>
-                <Icone className="h-3.5 w-3.5" aria-hidden="true" />
-                {confiance.libelle}
-              </span>
-            </header>
 
-            {/* Ce que le fichier a corrige dans l'analyse. */}
-            {plan.corrections?.length > 0 && (
-              <div className="rounded-lg border border-sky-200 bg-sky-50 p-3">
-                <p className="flex items-center gap-1.5 text-sm font-medium text-sky-900">
-                  <ScanLine className="h-4 w-4" aria-hidden="true" />
-                  Corrigé d'après le contenu réel du fichier
-                </p>
-                <ul className="mt-1.5 space-y-1 text-sm text-sky-800">
-                  {plan.corrections.map((c, i) => <li key={i}>• {c}</li>)}
-                </ul>
-              </div>
-            )}
-
-            {a.analyse_erreur && (
-              <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                {a.analyse_erreur}
-              </p>
-            )}
-
-            <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-xs font-medium text-slate-600" htmlFor={`type-${a.file_name}`}>
-                  Type de données
-                </label>
-                <Select value={plan.entite || ""} onValueChange={(val) => majPlan(a.file_name, { entite: val })}>
-                  <SelectTrigger id={`type-${a.file_name}`} className="mt-1">
-                    <SelectValue placeholder="Choisir un type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {entityOptions.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm self-end">
-                <dt className="text-slate-500">Lignes à importer</dt>
-                <dd className="text-slate-900">{a.rows_read ?? "—"}</dd>
-                <dt className="text-slate-500">Colonnes rattachées</dt>
-                <dd className="text-slate-900">{rattaches(plan)} / {plan.colonnes.length}</dd>
-                {plan.lignes_ignorees?.length > 0 && (
-                  <>
-                    <dt className="text-slate-500">Lignes écartées</dt>
-                    <dd className="text-slate-900">{plan.lignes_ignorees.length} (totaux, commentaires)</dd>
-                  </>
-                )}
-              </dl>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs font-medium text-slate-600">Correspondance des colonnes</p>
-              <div className="space-y-2">
-                {plan.colonnes.map((c) => (
-                  <div key={c.colonne} className="flex flex-wrap items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate rounded-md bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700" title={c.colonne}>
-                      {c.colonne}
-                    </span>
-                    <span className="text-slate-400" aria-hidden="true">→</span>
-                    <Select
-                      value={c.champ || IGNOREE}
-                      onValueChange={(val) => majColonne(a.file_name, c.colonne, val)}
-                    >
-                      <SelectTrigger className="w-full sm:w-56">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={IGNOREE}>Ignorer cette colonne</SelectItem>
-                        {champs.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    {c.convention_date && (
-                      <Badge variant="outline" className="shrink-0 text-xs">
-                        dates {c.convention_date === "JJ/MM" ? "jour/mois" : "mois/jour"}
-                      </Badge>
-                    )}
-                    {c.valeurs && (
-                      <Badge variant="outline" className="shrink-0 text-xs">
-                        {Object.entries(c.valeurs).slice(0, 3).map(([k, val]) => `${k} = ${val}`).join(", ")}
-                      </Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {a.apercu?.length > 0 && (
-              <div>
-                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                  <Table2 className="h-3.5 w-3.5" aria-hidden="true" />
-                  Aperçu de ce qui sera enregistré
-                </p>
-                <div className="overflow-x-auto rounded-lg border border-slate-200">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        {Object.keys(a.apercu[0]).map((k) => (
-                          <th key={k} className="whitespace-nowrap px-3 py-2 text-left font-medium text-slate-600">{k}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {a.apercu.map((ligne, i) => (
-                        <tr key={i} className="border-t border-slate-100">
-                          {Object.keys(a.apercu[0]).map((k) => (
-                            <td key={k} className="whitespace-nowrap px-3 py-2 text-slate-700">{String(ligne[k] ?? "")}</td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <p className="mb-3 text-sm font-semibold text-slate-900">Correspondance des colonnes</p>
+                <div className="space-y-2.5">
+                  {plan.colonnes.map((c) => {
+                    const isMapped = !!c.champ;
+                    const isManual = manuallyChanged[`${a.file_name}-${c.colonne}`];
+                    
+                    return (
+                      <div key={c.colonne} className={`flex flex-wrap items-center gap-3 p-2 rounded-lg border transition-colors ${
+                        isMapped ? "bg-emerald-50/30 border-emerald-100" : "bg-slate-50 border-slate-200"
+                      }`}>
+                        <span className="min-w-0 flex-1 truncate font-medium text-sm text-slate-700 px-1" title={c.colonne}>
+                          {c.colonne}
+                        </span>
+                        <span className="text-slate-400" aria-hidden="true">→</span>
+                        <Select
+                          value={c.champ || IGNOREE}
+                          onValueChange={(val) => majColonne(a.file_name, c.colonne, val)}
+                        >
+                          <SelectTrigger className={`w-full sm:w-64 bg-white ${isMapped ? "border-emerald-200" : "border-slate-300"}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={IGNOREE}>Ignorer cette colonne</SelectItem>
+                            {champs.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        
+                        <div className="flex items-center gap-2 shrink-0 min-w-[120px]">
+                          {isManual && (
+                            <motion.div 
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-100 px-2 py-1 rounded-md"
+                              title="Ce choix sera mémorisé pour les prochains imports"
+                            >
+                              <Brain className="h-3.5 w-3.5" />
+                              Appris par l'IA
+                            </motion.div>
+                          )}
+                          
+                          {c.convention_date && (
+                            <Badge variant="outline" className="text-[10px] uppercase tracking-wider bg-white">
+                              {c.convention_date === "JJ/MM" ? "jour/mois" : "mois/jour"}
+                            </Badge>
+                          )}
+                          {c.valeurs && (
+                            <Badge variant="outline" className="text-[10px] bg-white max-w-[150px] truncate" title={Object.entries(c.valeurs).map(([k, val]) => `${k}=${val}`).join(", ")}>
+                              {Object.entries(c.valeurs).slice(0, 2).map(([k, val]) => `${k}:${val}`).join(", ")}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            )}
 
-            {a.apercu?.length === 0 && (
-              <p className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-                Aucune ligne n'a pu être lue avec cette correspondance. Vérifiez le type de données et les colonnes ci-dessus avant d'importer.
-              </p>
-            )}
-          </section>
-        );
-      })}
-    </div>
+              {a.apercu?.length > 0 && (
+                <div>
+                  <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <Table2 className="h-4 w-4 text-slate-500" aria-hidden="true" />
+                    Aperçu de ce qui sera enregistré
+                  </p>
+                  <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                          {Object.keys(a.apercu[0]).map((k) => {
+                            // Find if this target key is mapped in the current plan
+                            const isColumnMapped = plan.colonnes.some(c => c.champ === k);
+                            
+                            return (
+                              <th key={k} className={`whitespace-nowrap px-4 py-3 text-left font-semibold ${
+                                isColumnMapped ? "text-emerald-700 bg-emerald-50/50" : "text-amber-700 bg-amber-50/50"
+                              }`}>
+                                <div className="flex items-center gap-1.5">
+                                  {isColumnMapped ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+                                  {k}
+                                </div>
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {a.apercu.map((ligne, i) => (
+                          <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                            {Object.keys(a.apercu[0]).map((k) => {
+                              const val = ligne[k];
+                              const isMissing = val === null || val === undefined || val === "";
+                              return (
+                                <td key={k} className={`whitespace-nowrap px-4 py-2.5 ${isMissing ? 'bg-rose-50/30' : ''}`}>
+                                  {isMissing ? (
+                                    <span className="text-slate-300 italic text-xs">vide</span>
+                                  ) : (
+                                    <span className="text-slate-700">{String(val)}</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {a.apercu?.length === 0 && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+                  <p>Aucune ligne n'a pu être lue avec cette correspondance. Vérifiez le type de données et les colonnes ci-dessus avant d'importer.</p>
+                </div>
+              )}
+            </motion.section>
+          );
+        })}
+      </AnimatePresence>
+    </motion.div>
   );
 }

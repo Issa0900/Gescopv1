@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import ImportProgress from "@/components/import/ImportProgress";
 import PlanConfirmation from "@/components/import/PlanConfirmation";
+import { motion, AnimatePresence } from "framer-motion";
 
 const acceptedTypes = ".csv,.xlsx,.xls,.tsv,.pdf";
 
@@ -268,24 +269,28 @@ export default function ImportPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-8"
+    >
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Importer des données</h1>
-        <p className="mt-1 text-muted-foreground">
-          Téléversez vos fichiers (CSV, Excel, PDF). GESCOP extrait et normalise automatiquement vos transactions.
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Importer des données</h1>
+        <p className="mt-2 text-slate-600">
+          Téléversez vos fichiers (CSV, Excel, PDF). L'IA extrait et normalise automatiquement vos données.
         </p>
       </div>
 
       {/* Manual entity type selector */}
-      <div className="rounded-xl border border-border bg-card p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <div className="shrink-0">
-            <Label htmlFor="entity-select" className="text-sm font-semibold">Type de données</Label>
-            <p className="mt-0.5 text-xs text-muted-foreground">Choisissez le type pour une détection fiable</p>
+            <Label htmlFor="entity-select" className="text-sm font-semibold text-slate-900">Type de données cible</Label>
+            <p className="mt-1 text-xs text-slate-500">Choisissez le type si la détection automatique échoue souvent</p>
           </div>
           <Select value={manualEntity} onValueChange={setManualEntity}>
-            <SelectTrigger id="entity-select" className="sm:w-80">
-              <SelectValue placeholder="Détection automatique (nom du fichier)" />
+            <SelectTrigger id="entity-select" className="sm:w-80 bg-slate-50">
+              <SelectValue placeholder="Détection automatique (recommandé)" />
             </SelectTrigger>
             <SelectContent>
               {ENTITY_OPTIONS.map((opt) => (
@@ -297,24 +302,26 @@ export default function ImportPage() {
       </div>
 
       {/* Drop zone */}
-      <div
+      <motion.div
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
-        className={`rounded-2xl border-2 border-dashed p-10 text-center transition-colors ${
-          dragOver ? "border-primary bg-primary/5" : "border-border bg-card"
+        className={`rounded-2xl border-2 border-dashed p-12 text-center transition-all duration-200 ${
+          dragOver ? "border-primary bg-primary/5 shadow-inner" : "border-slate-300 bg-white hover:border-primary/50 hover:bg-slate-50"
         }`}
       >
         {uploading || analyzing || processing ? (
           <ImportProgress phase={uploading ? "uploading" : analyzing ? "analyzing" : "processing"} />
         ) : (
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-              <Upload className="h-7 w-7 text-muted-foreground" />
+          <div className="flex flex-col items-center gap-5">
+            <div className={`flex h-16 w-16 items-center justify-center rounded-full transition-colors ${dragOver ? 'bg-primary text-primary-foreground' : 'bg-slate-100 text-slate-500'}`}>
+              <Upload className="h-8 w-8" />
             </div>
             <div>
-              <p className="font-medium">Glissez vos fichiers ici ou cliquez pour parcourir</p>
-              <p className="mt-1 text-sm text-muted-foreground">Multi-fichiers supporté: CSV, XLSX, XLS, TSV, PDF texte</p>
+              <p className="text-lg font-semibold text-slate-900">Glissez vos fichiers ici ou cliquez pour parcourir</p>
+              <p className="mt-1.5 text-sm text-slate-500">Support: CSV, XLSX, XLS, TSV, PDF (texte sélectionnable)</p>
             </div>
             <label>
               <input
@@ -324,13 +331,13 @@ export default function ImportPage() {
                 className="hidden"
                 onChange={(e) => handleFiles(e.target.files)}
               />
-              <span className="inline-flex cursor-pointer items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-                Choisir un fichier
+              <span className="inline-flex cursor-pointer items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">
+                Parcourir les fichiers
               </span>
             </label>
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* Entre la lecture et l'ecriture : l'utilisateur valide ce qui a ete compris. */}
       {analyses && !processing && (

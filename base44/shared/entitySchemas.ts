@@ -183,7 +183,7 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
   },
   Transaction: {
     properties: {
-      date: D, description: S, amount: N, type: S, category: S, source: S,
+      date: D, description: S, amount: N, type: E("income", "expense"), category: S, source: S,
       currency: S, client: S, product: S, import_id: S,
     },
     required: ["date", "amount"],
