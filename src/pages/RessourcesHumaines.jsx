@@ -4,10 +4,10 @@ import { base44 } from "@/api/base44Client";
 import EmptyState from "@/components/EmptyState";
 import StatCard from "@/components/StatCard";
 import { Users, Banknote, Upload, PieChart, TrendingUp, Building2, UserCircle, Briefcase } from "lucide-react";
-import { useKpiEngineTimeSeries } from "@/lib/useKpiEngine";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { motion } from "framer-motion";
 import DataErrorState from "@/components/DataErrorState";
+import { fetchAll } from "@/lib/fetchAll";
 
 function formatCurrency(val) {
   if (val === null || val === undefined) return "-";
@@ -19,10 +19,10 @@ export default function RessourcesHumaines() {
     queryKey: ["rh-data"],
     queryFn: async () => {
       const [employees, payrolls, transactions, orders] = await Promise.all([
-        base44.entities.Employee.list(),
-        base44.entities.Payroll.list(),
-        base44.entities.Transaction.list(),
-        base44.entities.Order.list()
+        fetchAll(base44.entities.Employee),
+        fetchAll(base44.entities.Payroll, "-period"),
+        fetchAll(base44.entities.Transaction, "-date"),
+        fetchAll(base44.entities.Order, "-date")
       ]);
       const normalizedPayrolls = (payrolls || []).map((payroll) => ({
         ...payroll,
@@ -37,11 +37,26 @@ export default function RessourcesHumaines() {
     }
   });
 
-  const { timeSeries, available } = useKpiEngineTimeSeries(
-    data || {},
-    ["payroll_total", "total_revenue"],
-    { includeCurrentMonth: true }
-  );
+  const { timeSeries, available } = useMemo(() => {
+    if (!data) return { timeSeries: [], available: false };
+    const byMonth = {};
+    const add = (record, month, key, value) => {
+      if (!month || !Number.isFinite(value)) return;
+      byMonth[month] ||= { date: month, payroll_total: 0, total_revenue: 0 };
+      byMonth[month][key] += value;
+    };
+    (data.payrolls || []).forEach((p) => {
+      const month = String(p.period || p.date || "").slice(0, 7);
+      add(p, month, "payroll_total", Math.abs(Number(p.total_cost) || 0));
+    });
+    (data.orders || []).forEach((o) => {
+      const month = String(o.date || "").slice(0, 7);
+      const total = Number(o.total);
+      if (month && Number.isFinite(total)) add(o, month, "total_revenue", Math.max(0, total));
+    });
+    const rows = Object.values(byMonth).sort((a, b) => a.date.localeCompare(b.date));
+    return { timeSeries: rows, available: rows.length > 0 };
+  }, [data]);
 
   const { metrics, distribution } = useMemo(() => {
     if (!data) return { metrics: {}, distribution: [] };

@@ -11,6 +11,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { getStockAlertSettings, isStockAlert, computeStockAlerts } from "@/lib/stockAlerts";
 import { latestByKey, currentMonthKey } from "@/lib/periods";
 import { fetchAll } from "@/lib/fetchAll";
+import DataErrorState from "@/components/DataErrorState";
 import { Package, AlertTriangle, Boxes, DollarSign } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -63,20 +64,27 @@ export default function Produits() {
     && (draft.threshold !== savedSettings.threshold
       || draft.useReorderPoint !== savedSettings.useReorderPoint
       || draft.dormantMonths !== savedSettings.dormantMonths);
-  const { data: products, isLoading: lp } = useQuery({
+  const { data: products, isLoading: lp, isError: productsError, refetch: refetchProducts } = useQuery({
     queryKey: ["products"],
     queryFn: () => fetchAll(base44.entities.Product),
   });
-  const { data: inventory, isLoading: li } = useQuery({
+  const { data: inventory, isLoading: li, isError: inventoryError, refetch: refetchInventory } = useQuery({
     queryKey: ["inventory-summary"],
     queryFn: () => fetchAll(base44.entities.Inventory, "-date"),
   });
-  const { data: orders, isLoading: lo } = useQuery({
+  const { data: orders, isLoading: lo, isError: ordersError, refetch: refetchOrders } = useQuery({
     queryKey: ["orders-produits"],
     queryFn: () => fetchAll(base44.entities.Order, "-date"),
   });
 
   if (lp || li || lo) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  if (productsError || inventoryError || ordersError) {
+    return (
+      <DataErrorState
+        onRetry={() => Promise.all([refetchProducts(), refetchInventory(), refetchOrders()])}
+      />
+    );
+  }
   if (!products || products.length === 0) {
     return (
       <EmptyState
@@ -104,7 +112,6 @@ export default function Produits() {
   // rows. A label from the source system is not a substitute for looking at the
   // stock actually on hand.
   const stock = computeStockAlerts(products, inventory, alertSettings, orders);
-  const latestInv = latestByKey(inventory || [], "product_id", "date");
   const invByProduct = stock.byProduct;
   const stockOf = (p) => {
     const snap = invByProduct[p.product_id];
@@ -152,11 +159,6 @@ export default function Produits() {
     totalSalesByProduct[o.product_id] = (totalSalesByProduct[o.product_id] || 0) + q;
     totalRevByProduct[o.product_id] = (totalRevByProduct[o.product_id] || 0) + (Number(o.total) || 0);
 
-    const key = o.date ? o.date.slice(0, 7) : null;
-    if (key && key >= "2024-01" && key <= currentKey) {
-      windowMonths.add(key);
-      salesByProduct[o.product_id] = (salesByProduct[o.product_id] || 0) + q;
-    }
   });
 
   const topBySales = products
@@ -173,7 +175,8 @@ export default function Produits() {
   }));
 
   const stockDist = {};
-  latestInv.forEach((i) => {
+  const latestInventory = latestByKey(inventory || [], "product_id", "date");
+  latestInventory.forEach((i) => {
     const s = i.stock_status || "non_precise";
     stockDist[s] = (stockDist[s] || 0) + 1;
   });
@@ -190,7 +193,7 @@ export default function Produits() {
   products.forEach((p) => { productById[p.product_id] = p; });
   let inventoryValueEstimated = false;
   const inventoryValue = products.reduce((s, p) => {
-    const stated = Number(latestInv.find(i => i.product_id === p.product_id)?.inventory_value);
+    const stated = Number(latestInventory.find(i => i.product_id === p.product_id)?.inventory_value);
     if (Number.isFinite(stated) && stated > 0) return s + stated;
     const cost = Number(p.purchase_cost) || 0;
     const qty = stockOf(p);
