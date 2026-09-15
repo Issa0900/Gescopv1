@@ -24,6 +24,7 @@ export default function RessourcesHumaines() {
         fetchAll(base44.entities.Transaction, "-date"),
         fetchAll(base44.entities.Order, "-date")
       ]);
+      
       const normalizedEmployees = (employees || []).map((employee) => ({
         ...employee,
         employee_id: employee.employee_id || employee.id || employee.employee_number || employee.matricule,
@@ -33,6 +34,8 @@ export default function RessourcesHumaines() {
         ...payroll,
         employee_id: payroll.employee_id || payroll.employee_number || payroll.matricule,
         period: payroll.period || payroll.date || payroll.pay_period,
+      const normalizedPayrolls = (payrolls || []).map((payroll) => ({
+        ...payroll,
         total_cost: Number(payroll.total_cost) || (
           Number(payroll.regular_pay || 0) +
           Number(payroll.overtime || 0) +

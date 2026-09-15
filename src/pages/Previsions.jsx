@@ -25,16 +25,17 @@ import DataErrorState from "@/components/DataErrorState";
  */
 function fit(xs, ys) {
   const n = xs.length;
-  if (n < 2) return { slope: 0, intercept: ys[0] || 0, stderr: 0, r2: 0, mx: 0, sxx: 0, n };
+  const finiteYs = ys.map((value) => Number.isFinite(value) ? value : 0);
+  if (n < 2) return { slope: 0, intercept: finiteYs[0] || 0, stderr: 0, r2: 0, mx: 0, sxx: 0, n };
   const mx = xs.reduce((a, b) => a + b, 0) / n;
-  const my = ys.reduce((a, b) => a + b, 0) / n;
-  const num = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0);
+  const my = finiteYs.reduce((a, b) => a + b, 0) / n;
+  const num = xs.reduce((s, x, i) => s + (x - mx) * (finiteYs[i] - my), 0);
   const sxx = xs.reduce((s, x) => s + (x - mx) ** 2, 0);
   const slope = sxx === 0 ? 0 : num / sxx;
   const intercept = my - slope * mx;
-  const residuals = xs.map((x, i) => ys[i] - (slope * x + intercept));
+  const residuals = xs.map((x, i) => finiteYs[i] - (slope * x + intercept));
   const ssRes = residuals.reduce((s, r) => s + r * r, 0);
-  const ssTot = ys.reduce((s, y) => s + (y - my) ** 2, 0);
+  const ssTot = finiteYs.reduce((s, y) => s + (y - my) ** 2, 0);
   const stderr = Math.sqrt(ssRes / Math.max(1, n - 2));
   const r2 = ssTot > 0 ? Math.max(0, 1 - ssRes / ssTot) : 0;
   return { slope, intercept, stderr, r2, mx, sxx, n };
@@ -48,9 +49,11 @@ function fit(xs, ys) {
  * to put in front of someone making a cash decision.
  */
 function forecastAt(f, x) {
-  const value = f.slope * x + f.intercept;
+  const rawValue = f.slope * x + f.intercept;
+  const value = Number.isFinite(rawValue) ? rawValue : 0;
   if (!f.n || f.n < 3 || f.sxx === 0) return { value, lower: value, upper: value, se: 0 };
-  const se = f.stderr * Math.sqrt(1 + 1 / f.n + ((x - f.mx) ** 2) / f.sxx);
+  const rawSe = f.stderr * Math.sqrt(1 + 1 / f.n + ((x - f.mx) ** 2) / f.sxx);
+  const se = Number.isFinite(rawSe) ? rawSe : 0;
   return { value, lower: value - se, upper: value + se, se };
 }
 
@@ -124,12 +127,13 @@ export default function Previsions() {
       });
       Object.keys(byM).sort().forEach((m) => cashHistory.push({ month: m, value: byM[m] }));
     }
-    const cash30 = cumulativeNow + (cashF[0]?.value ?? 0);
-    const cash90 = cumulativeNow + (cashF[0]?.value ?? 0) + (cashF[1]?.value ?? 0) + (cashF[2]?.value ?? 0);
-    const lastMonth = monthly[monthly.length - 1];
-    const currentIncome = lastMonth?.income ?? 0;
-    const currentMargin = lastMonth?.margin ?? 0;
-    const projected90Margin = marginF.reduce((s, f) => s + (f?.value ?? 0), 0);
+    const forecastValue = (forecast) => Number.isFinite(forecast?.value) ? forecast.value : 0;
+    const cash30 = cumulativeNow + forecastValue(cashF[0]);
+    const cash90 = cumulativeNow + cashF.reduce((sum, forecast) => sum + forecastValue(forecast), 0);
+    const latestMonth = monthly[monthly.length - 1] || { income: 0, margin: 0 };
+    const currentIncome = Number.isFinite(latestMonth.income) ? latestMonth.income : 0;
+    const currentMargin = Number.isFinite(latestMonth.margin) ? latestMonth.margin : 0;
+    const projected90Margin = marginF.reduce((s, f) => s + forecastValue(f), 0);
     const shortfall = currentMargin * 3 - projected90Margin;
     return {
       monthly, incomeF, marginF, cashF, cash30, cash90, currentIncome, currentMargin,
@@ -148,9 +152,10 @@ export default function Previsions() {
     const hist = (cashHistory && cashHistory.length > 0)
         ? cashHistory.slice(-monthly.length).map((c) => { cum = c.value; return { month: c.month.slice(5), value: Math.round(c.value), forecast: null, range: null }; })
         : monthly.map((d) => { cum += d.margin; return { month: d.month.slice(5), value: Math.round(cum), forecast: null, range: null }; });
-      if (hist.length > 0) {
-        hist[hist.length - 1].forecast = hist[hist.length - 1].value;
-        hist[hist.length - 1].range = [hist[hist.length - 1].value, hist[hist.length - 1].value];
+      const lastHist = hist[hist.length - 1];
+      if (lastHist) {
+        lastHist.forecast = lastHist.value;
+        lastHist.range = [lastHist.value, lastHist.value];
       }
       let runCum = cum;
       const fcstMonths = ["+30j", "+60j", "+90j"];
@@ -159,7 +164,7 @@ export default function Previsions() {
       // variances rather than by a flat multiple.
       let varSum = 0;
       const fcst = cashF.map((f, i) => {
-        runCum += f.value;
+        runCum += Number.isFinite(f.value) ? f.value : 0;
         varSum += f.se * f.se;
         const err = Math.sqrt(varSum);
         return { month: fcstMonths[i], value: null, forecast: Math.round(runCum), range: [Math.round(runCum - err), Math.round(runCum + err)] };
@@ -169,9 +174,10 @@ export default function Previsions() {
     const f = metric === "ca" ? incomeF : marginF;
     const key = metric === "ca" ? "income" : "margin";
     const hist = monthly.map((d) => ({ month: d.month.slice(5), value: Math.round(d[key]), forecast: null, range: null }));
-    if (hist.length > 0) {
-      hist[hist.length - 1].forecast = hist[hist.length - 1].value;
-      hist[hist.length - 1].range = [hist[hist.length - 1].value, hist[hist.length - 1].value];
+    const lastHist = hist[hist.length - 1];
+    if (lastHist) {
+      lastHist.forecast = lastHist.value;
+      lastHist.range = [lastHist.value, lastHist.value];
     }
     const fcstMonths = ["+30j", "+60j", "+90j"];
     const fcst = f.map((p, i) => ({ month: fcstMonths[i], value: null, forecast: Math.round(p.value), range: [Math.round(p.lower), Math.round(p.upper)] }));

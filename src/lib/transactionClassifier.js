@@ -122,9 +122,10 @@ export function classifyTransaction(t) {
   const byType = classifyType(t.type);
   if (byType) return byType;
   
-  const amt = Number(t.amount) || 0;
-  if (amt < 0) return "expense";
-  return "expense"; // Fallback robuste
+  const amount = [t.amount, t.revenue_amount, t.expense_amount]
+    .map(Number)
+    .find(Number.isFinite);
+  return amount === undefined || amount >= 0 ? "income" : "expense";
 }
 
 export function isIncome(t) {
@@ -139,6 +140,14 @@ export function isExpense(t) {
 export function txAmount(t, classification) {
   if (!t) return 0;
   const base = Number(t.amount);
-  if (base) return Math.abs(base);
+  if (Number.isFinite(base)) return Math.abs(base);
+
+  if (classification === "income") {
+    return Math.abs(Number(t.revenue_amount) || Number(t.expense_amount) || 0);
+  }
+  if (classification === "expense") {
+    return Math.abs(Number(t.expense_amount) || Number(t.revenue_amount) || 0);
+  }
+  // No hint — try both.
   return Math.abs(Number(t.revenue_amount) || Number(t.expense_amount) || 0);
 }
