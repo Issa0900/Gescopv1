@@ -60,10 +60,10 @@ export default function Finance() {
     };
   });
 
-  const totalRev = semanticEngine.indicators.total_revenue || 0;
-  const totalExp = semanticEngine.indicators.total_expense || 0;
-  const netInc = semanticEngine.indicators.net_income || 0;
-  const netMargin = semanticEngine.indicators.net_margin_pct || 0;
+  const totalRev = semanticEngine.kpis?.get("total_revenue")?.value || 0;
+  const totalExp = semanticEngine.kpis?.get("total_expense")?.value || 0;
+  const netInc = semanticEngine.kpis?.get("net_income")?.value || 0;
+  const netMargin = semanticEngine.kpis?.get("net_margin_pct")?.value || 0;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
