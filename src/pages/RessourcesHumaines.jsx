@@ -1,8 +1,10 @@
 import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import EmptyState from "@/components/EmptyState";
 import StatCard from "@/components/StatCard";
+import { Button } from "@/components/ui/button";
 import { Users, Banknote, Upload, PieChart, TrendingUp, Building2, UserCircle, Briefcase } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { motion } from "framer-motion";
@@ -126,7 +128,14 @@ export default function RessourcesHumaines() {
         icon={Users}
         title="Aucune donnée RH"
         description="Importez la liste de vos employés ou vos données de paie pour suivre vos effectifs et coûts salariaux."
-        action={{ label: "Importer des données", href: "/importer", icon: Upload }}
+        action={
+          <Link to="/importer">
+            <Button>
+              <Upload className="mr-2 h-4 w-4" />
+              Importer des données
+            </Button>
+          </Link>
+        }
       />
     );
   }
