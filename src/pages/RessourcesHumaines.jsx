@@ -271,7 +271,7 @@ export default function RessourcesHumaines() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold shadow-sm">
-                        {(emp.employee_id || "?").slice(0, 2).toUpperCase()}
+                        {String(emp.employee_id || "?").slice(0, 2).toUpperCase()}
                       </div>
                       <div className="font-medium text-slate-900">{emp.employee_id || "Inconnu"}</div>
                     </div>
@@ -286,7 +286,7 @@ export default function RessourcesHumaines() {
                   <td className="px-6 py-4 text-slate-600">
                     <div className="flex items-center gap-2">
                       <Briefcase className="h-3.5 w-3.5 text-slate-400" />
-                      {emp.employment_type ? emp.employment_type.replace('_', ' ') : "-"}
+                      {emp.employment_type ? String(emp.employment_type).replace('_', ' ') : "-"}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -297,7 +297,7 @@ export default function RessourcesHumaines() {
                     }`}>
                       {emp.status === 'actif' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>}
                       {emp.status === 'depart' && <span className="h-1.5 w-1.5 rounded-full bg-rose-500"></span>}
-                      {(emp.status || "Actif").toUpperCase()}
+                      {String(emp.status || "Actif").toUpperCase()}
                     </span>
                   </td>
                 </tr>
