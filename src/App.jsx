@@ -38,6 +38,7 @@ const Clients = lazy(() => import('@/pages/Clients'));
 const Produits = lazy(() => import('@/pages/Produits'));
 const Marketing = lazy(() => import('@/pages/Marketing'));
 const Tresorerie = lazy(() => import('@/pages/Tresorerie'));
+const Finance = lazy(() => import('@/pages/Finance'));
 const Audit = lazy(() => import('@/pages/Audit'));
 
 const AuthenticatedApp = () => {
@@ -94,6 +95,7 @@ const AuthenticatedApp = () => {
           <Route path="/produits" element={<Produits />} />
           <Route path="/marketing" element={<Marketing />} />
           <Route path="/tresorerie" element={<Tresorerie />} />
+          <Route path="/finance" element={<Finance />} />
           <Route path="/kpis" element={<Kpis />} />
           <Route path="/anomalies" element={<Anomalies />} />
           <Route path="/risques" element={<Risques />} />

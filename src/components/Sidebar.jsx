@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Brain, Upload, BarChart3, AlertTriangle, ShieldAlert, Lightbulb,
   TrendingUp, Calculator, CheckSquare, Bell, Target, FileText, MessageSquare,
   Radar as RadarIcon, History, Book, Settings, Menu, X, ChevronDown,
-  Users, Package, Megaphone, Wallet, PanelLeftClose, PanelLeftOpen, LogOut, ShieldCheck,
+  Users, Package, Megaphone, Wallet, PanelLeftClose, PanelLeftOpen, LogOut, ShieldCheck, Banknote
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCompany } from "@/hooks/useCompany";
@@ -20,6 +20,7 @@ const navGroups = [
       { to: "/", label: "Vue d'ensemble", icon: LayoutDashboard, end: true },
       { to: "/kpis", label: "KPI", icon: BarChart3 },
       { to: "/tresorerie", label: "Trésorerie", icon: Wallet },
+      { to: "/finance", label: "Finance", icon: Banknote },
       { to: "/previsions", label: "Prévisions", icon: TrendingUp },
       { to: "/simulateur", label: "Simulateur", icon: Calculator },
     ],
