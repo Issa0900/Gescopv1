@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Sparkles, RefreshCw, ArrowRight, Check, Loader2, ChevronDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { useKpiEngine } from "@/lib/useKpiEngine";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import HealthHero from "@/components/dashboard/HealthHero";
 import InsightCard from "@/components/dashboard/InsightCard";
@@ -166,7 +167,6 @@ export default function Dashboard() {
   };
 
   // --- NOUVEAU MOTEUR SÉMANTIQUE (GESCOP CORE) ---
-  const { useKpiEngine } = require("@/lib/useKpiEngine");
   const semanticEngine = useKpiEngine(
     { 
       transactions: (transactions || []).filter(t => inPeriod(t.date)), 

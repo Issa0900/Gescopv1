@@ -21,6 +21,7 @@
 import { getSchema } from "./entitySchemas.ts";
 import { parseDate, stripAccents, type ConventionDate } from "./importUtils.ts";
 import { trouverLigneEntetes, detectEntityByHeaders, detectEntityByFieldOverlap } from "./sheetDetect.ts";
+import { recognizeAllColumns } from "./core/contextualRecognition.ts";
 
 export type Confiance = "haute" | "moyenne" | "faible";
 export type OriginePlan = "ia" | "ia+preuves" | "regles" | "memoire";
@@ -353,7 +354,6 @@ export function planParRegles(
   const entite = entiteConnue || detectEntityByHeaders(entetes) || detectEntityByFieldOverlap(entetes) || null;
   
   // Use Contextual Recognition (Sprint 2)
-  const { recognizeAllColumns } = require('./core/contextualRecognition.ts'); // Using CommonJS require to avoid top-level import issues if needed, or normal import if supported. Wait, Deno uses ES imports. Let's use ES import at the top of the file.
   
   // Create sample rows for recognition
   const sampleRows: Record<string, any>[] = [];
