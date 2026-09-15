@@ -13,9 +13,13 @@ export default async function(req) {
     if (!company) {
       return Response.json({ error: "Veuillez configurer votre entreprise d'abord." }, { status: 400 });
     }
-    if (!transactions || transactions.length < 3) {
+    const hasData = (transactions && transactions.length > 0) || 
+                    (totals.orderCount && totals.orderCount > 0) || 
+                    (totals.currentCash && totals.currentCash > 0);
+    
+    if (!hasData) {
       return Response.json({
-        error: "Données insuffisantes. Importez au moins quelques transactions avant l'analyse.",
+        error: "Données insuffisantes. Importez au moins quelques transactions, commandes ou données de trésorerie avant l'analyse.",
       }, { status: 400 });
     }
 

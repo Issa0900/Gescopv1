@@ -1,0 +1,413 @@
+<USER_REQUEST>
+GESCOP
+Pilotage intelligent
+boulangerie
+Restauration
+Pilote[Vue d'ensemble](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/)[KPI](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/kpis)[Trésorerie](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/tresorerie)[Finance](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/finance)[Prévisions](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/previsions)[Simulateur](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/simulateur)
+Opérations[Clients](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/clients)[Produits](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/produits)[Marketing](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/marketing)
+Intelligence[Anomalies](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/anomalies)[Risques & opportunités](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/risques)[Insights IA](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/insights)[Radar externe](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/radar)[Alertes](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/alertes)[Recommandations](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/recommandations)[Historique](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/historique)
+Actions[Tâches](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/taches)[Décisions](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/decisions)[Rapports](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/rapports)[Assistant](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/assistant)
+Outils[Sources](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/importer)[Audit des calculs](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/audit)[Manuel](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/manuel)
+IS
+Issa Ouedraogo
+issaouedraogo0900@gmail.com
+Réduire la sidebarDonnées hébergées au Canada · Loi 25
+Importer des données
+Téléversez vos fichiers (CSV, Excel, PDF). L'IA extrait et normalise automatiquement vos données.
+Type de données cibleChoisissez le type si la détection automatique échoue souvent
+Détection automatique (recommandé)
+Glissez vos fichiers ici ou cliquez pour parcourir
+Support: CSV, XLSX, XLS, TSV, PDF (texte sélectionnable)
+Parcourir les fichiers
+Voici ce que j'ai compris
+Rien n'est encore enregistré. Vérifiez la lecture, corrigez si besoin, puis lancez l'import.
+AnnulerImporter ces données
+Nordik_PleinAir_Donnees_Complet_2026.xlsx [Sommaire Exécutif]
+Ce fichier est un sommaire exécutif présentant des indicateurs agrégés par succursale plutôt que des données détaillées (comme des ventes ou des dépenses individuelles) pouvant correspondre aux modèles standards.
+Lu par l'analyse, corrigé d'après le contenu du fichier
+Lecture sûre
+Corrigé d'après le contenu réel du fichier
+•colonne « Coût Total ($) » : rattrapage via memoire/reconnaissance -> total_cost.
+•colonne « % Marge » : rattrapage via memoire/reconnaissance -> gross_margin.
+Type de donnéesChoisir un type
+Lignes à importer
+9
+Colonnes rattachées
+2 / 6
+Lignes écartées
+1 (totaux, commentaires)
+Correspondance des colonnes
+Succursale→Ignorer cette colonne
+Nb Transactions→Ignorer cette colonne
+Ventes Totales ($)→Ignorer cette colonne
+Coût Total ($)→
+Profit Brut ($)→Ignorer cette colonne
+% Marge→
+Aperçu de ce qui sera enregistré
+total_cost
+gross_margin
+vide
+vide
+vide
+vide
+vide
+vide
+vide
+vide
+vide
+vide
+Nordik_PleinAir_Donnees_Complet_2026.xlsx [Ventes (1200+)]
+Ce document contient l'historique détaillé de vos ventes et commandes, avec les articles vendus, les clients associés, les succursales et les modes de paiement.
+Lu par l'analyse, corrigé d'après le contenu du fichier
+Lecture sûre
+Corrigé d'après le contenu réel du fichier
+•colonne « Client » : rattrapage via memoire/reconnaissance -> client.
+•colonne « Catégorie » : rattrapage via memoire/reconnaissance -> category.
+•colonne « Prix Unitaire ($) » : rattrapage via memoire/reconnaissance -> unit_price.
+•colonne « Coût Unitaire ($) » : rattrapage via memoire/reconnaissance -> unit_cost.
+•colonne « Montant Total ($) » : rattrapage via memoire/reconnaissance -> total_revenue.
+•colonne « Coût Total ($) » : rattrapage via memoire/reconnaissance -> total_cost.
+•colonne « Marge Brute % » : rattrapage via memoire/reconnaissance -> gross_margin.
+•colonne « ID Employé » : rattrapage via memoire/reconnaissance -> employee_id.
+•colonne « Employé » : rattrapage via memoire/reconnaissance -> employee_id.
+Type de donnéesCommandes (orders)
+Lignes à importer
+1201
+Colonnes rattachées
+13 / 18
+Correspondance des colonnes
+ID Transaction→Ignorer cette colonne
+Date→date
+ID Client→customer_id
+Client→customer_idAppris par l'IA
+Code Produit→product_idAppris par l'IA
+Description Produit→Ignorer cette colonne
+Catégorie→
+Quantité→quantity
+Prix Unitaire ($)→unit_price
+Coût Unitaire ($)→
+Montant Total ($)→
+Coût Total ($)→
+Profit Brut ($)→Ignorer cette colonne
+Marge Brute %→gross_margin
+ID Employé→
+Employé→
+Succursale→Ignorer cette colonne
+Mode de Paiement→Ignorer cette colonne
+Aperçu de ce qui sera enregistré
+date
+customer_id
+client
+category
+quantity
+unit_price
+unit_cost
+total_revenue
+total_cost
+gross_margin
+employee_id
+45658
+C-88124
+Leblanc, Gabriel
+Accessoires
+2
+45
+18
+vide
+vide
+vide
+Mathieu Côté
+45658
+C-88021
+Bouchard, Sarah
+Accessoires
+1
+35
+12.5
+vide
+vide
+vide
+Camille Bouchard
+45658
+C-88052
+Bélanger, Olivier
+Sports d'hiver
+4
+189.99
+85
+vide
+vide
+vide
+Mathieu Côté
+45658
+C-88136
+Gagné, Philippe
+Camping
+2
+70
+30
+vide
+vide
+vide
+Alexandre Roy
+45659
+C-88077
+Paquette, Alexandre
+Vêtements
+1
+140
+65
+vide
+vide
+vide
+Marie Tremblay
+Nordik_PleinAir_Donnees_Complet_2026.xlsx [Stocks & Inventaire]
+Ce fichier présente l'état de votre inventaire avec les quantités en stock, les seuils de réapprovisionnement, ainsi que les coûts et prix de vente par article.
+Lu par l'analyse, corrigé d'après le contenu du fichier
+Lecture sûre
+Corrigé d'après le contenu réel du fichier
+•colonne « SKU » : rattrapage via memoire/reconnaissance -> sku.
+•colonne « Description » : rattrapage via memoire/reconnaissance -> description.
+•colonne « Catégorie » : rattrapage via memoire/reconnaissance -> category.
+•colonne « Coût Unitaire ($) » : rattrapage via memoire/reconnaissance -> unit_cost.
+•colonne « Prix Vente ($) » : rattrapage via memoire/reconnaissance -> selling_price.
+Type de donnéesStocks (inventory)
+Lignes à importer
+13
+Colonnes rattachées
+5 / 10
+Lignes écartées
+1 (totaux, commentaires)
+Correspondance des colonnes
+SKU→
+Description→
+Catégorie→
+Qté en Stock→Ignorer cette colonne
+Seuil d'Alerte→Ignorer cette colonne
+Coût Unitaire ($)→
+Prix Vente ($)→
+Valeur Stock Coût ($)→Ignorer cette colonne
+Valeur Stock Vente ($)→Ignorer cette colonne
+Fournisseur→Ignorer cette colonne
+Aperçu de ce qui sera enregistré
+sku
+description
+category
+unit_cost
+selling_price
+CAM-T004
+Tente 4 saisons Boréal
+Camping
+210
+450
+VET-M012
+Manteau coupe-vent Laurentides
+Vêtements
+65
+140
+ACC-B001
+Bouteille isotherme 1L Eco
+Accessoires
+12.5
+35
+HIV-R008
+Raquettes à neige Pro Gaspésie
+Sports d'hiver
+85
+189.99
+CAM-S050
+Sac de randonnée 50L Kiamika
+Camping
+95
+210
+Nordik_PleinAir_Donnees_Complet_2026.xlsx [Employés & RH]
+Ce fichier contient la liste officielle de vos employés, incluant leurs rôles, leurs succursales de rattachement ainsi que leurs taux de commission respectifs.
+Lu par l'analyse, corrigé d'après le contenu du fichier
+Lecture sûre
+Corrigé d'après le contenu réel du fichier
+•colonne « Nom » : rattrapage via memoire/reconnaissance -> name.
+•colonne « Prénom » : rattrapage via memoire/reconnaissance -> first_name.
+Type de donnéesEmployés
+Lignes à importer
+10
+Colonnes rattachées
+4 / 6
+Correspondance des colonnes
+ID Employé→employee_id
+Nom→
+Prénom→
+Rôle / Poste→role
+Succursale→Ignorer cette colonne
+Taux Commission→Ignorer cette colonne
+Aperçu de ce qui sera enregistré
+employee_id
+name
+first_name
+role
+EMP-001
+Gagnon
+Jean-François
+Représentant Ventes
+EMP-002
+Tremblay
+Marie
+Gérante de Succursale
+EMP-003
+Roy
+Alexandre
+Représentant Ventes
+EMP-004
+Bouchard
+Camille
+Spécialiste E-Commerce
+EMP-005
+Côté
+Mathieu
+Représentant Ventes
+Nordik_PleinAir_Donnees_Complet_2026.xlsx [Fournisseurs]
+Ce fichier contient la liste de vos fournisseurs partenaires avec leurs coordonnées et leurs modalités de paiement.
+Lu par l'analyse, corrigé d'après le contenu du fichier
+Lecture sûre
+Corrigé d'après le contenu réel du fichier
+•colonne « Ville » : rattrapage via memoire/reconnaissance -> city.
+•colonne « Courriel » : rattrapage via memoire/reconnaissance -> email.
+Type de donnéesFournisseurs
+Lignes à importer
+7
+Colonnes rattachées
+4 / 6
+Correspondance des colonnes
+ID Fournisseur→supplier_id
+Raison Sociale→Ignorer cette colonne
+Ville→
+Contact Principal→Ignorer cette colonne
+Courriel→
+Conditions Paiement→payment_terms
+Aperçu de ce qui sera enregistré
+supplier_id
+city
+email
+payment_terms
+FOUR-101
+Montréal
+commandes@pleinairdist.qc.ca
+Net 30
+FOUR-102
+Drummondville
+ventes@textilesnordiques.ca
+Net 15
+FOUR-103
+Sherbrooke
+info@ecogourde.qc.ca
+Net 30
+FOUR-104
+Québec
+service@neigetech.ca
+Net 45
+FOUR-105
+Saguenay
+luc@equipementsaguenay.com
+Net 30
+Nordik_PleinAir_Donnees_Complet_2026.xlsx [Clients (CRM)]
+Ce fichier contient la liste des clients enregistrés avec leurs coordonnées de contact, leur localisation et leur solde de points de fidélité.
+Lu par l'analyse automatique
+Lecture sûre
+Type de donnéesClients (customers)
+Lignes à importer
+150
+Colonnes rattachées
+3 / 6
+Correspondance des colonnes
+ID Client→customer_id
+Nom Complet→Ignorer cette colonne
+Ville→city
+Code Postal→Ignorer cette colonne
+Courriel→email
+Points Fidélité→Ignorer cette colonne
+Aperçu de ce qui sera enregistré
+customer_id
+city
+email
+C-88001
+Montréal
+julie.leblanc1@email.qc.ca
+C-88002
+Gatineau
+antoine.paquette2@email.qc.ca
+C-88003
+Trois-Rivières
+amélie.martel3@email.qc.ca
+C-88004
+Lévis
+catherine.lavoie4@email.qc.ca
+C-88005
+Granby
+jonathan.bélanger5@email.qc.ca
+Nordik_PleinAir_Donnees_Complet_2026.xlsx [Marketing]
+Ce fichier présente la liste de vos campagnes publicitaires avec leur budget, le canal utilisé, les clics obtenus et leur coût par clic.
+Lu par l'analyse automatique
+Lecture sûre
+Type de donnéesCampagnes (campaigns)
+Lignes à importer
+7
+Colonnes rattachées
+5 / 7
+Lignes écartées
+1 (totaux, commentaires)
+Correspondance des colonnes
+ID Campagne→campaign_id
+Nom de la Campagne→Ignorer cette colonne
+Canal→channel
+Budget (CAD)→budget
+Clics→clicks
+Statut→status
+Coût / Clic ($)→Ignorer cette colonne
+Aperçu de ce qui sera enregistré
+campaign_id
+channel
+budget
+clicks
+status
+M-901
+Facebook Ads
+3500
+5200
+Terminée
+M-902
+Courriel
+500
+1850
+Terminée
+M-903
+Affichage / Web
+7500
+9400
+Active
+M-904
+Google Ads
+2800
+4100
+Terminée
+M-905
+Instagram Ads
+5000
+6800
+Active
+Tableurs
+Colonnes: date, description, montant, type, catégorie
+PDF texte
+Relevés bancaires, factures en PDF natif
+Normalisation auto
+Détection des types, doublons et devises
+Historique des imports
+Aucun import
+Vos imports apparaîtront ici.
+Purger toutes les données
+Supprime définitivement toutes vos données importées ainsi que les KPI, anomalies, risques, opportunités et recommandations produits par l'analyse. Irréversible.
+Tout supprimer
+Astuce
+Après l'import, allez au tableau de bord et lancez l'analyse IA pour obtenir votre score de santé, vos KPI, vos risques et vos recommandations. [Aller au tableau de bord →](https://preview-sandbox--6aa86c23663c4866ac9d9fd2.base44.app/)
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-09-14T22:44:46-04:00.
+</ADDITIONAL_METADATA>
