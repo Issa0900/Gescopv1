@@ -221,7 +221,7 @@ export default function Dashboard() {
     const cashMonthly = monthlyAgg(cashflow || [], "date", "closing_cash", cashMode.toLowerCase());
     
     const costMode = validateChartAggregation(METRIC_TYPES.FLOW, "sum", "Costs");
-    const costsMonthly = monthlyAggComplete(allExpenses, "date", "amount", costMode.toLowerCase());
+    const costsMonthly = monthlyAggComplete(expenseRecords || [], "date", "amount", costMode.toLowerCase());
     
     const clientMode = validateChartAggregation(METRIC_TYPES.STOCK, "count", "Clients"); // or FLOW
     const clientsMonthly = monthlyAggComplete(customers || [], "acquisition_date", "customer_id", "count");
