@@ -184,6 +184,7 @@ export default function Dashboard() {
     const fExpenses = (expenseRecords || []).filter((e) => inPeriod(e.date));
     const fCustomers = (customers || []).filter((c) => inPeriod(c.acquisition_date));
 
+    let totalIncome, totalExpensesTxn, margin, marginPct, latestCash;
     // Si le moteur sémantique est disponible ET retourne des données, on l'utilise
     const semRev = semanticEngine.kpis?.get("total_revenue")?.value || 0;
 
