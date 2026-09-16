@@ -52,8 +52,8 @@ test.describe('Onboarding and LLM Audit', () => {
 
     // Execute real LLM request without mocking
 
-    // 2. Go straight to onboarding by enabling the test backdoor
-    await page.goto('http://localhost:5175/');
+    // 2. Go straight to onboarding    // Set local storage directly and navigate
+    await page.goto('http://localhost:5173/');
     await page.evaluate(() => {
       localStorage.setItem('PLAYWRIGHT_TEST', 'true');
     });

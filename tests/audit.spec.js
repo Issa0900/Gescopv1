@@ -52,7 +52,7 @@ test.describe('Global Crash Audit', () => {
     });
 
     // Authenticate backdoor
-    await page.goto('http://localhost:5175/');
+    await page.goto('http://localhost:5173/');
     await page.evaluate(() => {
       localStorage.setItem('PLAYWRIGHT_TEST', 'true');
     });
