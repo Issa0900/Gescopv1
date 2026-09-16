@@ -1360,14 +1360,38 @@ export function normalizeKeys(row: Record<string, any>, properties?: Record<stri
 
 // English → French enum translations (context-aware: checked against target enum)
 const ENUM_TRANSLATIONS: Record<string, string[]> = {
+  // Statuses (orders, tasks, campaigns, general)
   "paid": ["paye"], "pending": ["en_attente", "en_cours"], "failed": ["echoue"], "refunded": ["rembourse"],
-  "shipped": ["expedie"], "processing": ["en_preparation"], "completed": ["livre", "terminee"], "cancelled": ["annule"], "returned": ["retourne"],
-  "received": ["recu"],
-  "none": ["aucun"], "requested": ["demande"], "approved": ["approuve"], "rejected": ["refuse"],
-  "web": ["shopify"],
-  "google ads": ["google_ads"], "meta ads": ["meta_ads"],
-  "paused": ["pause"], "planned": ["planifiee"], "active": ["active", "actif"], "inactive": ["inactif"],
-  "dormant": ["dormant"],
+  "shipped": ["expedie"], "processing": ["en_preparation", "en_cours"], "completed": ["livre", "terminee", "complete"], "cancelled": ["annule", "annulee"], "returned": ["retourne"],
+  "received": ["recu"], "done": ["terminee"], "todo": ["a_faire"], "in progress": ["en_cours"], "in_progress": ["en_cours"],
+  "none": ["aucun"], "requested": ["demande"], "approved": ["approuve"], "rejected": ["refuse", "rejetee"],
+  
+  // Levels, Priorities, Risks
+  "low": ["faible", "bas", "basse", "inferieur"], "medium": ["moyenne", "modere", "moyen", "egal"], "high": ["elevee", "eleve", "important", "superieur", "haute"], "urgent": ["urgente", "critique"],
+  "critical": ["critique", "urgente"],
+
+  // States
+  "new": ["nouveau", "nouvelle"], "seen": ["vu", "lue"], "resolved": ["resolu"], "archived": ["archivee", "archive"],
+  "active": ["active", "actif"], "inactive": ["inactif"], "lost": ["perdu"], "dormant": ["dormant"], "terminated": ["terminee"],
+  "paused": ["pause"], "planned": ["planifiee"], "discontinued": ["discontinue"],
+  
+  // Channels & Marketing
+  "web": ["shopify"], "google ads": ["google_ads"], "meta ads": ["meta_ads"], "instagram": ["instagram"], "email": ["email"], "tiktok": ["tiktok"],
+
+  // Employee & Customer types
+  "full time": ["temps_plein"], "part time": ["temps_partiel"], "contractor": ["contractuel"], "intern": ["stagiaire"],
+  "departed": ["depart"], "on leave": ["conge"], "probation": ["essai"],
+  "individual": ["particulier"], "business": ["entreprise", "b2b"],
+
+  // Sentiment & Impact
+  "positive": ["positif"], "neutral": ["neutre"], "negative": ["negatif"], "very negative": ["tres_negatif"],
+
+  // Competitor
+  "leader": ["leader"], "challenger": ["challenger"], "follower": ["suiveur"], "niche": ["niche"],
+
+  // Inventory
+  "optimal": ["optimal"], "out of stock": ["rupture"], "overstock": ["surstock"], "low stock": ["faible", "proche_rupture"],
+
   // French capitalized/common variants → canonical enum values
   "alerte": ["proche_rupture", "faible"], "normal": ["optimal"],
   "bas": ["inferieur"], "moyen": ["egal"], "eleve": ["superieur"],
