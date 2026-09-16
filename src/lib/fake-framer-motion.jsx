@@ -20,6 +20,18 @@ export const motion = {
   a: createMotionComponent('a'),
   svg: createMotionComponent('svg'),
   path: createMotionComponent('path'),
+  section: createMotionComponent('section'),
+  article: createMotionComponent('article'),
+  main: createMotionComponent('main'),
+  header: createMotionComponent('header'),
+  footer: createMotionComponent('footer'),
+  nav: createMotionComponent('nav'),
+  tr: createMotionComponent('tr'),
+  td: createMotionComponent('td'),
+  th: createMotionComponent('th'),
+  tbody: createMotionComponent('tbody'),
+  thead: createMotionComponent('thead'),
+  table: createMotionComponent('table'),
 };
 
 export const AnimatePresence = ({ children }) => {

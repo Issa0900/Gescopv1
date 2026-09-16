@@ -10,7 +10,7 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
     "preview": "vite preview",
-    "deploy": "base44 build && base44 deploy --yes"
+    "deploy": "npx base44 build && npx base44 deploy --yes"
   },
   "dependencies": {
     "@base44/sdk": "^0.8.48",
