@@ -1633,8 +1633,16 @@ export function coerceType(value: any, prop: any): any {
       }
       return String(value);
     case "number": {
+      // Same principle as the date branch just above, generalized: this used
+      // to return the unparsed value as-is on failure, so a malformed number
+      // (bad separator, stray text, an unrecognized unit) was stored VERBATIM
+      // in a numeric field - passing `missingRequired` (the key isn't blank,
+      // just unreadable) and then reading as NaN → 0 everywhere downstream
+      // does `Number(x) || 0`. Only Transaction.amount got this fix before;
+      // every other entity's numeric fields (Expense.amount, Order.total,
+      // Payroll.total_cost, Cashflow balances...) kept the old behavior.
       const n = parseNumber(value);
-      return n === null ? value : n;
+      return n === null ? null : n;
     }
     case "boolean": {
       if (typeof value === "boolean") return value;

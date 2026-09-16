@@ -225,9 +225,12 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
   let targetField = null;
   let targetSemantic = null;
 
-  for (const [fieldName, fs] of (fieldSemantics || new Map()).entries()) {
+  for (const fs of (fieldSemantics || new Map()).values()) {
     if (fs.canonicalKey === canonicalKey) {
-      targetField = fieldName;
+      // The map key may be namespaced by entity (e.g. "Transaction:amount")
+      // to avoid two entities' same-named fields colliding - the semantic's
+      // own `.field` is always the real property name on the record.
+      targetField = fs.field;
       targetSemantic = fs;
       break;
     }
@@ -245,15 +248,26 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
     });
   }
 
+  // Restrict to rows from the entity this field actually belongs to, before
+  // anything reads `records` again. Without this, two entities sharing a raw
+  // field name (Transaction and Expense both have "amount") got their
+  // quality score, lineage record count and aggregated value all computed
+  // over BOTH entities' rows combined the moment records from both were
+  // passed into the same batch - untagged rows (single-entity callers that
+  // predate this tag) are kept as-is.
+  const recordsForEntity = records.filter(
+    (r) => r._entity === undefined || r._entity === targetSemantic.source
+  );
+
   // Quality check
-  const quality = computeFieldQuality(records, targetField, targetSemantic);
+  const quality = computeFieldQuality(recordsForEntity, targetField, targetSemantic);
   const qualityCheck = isQualitySufficient(quality);
 
   const source = buildLineageSource({
     entity: targetSemantic.source || "Inconnu",
     field: targetField,
     canonicalKey,
-    records,
+    records: recordsForEntity,
     qualityScore: quality.global
   });
 
@@ -274,7 +288,7 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
   let value = null;
 
   // GESCOP Phase 3 : Validation Sémantique SSOT avant calcul
-  const filteredRecords = records.filter(r => {
+  const filteredRecords = recordsForEntity.filter(r => {
       // Filtrage sémantique SSOT basé sur le statut et l'entité
       if (targetSemantic.source === "Order") {
         // Utilisation d'un helper rudimentaire ici si on ne peut pas l'importer en haut,

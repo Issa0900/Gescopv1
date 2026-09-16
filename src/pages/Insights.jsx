@@ -58,7 +58,7 @@ export default function Insights() {
   const { data: liveData, isLoading: llive } = useQuery({
     queryKey: ["insights-live-alerts", company?.stock_alert_threshold],
     queryFn: async () => {
-      const [transactions, customers, orders, campaignDaily, inventory, cashflow, products] = await Promise.all([
+      const [transactions, customers, orders, campaignDaily, inventory, cashflow, products, expenses] = await Promise.all([
         fetchAll(base44.entities.Transaction, "-date"),
         fetchAll(base44.entities.Customer, "-created_date"),
         fetchAll(base44.entities.Order, "-date"),
@@ -66,8 +66,9 @@ export default function Insights() {
         fetchAll(base44.entities.Inventory, "-date"),
         fetchAll(base44.entities.Cashflow, "-date"),
         fetchAll(base44.entities.Product),
+        fetchAll(base44.entities.Expense),
       ]);
-      return computeLiveAlerts({ transactions, orders, customers, campaignDaily, products, inventory, cashflow, company });
+      return computeLiveAlerts({ transactions, orders, customers, campaignDaily, products, inventory, cashflow, expenses, company });
     },
   });
 

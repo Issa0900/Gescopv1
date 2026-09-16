@@ -183,7 +183,7 @@ export const ENTITY_FIELD_MAP = Object.freeze({
     overtime:      { canonicalKey: "payroll_overtime", semanticType: "payroll_cost", grain: GRAIN_TYPES.EMPLOYEE },
     bonus:         { canonicalKey: "payroll_bonus", semanticType: "payroll_cost", grain: GRAIN_TYPES.EMPLOYEE },
     employer_cost: { canonicalKey: "payroll_employer_cost", semanticType: "payroll_cost", grain: GRAIN_TYPES.EMPLOYEE },
-    total_cost:    { canonicalKey: "payroll_total", semanticType: "payroll_cost", grain: GRAIN_TYPES.EMPLOYEE },
+    total_cost:    { canonicalKey: "payroll_total_cost", semanticType: "payroll_cost", grain: GRAIN_TYPES.EMPLOYEE },
   },
 
   // ── SUPPLIERS ──────────────────────────────────────────────────────────

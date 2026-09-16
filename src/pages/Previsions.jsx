@@ -74,7 +74,11 @@ export default function Previsions() {
     queryKey: ["cashflow-summary"],
     queryFn: () => fetchAll(base44.entities.Cashflow, "-date"),
   });
-  
+  const { data: expenses } = useQuery({
+    queryKey: ["expenses-summary"],
+    queryFn: () => fetchAll(base44.entities.Expense, "-date"),
+  });
+
   // Phase 7: Fetch live alerts to cross-reference with forecasts
   const { company } = useCompany();
   const { data: liveAlerts } = useQuery({
@@ -87,13 +91,13 @@ export default function Previsions() {
         fetchAll(base44.entities.Inventory, "-date"),
         fetchAll(base44.entities.Product),
       ]);
-      return computeLiveAlerts({ transactions, orders, customers, campaignDaily, products, inventory, cashflow, company });
+      return computeLiveAlerts({ transactions, orders, customers, campaignDaily, products, inventory, cashflow, expenses, company });
     },
     enabled: !!transactions && !!cashflow
   });
 
   const result = useMemo(() => {
-    const monthly = financialMonthlySeries(transactions || []).map((point, i) => ({ ...point, x: i }));
+    const monthly = financialMonthlySeries(transactions || [], expenses || []).map((point, i) => ({ ...point, x: i }));
     if (monthly.length < 3) return null;
 
     const xs = monthly.map((d) => d.x);
@@ -140,7 +144,7 @@ export default function Previsions() {
       cumulativeNow, cashDate, cashHistory, shortfall, incomeFit, marginFit,
       cashFlowFit, usesRealCashFlow,
     };
-  }, [transactions, cashflow]);
+  }, [transactions, cashflow, expenses]);
 
   const chartData = useMemo(() => {
     if (!result) return [];

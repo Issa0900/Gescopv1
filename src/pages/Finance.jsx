@@ -18,9 +18,16 @@ export default function Finance() {
     queryKey: ["transactions-summary"],
     queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
   });
-  
+  // Costs can live in expense-typed Transaction rows, in the dedicated
+  // Expense entity, or both - both are fed in so "Dépenses totales" never
+  // reads 0 $ just because a company's costs sit in the other one.
+  const { data: expenses } = useQuery({
+    queryKey: ["expenses-summary"],
+    queryFn: () => fetchAll(base44.entities.Expense, "-date"),
+  });
+
   // GESCOP Phase 4 SSOT
-  const { kpis: engineKpis } = useKpiEngine({ transactions: transactions || [] }, ["total_revenue", "total_expense", "gross_margin_amount"]);
+  const { kpis: engineKpis } = useKpiEngine({ transactions: transactions || [], expenses: expenses || [] }, ["total_revenue", "total_expense", "net_income", "net_margin_pct"]);
   
   if (ltx) return <p className="text-sm text-muted-foreground">Chargement...</p>;
   if (isError) return <DataErrorState onRetry={refetch} />;
@@ -35,13 +42,17 @@ export default function Finance() {
   }
 
   // Consommation officielle de la SSOT
+  // "Résultat Net" = revenus - TOUTES les dépenses (net_income), pas la marge
+  // brute (qui ne retranche que le coût des marchandises vendues - une donnée
+  // qu'on n'a pas ici, ce qui aurait affiché 100 % de marge dès que les vraies
+  // dépenses existaient).
   const summary = {
     revenue: engineKpis.get("total_revenue")?.value || 0,
     expense: engineKpis.get("total_expense")?.value || 0,
-    netIncome: engineKpis.get("gross_margin_amount")?.value || 0,
-    marginPct: (engineKpis.get("total_revenue")?.value || 0) > 0 ? ((engineKpis.get("gross_margin_amount")?.value || 0) / (engineKpis.get("total_revenue")?.value || 0)) * 100 : 0,
+    netIncome: engineKpis.get("net_income")?.value || 0,
+    marginPct: engineKpis.get("net_margin_pct")?.value || 0,
   };
-  const monthly = financialMonthlySeries(transactions);
+  const monthly = financialMonthlySeries(transactions, expenses);
   const chartData = monthly.slice(-12).map((point) => {
     return {
       date: point.month,

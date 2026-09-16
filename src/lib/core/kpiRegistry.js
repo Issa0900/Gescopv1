@@ -71,8 +71,12 @@ export const KPI_REGISTRY = Object.freeze({
     semanticType: "payroll_cost",
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: true,
-    dependencies: ["payroll_cost"],
-    calculate: (deps) => deps.payroll_cost || 0,
+    // The raw field's own canonicalKey used to be "payroll_total" too - same
+    // string as this KPI's own id, which made the dependency resolve back to
+    // THIS kpi (getKpiDefinition found itself) instead of the Payroll.total_cost
+    // field, so it always came back 0 rather than the real payroll sum.
+    dependencies: ["payroll_total_cost"],
+    calculate: (deps) => deps.payroll_total_cost || 0,
   },
 
   employee_count_raw: {
@@ -107,7 +111,11 @@ export const KPI_REGISTRY = Object.freeze({
     semanticType: "count",
     dataType: DATA_TYPES.NUMBER,
     isAdditive: false, // Stock metric
-    dependencies: [],
+    // Must list employee_count_raw here, not just reference deps.employee_count_raw
+    // in calculate() below: an undeclared dependency is never computed, so
+    // deps.employee_count_raw was always undefined and every fallback path
+    // silently returned 0 headcount even with real employee rows present.
+    dependencies: ["employee_count_raw"],
     // Counts distinct ACTIVE employees from the raw dataset. A record without
     // an explicit status is considered active; otherwise the status must
     // contain an "active" marker. Falls back to the raw employee count when no
@@ -152,7 +160,10 @@ export const KPI_REGISTRY = Object.freeze({
     dependencies: ["payroll_total", "total_revenue"],
     calculate: (deps) => {
       if (!deps.total_revenue || deps.total_revenue === 0) return 0;
-      return deps.payroll_total / deps.total_revenue;
+      // dataType is PERCENTAGE, like every other ratio KPI here (marketing_roi,
+      // net_margin_pct...) - all of them already scale to 0-100, this one
+      // didn't and rendered as "0.35 %" instead of "35 %".
+      return (deps.payroll_total / deps.total_revenue) * 100;
     },
   },
 
@@ -169,6 +180,39 @@ export const KPI_REGISTRY = Object.freeze({
     calculate: (deps) => {
       if (!deps.employee_count || deps.employee_count === 0) return 0;
       return deps.total_revenue / deps.employee_count;
+    },
+  },
+
+  avg_employee_cost: {
+    id: "avg_employee_cost",
+    name: { fr: "Coût moyen par employé", en: "Average Cost per Employee" },
+    level: KPI_LEVELS.KPI,
+    domain: DOMAINS.RH,
+    semanticType: "ratio",
+    economicRole: ECONOMIC_ROLES.RATIO,
+    dataType: DATA_TYPES.CURRENCY,
+    isAdditive: false,
+    dependencies: ["payroll_total", "employee_count"],
+    calculate: (deps) => {
+      if (!deps.employee_count || deps.employee_count === 0) return null;
+      return (deps.payroll_total || 0) / deps.employee_count;
+    },
+  },
+
+  overtime_ratio: {
+    id: "overtime_ratio",
+    name: { fr: "Ratio heures supplémentaires", en: "Overtime Ratio" },
+    level: KPI_LEVELS.KPI,
+    domain: DOMAINS.RH,
+    semanticType: "ratio",
+    economicRole: ECONOMIC_ROLES.RATIO,
+    dataType: DATA_TYPES.PERCENTAGE,
+    isAdditive: false,
+    dependencies: ["payroll_overtime", "payroll_regular_pay"],
+    calculate: (deps) => {
+      const total = (deps.payroll_regular_pay || 0) + (deps.payroll_overtime || 0);
+      if (total === 0) return null;
+      return ((deps.payroll_overtime || 0) / total) * 100;
     },
   },
 
@@ -312,12 +356,49 @@ export const KPI_REGISTRY = Object.freeze({
     dependencies: ["bfr", "total_revenue"],
     calculate: (deps) => {
       if (!deps.total_revenue || deps.total_revenue === 0) return 0;
-      // Note: Assuming the total_revenue is annual. If it's a monthly period, 
-      // the engine should adjust the multiplier (e.g., * 30 instead of 365).
-      // For now, we return a simple ratio, engine handles period normalization.
-      return (deps.bfr / deps.total_revenue) * 365;
+      // total_revenue here is whatever period the caller's records cover;
+      // normalize by that period's length rather than assuming a year.
       const periodDays = deps.period_days || 365;
       return (deps.bfr / deps.total_revenue) * periodDays;
+    },
+  },
+
+  dso: {
+    id: "dso",
+    name: { fr: "Délai de recouvrement clients (DSO)", en: "Days Sales Outstanding" },
+    level: KPI_LEVELS.KPI,
+    domain: DOMAINS.TRESORERIE,
+    semanticType: "duration",
+    economicRole: ECONOMIC_ROLES.RATIO,
+    dataType: DATA_TYPES.NUMBER,
+    isAdditive: false,
+    // Standard finance KPI: how many days of revenue sit uncollected in
+    // accounts receivable. Lower is better (customers pay faster).
+    dependencies: ["accounts_receivable", "total_revenue"],
+    calculate: (deps) => {
+      if (!deps.total_revenue || deps.total_revenue === 0) return null;
+      const periodDays = deps.period_days || 365;
+      return ((deps.accounts_receivable || 0) / deps.total_revenue) * periodDays;
+    },
+  },
+
+  dpo: {
+    id: "dpo",
+    name: { fr: "Délai de paiement fournisseurs (DPO)", en: "Days Payable Outstanding" },
+    level: KPI_LEVELS.KPI,
+    domain: DOMAINS.TRESORERIE,
+    semanticType: "duration",
+    economicRole: ECONOMIC_ROLES.RATIO,
+    dataType: DATA_TYPES.NUMBER,
+    isAdditive: false,
+    // Pairs with DSO: how many days of expenses sit unpaid in accounts
+    // payable. Higher can mean better cash management, or slow-paying
+    // suppliers strain - read it alongside DSO, not alone.
+    dependencies: ["accounts_payable", "total_expense"],
+    calculate: (deps) => {
+      if (!deps.total_expense || deps.total_expense === 0) return null;
+      const periodDays = deps.period_days || 365;
+      return ((deps.accounts_payable || 0) / deps.total_expense) * periodDays;
     },
   },
 
@@ -371,6 +452,38 @@ export const KPI_REGISTRY = Object.freeze({
     },
   },
 
+  cpc: {
+    id: "cpc",
+    name: { fr: "Coût par clic (CPC)", en: "Cost per Click" },
+    level: KPI_LEVELS.KPI,
+    domain: DOMAINS.MARKETING,
+    semanticType: "ratio",
+    economicRole: ECONOMIC_ROLES.RATIO,
+    dataType: DATA_TYPES.CURRENCY,
+    isAdditive: false,
+    dependencies: ["marketing_spend", "campaign_clicks"],
+    calculate: (deps) => {
+      if (!deps.campaign_clicks) return null;
+      return (deps.marketing_spend || 0) / deps.campaign_clicks;
+    },
+  },
+
+  cpm: {
+    id: "cpm",
+    name: { fr: "Coût pour mille impressions (CPM)", en: "Cost per Mille" },
+    level: KPI_LEVELS.KPI,
+    domain: DOMAINS.MARKETING,
+    semanticType: "ratio",
+    economicRole: ECONOMIC_ROLES.RATIO,
+    dataType: DATA_TYPES.CURRENCY,
+    isAdditive: false,
+    dependencies: ["marketing_spend", "campaign_impressions"],
+    calculate: (deps) => {
+      if (!deps.campaign_impressions) return null;
+      return ((deps.marketing_spend || 0) / deps.campaign_impressions) * 1000;
+    },
+  },
+
   aov: {
     id: "aov",
     name: { fr: "Panier Moyen (AOV)", en: "Average Order Value" },
@@ -390,6 +503,30 @@ export const KPI_REGISTRY = Object.freeze({
     },
   },
 
+  purchase_frequency: {
+    id: "purchase_frequency",
+    name: { fr: "Fréquence d'achat", en: "Purchase Frequency" },
+    level: KPI_LEVELS.KPI,
+    domain: DOMAINS.VENTES,
+    semanticType: "ratio",
+    economicRole: ECONOMIC_ROLES.RATIO,
+    dataType: DATA_TYPES.NUMBER,
+    isAdditive: false,
+    dependencies: [],
+    // Orders per buyer - deliberately independent of Customer.status (which
+    // is often unfilled): counts who actually bought, from Order rows only.
+    calculate: (deps) => {
+      const orders = (deps._records || []).filter(
+        (r) => (r._entity === undefined || r._entity === "Order") &&
+          r.customer_id && (!r.status || !["annul", "cancel", "void", "draft"].some((s) => String(r.status).toLowerCase().includes(s)))
+      );
+      if (orders.length === 0) return null;
+      const buyers = new Set(orders.map((o) => o.customer_id)).size;
+      if (buyers === 0) return null;
+      return orders.length / buyers;
+    },
+  },
+
   active_customers: {
     id: "active_customers",
     name: { fr: "Clients Actifs", en: "Active Customers" },
@@ -399,9 +536,20 @@ export const KPI_REGISTRY = Object.freeze({
     dataType: DATA_TYPES.NUMBER,
     isAdditive: false,
     dependencies: [],
+    // Scoped to Customer rows specifically - Order rows also carry a
+    // customer_id, so an unscoped filter counted orders as customers too.
+    // Returns null (not 0) when the base has customers but none of them
+    // carry any recognized status at all: an unfilled status column is not
+    // "zero active customers", it's "we don't know" - see churnStats() in
+    // src/lib/metrics.js, which this mirrors so the two never disagree.
     calculate: (deps) => {
-      const records = deps._records || [];
-      return records.filter(r => r.customer_id && ["actif", "active"].includes(String(r.status).toLowerCase())).length;
+      const records = (deps._records || []).filter((r) => r._entity === undefined || r._entity === "Customer");
+      const customers = records.filter((r) => r.customer_id);
+      if (customers.length === 0) return null;
+      const active = customers.filter((r) => ["actif", "active"].includes(String(r.status || "").toLowerCase())).length;
+      const churned = customers.filter((r) => ["inactif", "inactive", "perdu", "lost"].includes(String(r.status || "").toLowerCase())).length;
+      if (active === 0 && churned === 0) return null;
+      return active;
     },
   },
 
@@ -415,11 +563,13 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: false,
     dependencies: [],
     calculate: (deps) => {
-      const records = deps._records || [];
-      const customers = records.filter(r => r.customer_id);
-      if (customers.length === 0) return 0;
-      const churned = customers.filter(r => ["inactif", "inactive", "perdu", "lost"].includes(String(r.status).toLowerCase())).length;
-      return churned / customers.length;
+      const records = (deps._records || []).filter((r) => r._entity === undefined || r._entity === "Customer");
+      const customers = records.filter((r) => r.customer_id);
+      if (customers.length === 0) return null;
+      const active = customers.filter((r) => ["actif", "active"].includes(String(r.status || "").toLowerCase())).length;
+      const churned = customers.filter((r) => ["inactif", "inactive", "perdu", "lost"].includes(String(r.status || "").toLowerCase())).length;
+      if (active === 0 && churned === 0) return null;
+      return (churned / customers.length) * 100;
     },
   },
 
@@ -433,7 +583,10 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: false,
     dependencies: ["total_revenue", "active_customers"],
     calculate: (deps) => {
-      if (!deps.active_customers || deps.active_customers === 0) return 0;
+      // null (not 0) propagates "unmeasured" from active_customers - an
+      // unfilled Customer.status must not be read as "0 active customers".
+      if (deps.active_customers === null || deps.active_customers === undefined) return null;
+      if (deps.active_customers === 0) return 0;
       return (deps.total_revenue || 0) / deps.active_customers;
     },
   },
@@ -451,8 +604,13 @@ export const KPI_REGISTRY = Object.freeze({
     // OR simpler: Average Revenue Per User / Churn Rate
     dependencies: ["arpu", "churn_rate"],
     calculate: (deps) => {
-      if (!deps.churn_rate || deps.churn_rate === 0) return 0;
-      return (deps.arpu || 0) / deps.churn_rate;
+      if (deps.arpu === null || deps.arpu === undefined) return null;
+      if (deps.churn_rate === null || deps.churn_rate === undefined) return null;
+      // churn_rate is a PERCENTAGE (e.g. 5 meaning 5%) - the LTV formula
+      // needs the decimal fraction. Dividing by the raw percentage number
+      // used to understate LTV a hundredfold.
+      if (deps.churn_rate === 0) return null; // 0% churn -> undefined (infinite) LTV
+      return (deps.arpu || 0) / (deps.churn_rate / 100);
     },
   },
   
@@ -467,8 +625,9 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: false,
     dependencies: ["ltv", "cac"],
     calculate: (deps) => {
-      if (!deps.cac || deps.cac === 0) return 0;
-      return (deps.ltv || 0) / deps.cac;
+      if (deps.ltv === null || deps.ltv === undefined) return null;
+      if (!deps.cac || deps.cac === 0) return null;
+      return deps.ltv / deps.cac;
     },
   },
 

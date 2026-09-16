@@ -10,6 +10,7 @@ import {
   hasWindow,
 } from "@/lib/periods";
 import { getStockAlertSettings, computeStockAlerts } from "@/lib/stockAlerts";
+import { warnIfDataMissing } from "@/lib/core/dataCompleteness";
 import {
   aggregateMarginPct,
   previousMarginPct,
@@ -28,13 +29,23 @@ function alert(level, category, title, message) {
 }
 
 export function computeLiveAlerts(data) {
-  const { transactions, orders, customers, campaignDaily, products, inventory, cashflow, company } = data;
+  warnIfDataMissing("computeLiveAlerts", data, [
+    "transactions", "orders", "customers", "campaignDaily",
+    "products", "inventory", "cashflow", "expenses", "company",
+  ]);
+  const { transactions, orders, customers, campaignDaily, products, inventory, cashflow, expenses, company } = data;
   const out = [];
 
   const incomes = (transactions || []).filter((t) => t.type === "income");
   const txnExpenses = (transactions || []).filter((t) => t.type === "expense");
   const revMonthly = monthlyAggComplete(incomes, "date", "amount");
-  const expMonthly = monthlyAggComplete(txnExpenses, "date", "amount");
+  // Costs can live in expense-typed Transaction rows, in the dedicated
+  // Expense entity, or both - both are read so the runway/margin alerts
+  // above never miss real costs recorded in the other one.
+  const expMonthly = monthlyAggComplete(
+    [...txnExpenses, ...(expenses || []).map((e) => ({ ...e, amount: Number(e.amount) || 0 }))],
+    "date", "amount"
+  );
 
   // --- Trésorerie : runway sur le burn NET ---
   // Une entreprise rentable n'a pas de problème d'autonomie : comparer le solde

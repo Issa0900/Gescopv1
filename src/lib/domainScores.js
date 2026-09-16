@@ -20,6 +20,7 @@ import {
   sumPrev,
 } from "@/lib/periods";
 import { getStockAlertSettings, computeStockAlerts } from "@/lib/stockAlerts";
+import { warnIfDataMissing } from "@/lib/core/dataCompleteness";
 import {
   aggregateMarginPct,
   previousMarginPct,
@@ -52,7 +53,11 @@ function applyTrend(score, pct, bonus = 8, penalty = 12, threshold = 5) {
 }
 
 export function computeDomainScores(data) {
-  const { transactions, orders, customers, campaigns, campaignDaily, products, inventory, cashflow, company } = data;
+  warnIfDataMissing("computeDomainScores", data, [
+    "transactions", "orders", "customers", "campaigns", "campaignDaily",
+    "products", "inventory", "cashflow", "expenses", "company",
+  ]);
+  const { transactions, orders, customers, campaigns, campaignDaily, products, inventory, cashflow, expenses, company } = data;
   const scores = {};
 
   // === FINANCE - aggregated margin over 3 complete months ===
@@ -74,11 +79,16 @@ export function computeDomainScores(data) {
     "date", 
     "_amt"
   );
-  const expMonthly = monthlyAggComplete(
-    txnExpenses.map(t => ({ ...t, _amt: Number(t.amount) || Number(t.expense_amount) || 0 })), 
-    "date", 
-    "_amt"
-  );
+  // Expenses live in two separate places that a company can populate
+  // independently: expense-typed rows in the bank-feed Transaction import,
+  // and the dedicated Expense entity (itemized bills, subscriptions, etc.
+  // imported separately). Reading only one made "Dépenses" read 0 $ whenever
+  // a company had real costs recorded exclusively in the other.
+  const expenseRows = [
+    ...txnExpenses.map(t => ({ date: t.date, _amt: Number(t.amount) || Number(t.expense_amount) || 0 })),
+    ...(expenses || []).map(e => ({ date: e.date, _amt: Number(e.amount) || 0 })),
+  ];
+  const expMonthly = monthlyAggComplete(expenseRows, "date", "_amt");
 
   const recentMargin = aggregateMarginPct(revMonthly, expMonthly, 3);
   const priorMargin = previousMarginPct(revMonthly, expMonthly, 3);

@@ -16,53 +16,42 @@ export function useKpiEngine(data, kpiIds) {
     const allRecords = [];
     const allSemantics = new Map();
 
-    if (data.transactions) {
-      allRecords.push(...data.transactions);
-      const sem = getEntitySemantics('Transaction');
-      if (sem) sem.forEach((v, k) => allSemantics.set(k, v));
-    }
-    
-    if (data.cashflow) {
-      allRecords.push(...data.cashflow);
-      const sem = getEntitySemantics('Cashflow');
-      if (sem) sem.forEach((v, k) => allSemantics.set(k, v));
-    }
-    
-    if (data.orders) {
-      allRecords.push(...data.orders);
-      const sem = getEntitySemantics('Order');
-      if (sem) sem.forEach((v, k) => allSemantics.set(k, v));
-    }
+    // Two entities can share a raw field name (Transaction.amount and
+    // Expense.amount, Transaction.date and Cashflow.date...). Keying this
+    // map by field name alone let the second entity's semantic silently
+    // overwrite the first's, so a canonicalKey only the first entity
+    // provided (e.g. "transaction_amount") could no longer be found at all
+    // the moment a second entity sharing that field name was added. The key
+    // is namespaced by entity; lookups still match by canonicalKey value
+    // (see _aggregateRawField), and each FieldSemantic already carries its
+    // own raw field name (`.field`) for indexing back into its records.
+    // Tagged with its source entity: two entities can share a raw field name
+    // (Transaction.amount and Expense.amount both just called "amount"), and
+    // without this tag the engine's raw-field aggregator had no way to tell
+    // which rows actually belong to the field it resolved - it summed every
+    // row in the flattened batch that happened to have an "amount" property,
+    // so "Chiffre d'affaires" and "Dépenses totales" both ended up equal to
+    // income + expenses combined the moment both entities were passed in.
+    const addEntity = (entityName, records) => {
+      if (!records) return;
+      allRecords.push(...records.map((r) => ({ ...r, _entity: entityName })));
+      const sem = getEntitySemantics(entityName);
+      if (sem) sem.forEach((v, k) => allSemantics.set(`${entityName}:${k}`, v));
+    };
 
-    if (data.expenses) {
-      allRecords.push(...data.expenses);
-      const sem = getEntitySemantics('Expense');
-      if (sem) sem.forEach((v, k) => allSemantics.set(k, v));
-    }
-
-    if (data.employees) {
-      allRecords.push(...data.employees);
-      const sem = getEntitySemantics('Employee');
-      if (sem) sem.forEach((v, k) => allSemantics.set(k, v));
-    }
-
-    if (data.payrolls) {
-      allRecords.push(...data.payrolls);
-      const sem = getEntitySemantics('Payroll');
-      if (sem) sem.forEach((v, k) => allSemantics.set(k, v));
-    }
-    
-    if (data.customers) {
-      allRecords.push(...data.customers);
-      const sem = getEntitySemantics('Customer');
-      if (sem) sem.forEach((v, k) => allSemantics.set(k, v));
-    }
-
-    if (data.products) {
-      allRecords.push(...data.products);
-      const sem = getEntitySemantics('Product');
-      if (sem) sem.forEach((v, k) => allSemantics.set(k, v));
-    }
+    addEntity('Transaction', data.transactions);
+    addEntity('Cashflow', data.cashflow);
+    addEntity('Order', data.orders);
+    addEntity('Expense', data.expenses);
+    addEntity('Employee', data.employees);
+    addEntity('Payroll', data.payrolls);
+    addEntity('Customer', data.customers);
+    addEntity('Product', data.products);
+    // Campaign and CampaignDaily both roll up to the same canonicalKeys
+    // (marketing_spend, campaign_revenue...) by design - pass only one to
+    // avoid the entity filter picking whichever happens to be seen first
+    // and silently ignoring the other's rows.
+    addEntity('CampaignDaily', data.campaignDaily);
 
     // NOUVEAU DATA CORE (PHASE 2) - Traitement des Observations
     if (data.observations) {
@@ -93,11 +82,12 @@ export function useKpiEngineTimeSeries(data, kpiIds, options = { includeCurrentM
     const allRecords = [];
     const allSemantics = new Map();
 
+    // Namespaced and tagged by entity - see the comment in useKpiEngine above.
     const addData = (entityName, records) => {
       if (!records || records.length === 0) return;
-      allRecords.push(...records);
+      allRecords.push(...records.map((r) => ({ ...r, _entity: entityName })));
       const sem = getEntitySemantics(entityName);
-      if (sem) sem.forEach((v, k) => allSemantics.set(k, v));
+      if (sem) sem.forEach((v, k) => allSemantics.set(`${entityName}:${k}`, v));
     };
 
     addData('Transaction', data.transactions);

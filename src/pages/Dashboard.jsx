@@ -186,15 +186,17 @@ export default function Dashboard() {
     customers: fCustomers,
     observations: fObservations,
     cashflow: cashflow || []
-  }, ["total_revenue", "total_expense", "gross_margin_amount", "gross_margin_pct", "aov", "active_customers", "customer_sentiment_score"]);
+  }, ["total_revenue", "total_expense", "net_income", "net_margin_pct", "aov", "active_customers", "customer_sentiment_score"]);
 
   // === COMPUTATIONS (Hybride : Ancien + Nouveau) ===
   const computed = useMemo(() => {
     // Consommation officielle de la SSOT (KPI Engine)
     const totalIncome = engineKpis.get("total_revenue")?.value || 0;
     const totalExpensesTxn = engineKpis.get("total_expense")?.value || 0;
-    const margin = engineKpis.get("gross_margin_amount")?.value || 0;
-    const marginPct = engineKpis.get("gross_margin_pct")?.value || 0;
+    // "Marge nette" = revenus - TOUTES les dépenses (net_income), pas la
+    // marge brute (coût des marchandises vendues uniquement).
+    const margin = engineKpis.get("net_income")?.value || 0;
+    const marginPct = engineKpis.get("net_margin_pct")?.value || 0;
     
     const aov = engineKpis.get("aov")?.value || 0;
     const activeCustomers = engineKpis.get("active_customers")?.value || 0;
@@ -209,7 +211,7 @@ export default function Dashboard() {
     const orderRevenue = fOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
 
     // Full monthly data (ALL records, not period-filtered) for charts and trends
-    const financialMonthly = financialMonthlySeries(transactions || []);
+    const financialMonthly = financialMonthlySeries(transactions || [], expenseRecords || []);
     const revenueMonthly = financialMonthly.map((pt) => ({ month: pt.month, val: pt.income }));
     const expenseMonthly = financialMonthly.map((pt) => ({ month: pt.month, val: pt.expense }));
     const marginMonthly = financialMonthly.map((pt) => ({
