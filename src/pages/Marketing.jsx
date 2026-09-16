@@ -22,7 +22,7 @@ export default function Marketing() {
     queryFn: () => fetchAll(base44.entities.CampaignDaily, "-date"),
   });
   // Ad exports rarely carry a "new customers" column, but the customer file does
-  // carry an acquisition date — so the figure is measurable even when it is not
+  // carry an acquisition date - so the figure is measurable even when it is not
   // attributable to a specific campaign.
   const { data: customers, isLoading: lcu } = useQuery({
     queryKey: ["customers-acquisition"],
@@ -65,10 +65,10 @@ export default function Marketing() {
     );
   }
 
-  const overallRoas = totalSpend > 0 ? (totalRevenue / totalSpend).toFixed(2) : "—";
+  const overallRoas = totalSpend > 0 ? (totalRevenue / totalSpend).toFixed(2) : "-";
 
   // "new_customers" is often absent from ad exports. Dividing by it produced a
-  // CAC of 0 $ sitting next to 623 667 $ of spend — a figure that reads as free
+  // CAC of 0 $ sitting next to 623 667 $ of spend - a figure that reads as free
   // acquisition instead of missing data. Fall back to conversions, which is the
   // usual proxy, and say which one is being used. Never show 0 for "unknown".
   const cacBasis = totalNew > 0 ? "clients" : totalConversions > 0 ? "conversions" : null;
@@ -112,7 +112,7 @@ export default function Marketing() {
     revenus: Math.round(v.revenue),
     roas: v.spend > 0 ? Number((v.revenue / v.spend).toFixed(2)) : 0,
     // Same basis as the global card: cost per new customer when the column
-    // exists, otherwise per conversion. null renders as « — », never as 0 €.
+    // exists, otherwise per conversion. null renders as « - », never as 0 €.
     cac: v.new_customers > 0 ? Math.round(v.spend / v.new_customers)
       : v.conversions > 0 ? Math.round(v.spend / v.conversions)
         : null,
@@ -147,7 +147,7 @@ export default function Marketing() {
         <StatCard label="ROAS global" value={overallRoas} sublabel={`${Math.round(totalRevenue).toLocaleString()} $ revenus`} icon={TrendingUp} accent={totalSpend === 0 ? "bg-muted text-muted-foreground" : Number(overallRoas) >= 2 ? "bg-emerald-50 text-emerald-600" : Number(overallRoas) < 1 ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"} />
         <StatCard
           label={cacBasis === "conversions" ? "Coût par conversion" : "CAC global"}
-          value={overallCac !== null ? `${overallCac.toLocaleString("fr-CA")} $` : "—"}
+          value={overallCac !== null ? `${overallCac.toLocaleString("fr-CA")} $` : "-"}
           sublabel={cacBasis === "conversions"
             ? `${totalConversions.toLocaleString("fr-CA")} conversions · colonne « nouveaux clients » absente`
             : cacBasis === "clients"
@@ -160,11 +160,11 @@ export default function Marketing() {
           label="Nouveaux clients"
           value={totalNew > 0
             ? totalNew.toLocaleString("fr-CA")
-            : lastMonth ? lastMonthCount.toLocaleString("fr-CA") : "—"}
+            : lastMonth ? lastMonthCount.toLocaleString("fr-CA") : "-"}
           sublabel={totalNew > 0
             ? `${totalNew.toLocaleString("fr-CA")} attribués aux campagnes`
             : lastMonth
-              ? `en ${lastMonth} · ${acquiredTotal.toLocaleString("fr-CA")} au total${prevMonth ? ` · ${prevMonthCount} le mois précédent` : ""} — mesurés sur les dates d'acquisition, non attribués aux campagnes`
+              ? `en ${lastMonth} · ${acquiredTotal.toLocaleString("fr-CA")} au total${prevMonth ? ` · ${prevMonthCount} le mois précédent` : ""} - mesurés sur les dates d'acquisition, non attribués aux campagnes`
               : "aucune date d'acquisition dans les données clients"}
           icon={UserPlus}
           accent={totalNew > 0 || lastMonth
@@ -193,7 +193,7 @@ export default function Marketing() {
       <div className="rounded-xl border border-border bg-card p-6">
         <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Tendance ROAS (8 derniers mois)</h2>
         <p className="mb-4 text-xs text-muted-foreground">
-          Calculé sur les relevés quotidiens ({daily.length} lignes, {dailyCampaigns} campagnes sur {campaigns.length}) — les campagnes sans date ne peuvent pas être réparties par mois.
+          Calculé sur les relevés quotidiens ({daily.length} lignes, {dailyCampaigns} campagnes sur {campaigns.length}) - les campagnes sans date ne peuvent pas être réparties par mois.
         </p>
         {trendData.length > 0 ? (
           <ResponsiveContainer width="100%" height={280}>
@@ -231,10 +231,10 @@ export default function Marketing() {
               const revenue = num(c.revenue);
               const newCustomers = num(c.new_customers);
               const conversions = num(c.conversions);
-              const roas = spend > 0 ? (revenue / spend).toFixed(1) : "—";
+              const roas = spend > 0 ? (revenue / spend).toFixed(1) : "-";
               const cac = newCustomers > 0 ? Math.round(spend / newCustomers)
                 : conversions > 0 ? Math.round(spend / conversions)
-                  : "—";
+                  : "-";
               return (
                 <tr key={c.id} className="hover:bg-muted/30">
                   <td className="max-w-[180px] truncate px-4 py-3 font-medium" title={c.campaign_name}>{c.campaign_name}</td>
@@ -245,11 +245,11 @@ export default function Marketing() {
                   <td className="px-4 py-3">
                     <span className={Number(roas) >= 2 ? "text-emerald-600 font-medium" : Number(roas) < 1 ? "text-red-600 font-medium" : ""}>{roas}</span>
                   </td>
-                  <td className="px-4 py-3">{cac === "—" ? "—" : `${cac} $`}</td>
+                  <td className="px-4 py-3">{cac === "-" ? "-" : `${cac} $`}</td>
                   <td className="px-4 py-3">{conversions}</td>
                   <td className="px-4 py-3">
                     <span className={c.status === "active" ? "text-emerald-600" : c.status === "terminee" ? "text-muted-foreground" : "text-amber-600"}>
-                      {c.status || "—"}
+                      {c.status || "-"}
                     </span>
                   </td>
                 </tr>

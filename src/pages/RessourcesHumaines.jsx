@@ -5,7 +5,7 @@ import EmptyState from "@/components/EmptyState";
 import StatCard from "@/components/StatCard";
 import { Users, Banknote, Upload, PieChart, TrendingUp, Building2, UserCircle, Briefcase } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { motion } from "framer-motion";
+import { motion } from "@/lib/fake-framer-motion.jsx";
 import DataErrorState from "@/components/DataErrorState";
 import { fetchAll } from "@/lib/fetchAll";
 

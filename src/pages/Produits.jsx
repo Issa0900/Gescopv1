@@ -142,7 +142,7 @@ export default function Produits() {
   // Sales per product over the last 3 COMPLETE months.
   //
   // This used to rank products on the single most recent month present in the
-  // orders — which is the month in progress. With 11 days of September against
+  // orders - which is the month in progress. With 11 days of September against
   // 18 months of history, almost every product scored 0 and the "Top 10" chart
   // came up empty. The in-progress month is excluded here like everywhere else,
   // and three months are used so one quiet month cannot empty the ranking.
@@ -251,7 +251,7 @@ export default function Produits() {
           value={dormantCount}
           sublabel={stock.dormancyFromRotation
             ? `aucune vente depuis ${stock.dormantMonths} mois · sur ${stock.tracked} suivis`
-            : "historique de commandes absent — rotation non mesurable"}
+            : "historique de commandes absent - rotation non mesurable"}
           icon={Boxes}
           accent={dormantCount > 0 ? "bg-amber-50 text-amber-600" : "bg-muted text-muted-foreground"}
         />
@@ -280,7 +280,7 @@ export default function Produits() {
 
       <div className="rounded-xl border border-border bg-card p-6">
         <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Évolution des ventes par mois</h2>
-        <p className="mb-4 text-xs text-muted-foreground">Quantité vendue (axe gauche) — revenu $ (axe droit) · 12 derniers mois</p>
+        <p className="mb-4 text-xs text-muted-foreground">Quantité vendue (axe gauche) - revenu $ (axe droit) · 12 derniers mois</p>
         <ProductSalesTrend orders={orders} />
       </div>
 
@@ -375,7 +375,7 @@ export default function Produits() {
             {filteredRows.slice(0, 50).map((p) => (
               <tr key={p.id} className="hover:bg-muted/30">
                 <td className="max-w-[180px] truncate px-4 py-3 font-medium" title={p.product_name}>{p.product_name || p.product_id}</td>
-                <td className="px-4 py-3 text-muted-foreground">{p.category || "—"}</td>
+                <td className="px-4 py-3 text-muted-foreground">{p.category || "-"}</td>
                 <td className="px-4 py-3">{Math.round(p.purchase_cost || 0)} $</td>
                 <td className="px-4 py-3">{Math.round(p.selling_price || 0)} $</td>
                 <td className="px-4 py-3">
@@ -395,7 +395,7 @@ export default function Produits() {
                         : st === "optimal" || st === "actif"
                           ? "text-emerald-600"
                           : "text-muted-foreground";
-                    return <span className={cls}>{stockLabels[st] || st || "—"}</span>;
+                    return <span className={cls}>{stockLabels[st] || st || "-"}</span>;
                   })()}
                 </td>
               </tr>

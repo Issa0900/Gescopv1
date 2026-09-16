@@ -43,7 +43,7 @@ export default function DomainScoreList({ domains }) {
             <div className="flex w-32 shrink-0 items-center justify-end gap-2">
               {d.measured === false ? (
                 <>
-                  <span className="text-lg font-bold tabular-nums text-muted-foreground">—</span>
+                  <span className="text-lg font-bold tabular-nums text-muted-foreground">-</span>
                   <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">Non mesuré</span>
                 </>
               ) : (

@@ -289,7 +289,7 @@ export default function Register() {
           />
         </div>
 
-        {/* Consentement Loi 25 — enregistre des la verification du compte */}
+        {/* Consentement Loi 25 - enregistre des la verification du compte */}
         <div className="rounded-lg border border-border bg-muted/20 p-3">
           <ConsentCheckbox id="consent" checked={consent} onChange={setConsent}>
             J'ai lu et j'accepte la{" "}

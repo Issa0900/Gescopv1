@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GESCOP Data Intelligence Core — KPI Semantic Validator
+// GESCOP Data Intelligence Core - KPI Semantic Validator
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Validates that a KPI or a set of KPIs can be safely computed and displayed.
@@ -14,8 +14,8 @@ import { KPI_STATUS } from "./semanticTypes";
 /**
  * Validates if a specific KPI can be calculated given a list of available entities.
  * 
- * @param {string} kpiId — Canonical KPI key
- * @param {string[]} availableEntities — List of entities we have data for
+ * @param {string} kpiId - Canonical KPI key
+ * @param {string[]} availableEntities - List of entities we have data for
  * @returns {Object} Validation result
  */
 export function validateKpiComputability(kpiId, availableEntities) {

@@ -59,7 +59,7 @@ export default function PrivacyConsentModal() {
             <Shield className="h-5.5 w-5.5 text-primary" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-lg font-bold tracking-tight">Contrat de confidentialité — Loi 25</h2>
+            <h2 className="text-lg font-bold tracking-tight">Contrat de confidentialité - Loi 25</h2>
             <p className="text-xs text-muted-foreground">Acceptation requise avant l'utilisation de GESCOP</p>
           </div>
         </div>

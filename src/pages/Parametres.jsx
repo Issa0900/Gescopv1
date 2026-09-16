@@ -185,7 +185,7 @@ export default function Parametres() {
           <p>✓ Données hébergées au Canada</p>
           <p>✓ Conforme à la Loi 25 (protection des renseignements personnels, Québec)</p>
           <p>✓ Chiffrement des données au repos et en transit</p>
-          <p>✓ Séparation des organisations — vos données ne sont jamais partagées</p>
+          <p>✓ Séparation des organisations - vos données ne sont jamais partagées</p>
           <p>✓ Journal d'audit complet des imports</p>
         </div>
         <Link

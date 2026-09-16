@@ -32,7 +32,7 @@ export default function ReportViewer({ report, onClose, onExport }) {
             <div className="mt-0.5 flex items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                {report.created_date ? new Date(report.created_date).toLocaleDateString("fr-CA") : "—"}
+                {report.created_date ? new Date(report.created_date).toLocaleDateString("fr-CA") : "-"}
               </span>
               {report.created_date && (
                 <span className="flex items-center gap-1">

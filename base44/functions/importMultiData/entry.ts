@@ -1,4 +1,4 @@
-import { createClientFromRequest } from "npm:@base44/sdk@0.8.44";
+import { createFixedClientFromRequest as createClientFromRequest } from "../../shared/client.ts";
 import { normalizeRow } from "../../shared/importUtils.ts";
 import { detectEntityByName, detectEntityByHeaders, detectEntityByFieldOverlap, entiteCompatible, sheetRows, trouverLigneEntetes } from "../../shared/sheetDetect.ts";
 import { fetchDelimitedRows, fetchMatrice } from "../../shared/csvParse.ts";

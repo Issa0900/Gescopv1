@@ -8,7 +8,7 @@ const statusStyles = {
   resultats: "border-emerald-200 bg-emerald-50/30",
 };
 
-const fmt = (v) => (v != null ? `${v > 0 ? "+" : ""}${Math.round(v).toLocaleString("fr-CA")} $` : "—");
+const fmt = (v) => (v != null ? `${v > 0 ? "+" : ""}${Math.round(v).toLocaleString("fr-CA")} $` : "-");
 
 export default function DecisionCard({ decision, onDecide, onAddResult, editing, resultValue, setResultValue, submitResult }) {
   const perf = decision.actual_impact != null && decision.predicted_impact

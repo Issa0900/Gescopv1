@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GESCOP Data Intelligence Core — KPI Execution Engine
+// GESCOP Data Intelligence Core - KPI Execution Engine
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Calculates KPIs by evaluating their dependencies, aggregating raw data
@@ -17,10 +17,10 @@ import { KPI_STATUS, ECONOMIC_ROLES, AGGREGATION_METHODS, TEMPORAL_TYPES } from 
  * Execute calculation for a specific KPI or measure over a dataset.
  *
  * @param {Object} params
- * @param {string} params.kpiId — The canonical key of the KPI
- * @param {Array<Object>} params.records — The raw data records
- * @param {Map<string, Object>} params.fieldSemantics — Resolved semantics for the records
- * @param {Object} [params.context={}] — Pre-computed dependencies or context variables
+ * @param {string} params.kpiId - The canonical key of the KPI
+ * @param {Array<Object>} params.records - The raw data records
+ * @param {Map<string, Object>} params.fieldSemantics - Resolved semantics for the records
+ * @param {Object} [params.context={}] - Pre-computed dependencies or context variables
  * @returns {import("./dataLineage").KpiLineage} The calculated KPI with its lineage
  */
 export function computeKpi({ kpiId, records, fieldSemantics, context = {} }) {

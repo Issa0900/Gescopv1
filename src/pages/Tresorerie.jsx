@@ -118,8 +118,8 @@ export default function Tresorerie() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Trésorerie actuelle" value={`${Math.round(currentCash).toLocaleString("fr-CA")} $`} sublabel={`au ${latestRow?.date || "—"}`} icon={Wallet} accent={currentCash < 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"} />
-        <StatCard label="Flux net moyen / mois" value={`${avgNet.toLocaleString()} $`} sublabel={`${last3.length} derniers mois complets`} icon={avgNet >= 0 ? TrendingUp : TrendingDown} accent={avgNet < 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"} />
+        <StatCard label="Trésorerie actuelle" value={`${Math.round(currentCash).toLocaleString("fr-CA")} $`} sublabel={`au ${latestRow?.date || "-"}`} icon={Wallet} accent={currentCash < 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"} />
+        <StatCard label="Flux net moyen / mois" value={`${avgNet.toLocaleString()} $`} sublabel={`moyenne de la période`} icon={avgNet >= 0 ? TrendingUp : TrendingDown} accent={avgNet < 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"} />
         <StatCard label="Coût paie / mois" value={`${Math.round(avgMonthlyPayroll).toLocaleString()} $`} sublabel={`moyenne sur ${payrollPeriods.size} périodes`} icon={RefreshCw} />
         <StatCard label="Abonnements/mois" value={`${Math.round(recurringTotal).toLocaleString()} $`} sublabel={`moyenne sur ${recDiv} mois`} icon={RefreshCw} accent={recurringTotal > 0 && currentCash > 0 && recurringTotal > currentCash * 0.15 ? "bg-red-50 text-red-600" : recurringTotal > 0 ? "bg-amber-50 text-amber-600" : "bg-muted text-muted-foreground"} />
       </div>

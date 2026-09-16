@@ -10,7 +10,7 @@ const SLIDER_MAX = 100;
 const DORMANT_MAX = 24;
 
 /**
- * Stock alert threshold — applied live.
+ * Stock alert threshold - applied live.
  *
  * The control is fully driven by the parent: every move calls onChange, the page
  * recomputes immediately, and the alert count below updates as you drag. Saving
@@ -18,7 +18,7 @@ const DORMANT_MAX = 24;
  *
  * Previously the component kept its own copy of the threshold and the page only
  * saw it after "Appliquer" persisted it to the company record and that query
- * refetched — you had to commit a value in order to find out what it did.
+ * refetched - you had to commit a value in order to find out what it did.
  */
 export default function StockThresholdSettings({
   company,
@@ -174,7 +174,7 @@ export default function StockThresholdSettings({
 
       <p className="mt-3 text-xs text-muted-foreground">
         {isDraft
-          ? "Réglage en cours d'essai — la liste et les alertes ci-dessous sont déjà recalculées. Enregistrez pour le conserver."
+          ? "Réglage en cours d'essai - la liste et les alertes ci-dessous sont déjà recalculées. Enregistrez pour le conserver."
           : "Réglage enregistré. Déplacez le curseur pour tester un autre seuil : tout se recalcule immédiatement."}
       </p>
     </div>

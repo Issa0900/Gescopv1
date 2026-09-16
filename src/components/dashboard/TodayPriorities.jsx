@@ -109,7 +109,7 @@ export default function TodayPriorities({ recommendations, anomalies, risks, tas
     .map((t) => ({
       type: "task",
       title: t.title,
-      subtitle: t.due_date < todayStr ? `En retard — échéance ${t.due_date}` : `Échéance: aujourd'hui`,
+      subtitle: t.due_date < todayStr ? `En retard - échéance ${t.due_date}` : `Échéance: aujourd'hui`,
       link: "/taches",
     }));
 

@@ -1,4 +1,4 @@
-// CSV export utility — generates and downloads a CSV file from an array of objects.
+// CSV export utility - generates and downloads a CSV file from an array of objects.
 
 function escapeCsv(value) {
   if (value == null) return "";
@@ -10,7 +10,7 @@ function escapeCsv(value) {
 }
 
 export function downloadCSV(filename, rows, headers) {
-  // rows: array of objects; headers: optional { key: label } — defaults to object keys
+  // rows: array of objects; headers: optional { key: label } - defaults to object keys
   if (!rows || rows.length === 0) return;
 
   const keys = headers ? Object.keys(headers) : Object.keys(rows[0]);

@@ -67,7 +67,7 @@ export function densify(series, endMonth = null) {
   return out;
 }
 
-/** Aggregate records into ascending monthly buckets (sparse — gaps are absent). */
+/** Aggregate records into ascending monthly buckets (sparse - gaps are absent). */
 export function monthlyAgg(items, dateField, valueField, mode = "sum") {
   const map = {};
   const lastDate = {};
@@ -81,7 +81,7 @@ export function monthlyAgg(items, dateField, valueField, mode = "sum") {
     else if (mode === "count") map[m] += 1;
     else if (mode === "last") {
       // Keep the value of the latest DATE in the month, not the last row the
-      // iteration happened to reach — row order is not date order.
+      // iteration happened to reach - row order is not date order.
       if (!lastDate[m] || raw >= lastDate[m]) { lastDate[m] = raw; map[m] = v; }
     }
   });
@@ -139,7 +139,7 @@ export function trendDir(curr, prev, tolerance = 2) {
 
 /** Format a possibly-null percentage for display. */
 export function fmtPct(pct, digits = 0) {
-  if (pct === null || pct === undefined || !Number.isFinite(pct)) return "—";
+  if (pct === null || pct === undefined || !Number.isFinite(pct)) return "-";
   return `${pct >= 0 ? "+" : ""}${pct.toFixed(digits)} %`;
 }
 
@@ -151,7 +151,7 @@ export function sumLast(series, n) {
 }
 
 /**
- * Sum the n buckets immediately before the last n — null unless BOTH windows
+ * Sum the n buckets immediately before the last n - null unless BOTH windows
  * are fully covered. Comparing a 3-month block to a 1-month block is the single
  * biggest source of invented trends, so an incomplete window is refused.
  */

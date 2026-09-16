@@ -3,7 +3,7 @@ import { TrendingUp, TrendingDown, Minus, ArrowRight, Sparkles, BarChart3 } from
 import { cn } from "@/lib/utils";
 
 function formatValue(value, unit) {
-  if (value === null || value === undefined) return "—";
+  if (value === null || value === undefined) return "-";
   const num = Number(value) || 0;
   if (unit === "$") {
     return num.toLocaleString("fr-CA", { maximumFractionDigits: 0 }) + " $";

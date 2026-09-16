@@ -138,7 +138,7 @@ export function validateAggregation(fieldSemantic, method) {
     if (temporalType === TEMPORAL_TYPES.FLOW) {
       return {
         valid: true,
-        reason: "La moyenne d'un flux dilue l'information — préférez la somme.",
+        reason: "La moyenne d'un flux dilue l'information - préférez la somme.",
         suggestedMethod: 'sum'
       };
     }

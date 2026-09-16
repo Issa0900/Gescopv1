@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GESCOP Data Intelligence Core — Display Engine
+// GESCOP Data Intelligence Core - Display Engine
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Dynamically decides what components and KPIs to display on a page based on:
@@ -19,9 +19,9 @@ import { validateChartConfig } from "./chartValidator";
  * Generates a dynamic dashboard layout based on available data.
  * 
  * @param {Object} params
- * @param {string} params.domain — 'finance', 'ventes', 'tresorerie', etc.
- * @param {string[]} params.availableEntities — Entities with data in this context
- * @param {Map<string, import("./dataLineage").KpiLineage>} params.computedKpis — Pre-computed KPIs
+ * @param {string} params.domain - 'finance', 'ventes', 'tresorerie', etc.
+ * @param {string[]} params.availableEntities - Entities with data in this context
+ * @param {Map<string, import("./dataLineage").KpiLineage>} params.computedKpis - Pre-computed KPIs
  * @returns {Object} Layout definition with sections, metrics, and valid charts
  */
 export function buildDynamicDashboard({ domain, availableEntities, computedKpis }) {

@@ -1,4 +1,4 @@
-import { createClientFromRequest } from "npm:@base44/sdk@0.8.44";
+import { createFixedClientFromRequest as createClientFromRequest } from "../../shared/client.ts";
 
 // Radar externe — scan DEDIE, declenche a la demande.
 // Il etait auparavant produit par le diagnostic general : chaque analyse

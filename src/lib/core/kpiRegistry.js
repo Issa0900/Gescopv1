@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GESCOP Data Intelligence Core — KPI Registry
+// GESCOP Data Intelligence Core - KPI Registry
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Declarative registry of all business KPIs.

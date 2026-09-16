@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "@/components/Sidebar";
 import PrivacyConsentModal from "@/components/PrivacyConsentModal";
 import { useAuth } from "@/lib/AuthContext";
@@ -20,17 +19,13 @@ export default function Layout() {
         {/* pt-20 sur mobile : le bouton de menu est en position fixe (Sidebar
               left-4 top-4, 40px) et recouvrait le titre de chaque page. */}
         <div className="mx-auto max-w-6xl px-4 pb-6 pt-20 md:px-8 md:py-10">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
+          {/* CSS-only fade (pas de framer-motion) : AnimatePresence + Suspense/lazy
+              autour de l'Outlet provoquait un crash React ("Failed to execute
+              'removeChild'") quand l'animation de sortie manipulait encore le
+              noeud DOM au moment ou React le retirait pendant un changement de route. */}
+          <div key={location.pathname} className="animate-in fade-in duration-200">
+            <Outlet />
+          </div>
         </div>
       </main>
       {needsConsent && <PrivacyConsentModal />}

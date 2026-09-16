@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import ImportProgress from "@/components/import/ImportProgress";
 import PlanConfirmation from "@/components/import/PlanConfirmation";
-import { motion } from "framer-motion";
+import { motion } from "@/lib/fake-framer-motion.jsx";
 
 const acceptedTypes = ".csv,.xlsx,.xls,.tsv,.pdf";
 

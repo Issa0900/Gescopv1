@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
+import { createFixedClientFromRequest as createClientFromRequest, invokeLLM } from "../../shared/client.ts";
 
 export default async function(req) {
   try {
@@ -47,10 +47,11 @@ Sois précis et concis. Si une information n'est pas trouvable sur le site, lais
       }
     };
 
-    const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
+    const result = await invokeLLM(base44, {
       prompt,
+      model: "claude-3-5-sonnet",
+      temperature: 0.2,
       add_context_from_internet: true,
-      model: "gemini_3_8_flash",
       response_json_schema: schema
     });
 

@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GESCOP Data Intelligence Core — Entity Relation Graph
+// GESCOP Data Intelligence Core - Entity Relation Graph
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Declarative graph of relationships between Base44 entities.
@@ -274,8 +274,8 @@ export function findPath(fromEntity, toEntity) {
 /**
  * Check if a KPI can be derived from the available entities.
  *
- * @param {string[]} requiredEntities — Entities needed for the KPI
- * @param {string[]} availableEntities — Entities that have data
+ * @param {string[]} requiredEntities - Entities needed for the KPI
+ * @param {string[]} availableEntities - Entities that have data
  * @returns {{ possible: boolean, missingEntities: string[], paths: Object[] }}
  */
 export function canDeriveKpi(requiredEntities, availableEntities) {

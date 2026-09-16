@@ -161,7 +161,7 @@ export default function Sidebar({ compact, onToggleCompact }) {
             <div className="flex items-center justify-between">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-white">{company.name}</p>
-                <p className="truncate text-xs text-sidebar-foreground/70">{company.sector || "—"}</p>
+                <p className="truncate text-xs text-sidebar-foreground/70">{company.sector || "-"}</p>
               </div>
               <ChevronDown className="h-4 w-4 shrink-0 text-sidebar-foreground/60" />
             </div>
@@ -205,7 +205,7 @@ export default function Sidebar({ compact, onToggleCompact }) {
           })}
         </nav>
 
-        {/* User profile — no harsh borders */}
+        {/* User profile - no harsh borders */}
         <div className="px-3 py-3">
           {!compact && user ? (
             <div className="flex items-center gap-2.5 rounded-xl bg-white/[0.04] px-3 py-2.5 transition-colors duration-150 hover:bg-white/[0.07]">

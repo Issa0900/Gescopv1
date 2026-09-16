@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion } from "@/lib/fake-framer-motion.jsx";
 import { Sparkles } from "lucide-react";
 
 export default function AnalysisEmptyState({ onStart }) {

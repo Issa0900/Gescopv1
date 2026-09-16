@@ -73,7 +73,7 @@ function FieldLabel({ children, autofilled }) {
       <Label>{children}</Label>
       {autofilled && (
         <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
-          Auto-rempli — à vérifier
+          Auto-rempli - à vérifier
         </span>
       )}
     </div>
@@ -163,7 +163,7 @@ export default function Onboarding() {
         setAutofilled((list) => Array.from(new Set([...list, ...filled])));
         toast({
           title: filled.length
-            ? `${filled.length} champ(s) remplis depuis votre site web — relisez-les`
+            ? `${filled.length} champ(s) remplis depuis votre site web - relisez-les`
             : "Aucun champ vide à remplir depuis votre site web",
         });
       }
@@ -246,10 +246,10 @@ export default function Onboarding() {
 
         <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
           {/* Indicateur d'etape : les points seuls ne disaient ni ou l'on est,
-              ni combien il reste — un lecteur d'ecran n'en tirait rien. */}
+              ni combien il reste - un lecteur d'ecran n'en tirait rien. */}
           <div className="mb-8">
             <p className="mb-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Étape {step + 1} sur {STEP_TITLES.length} — {STEP_TITLES[step]}
+              Étape {step + 1} sur {STEP_TITLES.length} - {STEP_TITLES[step]}
             </p>
             <div
               className="flex items-center justify-center gap-2"

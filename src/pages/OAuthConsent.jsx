@@ -6,10 +6,10 @@ import AuthLayout from "@/components/AuthLayout";
 
 // App-side OAuth consent page for the app's MCP server. The platform redirects
 // AI clients here (see base44/mcp/config.json `consent_path`) with an opaque
-// `ctx` handle — the authorization request itself lives on the server. This page
+// `ctx` handle - the authorization request itself lives on the server. This page
 // gates on the app-user session, fetches the display info for that handle, shows
 // the categories of access being granted, and posts the approve/deny decision.
-// Do not change the fetch calls, headers, or the `ctx` handle handling — styling
+// Do not change the fetch calls, headers, or the `ctx` handle handling - styling
 // and copy are safe to edit.
 export default function OAuthConsent() {
   const ctx = new URLSearchParams(window.location.search).get("ctx");
@@ -32,7 +32,7 @@ export default function OAuthConsent() {
         // approve/deny, and the response carries the app's configured login
         // route for the signed-out redirect below. Send the session (cookie +
         // bearer token) so the server can list the granted tools for a
-        // signed-in user — the same auth the approve/deny call sends; without
+        // signed-in user - the same auth the approve/deny call sends; without
         // it the display request is anonymous and shows no tools.
         const infoHeaders = {};
         if (appParams.token) infoHeaders.Authorization = "Bearer " + appParams.token;
@@ -48,7 +48,7 @@ export default function OAuthConsent() {
         // Gate on the server's auth result, NOT base44.auth.isAuthenticated():
         // the SDK check runs the bearer path, so a cookie-only session (platform
         // login/SSO, or a private app with a stale localStorage token) would read
-        // as signed-out and redirect — even though /consent-info just
+        // as signed-out and redirect - even though /consent-info just
         // authenticated this same request via its cookie fallback. data.authenticated
         // keeps the redirect decision in agreement with what the server returned.
         if (!data.authenticated) {
@@ -57,7 +57,7 @@ export default function OAuthConsent() {
           // Send from_url too: a custom-auth app coerced to platform auth (e.g.
           // public_without_login under workspace SSO) serves the platform login,
           // which honors from_url rather than returnTo. Rebuild the query from
-          // `ctx` alone — never forward window.location.search raw: the platform
+          // `ctx` alone - never forward window.location.search raw: the platform
           // resume returns from_url verbatim, so crafted extras on the consent
           // link (app_base_url, access_token, …) would ride through the login
           // round-trip and app-params.js would persist them into the freshly
@@ -96,8 +96,8 @@ export default function OAuthConsent() {
       if (!res.ok) {
         // 401 = the session expired before the (single-use, still-unconsumed)
         // handle was spent; retrying the same controls re-sends the dead session
-        // forever. Send the user back through login preserving `ctx` — the same
-        // redirect the initial signed-out path uses — so they can return and
+        // forever. Send the user back through login preserving `ctx` - the same
+        // redirect the initial signed-out path uses - so they can return and
         // approve the still-valid handle.
         if (res.status === 401) {
           const returnTo = window.location.pathname + "?ctx=" + encodeURIComponent(ctx);

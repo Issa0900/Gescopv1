@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion } from "@/lib/fake-framer-motion.jsx";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { formatPct } from "@/lib/utils";

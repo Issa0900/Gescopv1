@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion } from "@/lib/fake-framer-motion.jsx";
 import { Upload, ScanText, Wand2, Database, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 

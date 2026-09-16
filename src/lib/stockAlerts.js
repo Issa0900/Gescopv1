@@ -80,7 +80,7 @@ export function computeStockAlerts(products, inventory, settings, orders) {
   // A real file had stock_status = "optimal" on all 500 rows, so the dormant
   // count was structurally stuck at 0 while stock genuinely sat unsold. A
   // product holding stock that recorded no sale over the chosen window is
-  // dormant, whatever the label says. Only applied when order history exists —
+  // dormant, whatever the label says. Only applied when order history exists -
   // without it every product would look dormant.
   const months = Math.max(1, Number(settings.dormantMonths) || DEFAULT_DORMANT_MONTHS);
   const hasOrderHistory = (orders || []).some((o) => o.product_id && o.date);
