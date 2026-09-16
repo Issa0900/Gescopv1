@@ -64,8 +64,14 @@ export function useKpiEngine(data, kpiIds) {
       if (sem) sem.forEach((v, k) => allSemantics.set(k, v));
     }
 
+    // NOUVEAU DATA CORE (PHASE 2) - Traitement des Observations
+    if (data.observations) {
+      allRecords.push(...data.observations);
+      // Les observations n'ont pas besoin de sémantique, elles ont déjà un champ 'concept'
+    }
+
     // 2. Lancer le calcul
-    if (allRecords.length === 0 || kpiIds.length === 0) {
+    if (allRecords.length === 0 || !kpiIds || kpiIds.length === 0) {
       return { kpis: new Map(), available: false };
     }
 

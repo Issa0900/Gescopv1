@@ -4,11 +4,12 @@ import { base44 } from "@/api/base44Client";
 import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { FileText, Trash2, Download, Clock, GitCompareArrows } from "lucide-react";
+import { FileText, Trash2, Download, Clock, GitCompareArrows, Database, Activity, MessagesSquare, Radio } from "lucide-react";
 import { downloadCSV } from "@/lib/exportUtils";
 import ReportTypeCard from "@/components/reports/ReportTypeCard";
 import ReportViewer from "@/components/reports/ReportViewer";
 import { cn } from "@/lib/utils";
+import { useObservations } from "@/hooks/useObservations";
 
 const reportTypes = ["quotidien", "hebdomadaire", "mensuel"];
 
@@ -25,6 +26,17 @@ export default function Rapports() {
   const [generating, setGenerating] = useState(null);
   const [selected, setSelected] = useState(null);
   const [withComparison, setWithComparison] = useState(true);
+
+  const { data: observations } = useObservations();
+  const obsStats = React.useMemo(() => {
+    const obs = observations || [];
+    return {
+      total: obs.length,
+      quant: obs.filter(o => o.observation_type === "quantitative").length,
+      qual: obs.filter(o => o.observation_type === "qualitative").length,
+      ext: obs.filter(o => o.observation_type === "external").length
+    };
+  }, [observations]);
 
   const { data: reports, isLoading } = useQuery({
     queryKey: ["reports"],
@@ -98,6 +110,31 @@ export default function Rapports() {
         <Button variant="outline" size="sm" onClick={exportReportsList} disabled={!reports || reports.length === 0}>
           <Download className="mr-1.5 h-4 w-4" /> Exporter tout (CSV)
         </Button>
+      </div>
+
+      {/* Data Core Observations Overview */}
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Database className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold">Data Core (Observation-based)</h2>
+        </div>
+        <p className="text-xs text-muted-foreground mb-3">
+          Vos rapports sont générés à partir d'un Data Core unifié combinant {obsStats.total} observations.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <div className="flex items-center gap-2 text-sm">
+            <Activity className="h-4 w-4 text-emerald-600" />
+            <span className="font-medium text-emerald-700">{obsStats.quant} Quantitatives</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <MessagesSquare className="h-4 w-4 text-amber-600" />
+            <span className="font-medium text-amber-700">{obsStats.qual} Qualitatives</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <Radio className="h-4 w-4 text-blue-600" />
+            <span className="font-medium text-blue-700">{obsStats.ext} Externes</span>
+          </div>
+        </div>
       </div>
 
       {/* Comparison toggle */}

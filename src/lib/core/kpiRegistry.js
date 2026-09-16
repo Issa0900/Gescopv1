@@ -472,6 +472,21 @@ export const KPI_REGISTRY = Object.freeze({
     },
   },
 
+  // ── QUALITATIVE & SENTIMENT (LEVEL 2) ────────────────────────────────────
+  customer_sentiment_score: {
+    id: "customer_sentiment_score",
+    name: { fr: "Score de Sentiment Client", en: "Customer Sentiment Score" },
+    level: KPI_LEVELS.KPI_STRATEGIQUE,
+    domain: DOMAINS.CLIENTS,
+    semanticType: "score",
+    economicRole: ECONOMIC_ROLES.RESULT,
+    dataType: DATA_TYPES.PERCENTAGE,
+    isAdditive: false,
+    dependencies: [],
+    // Evaluated by the qualitativeEngine usually, but the KPI engine reads the pre-aggregated value
+    calculate: (deps) => deps.customer_sentiment_score || 0,
+  },
+
 });
 
 /**

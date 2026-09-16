@@ -7,6 +7,13 @@ import {
   construireEchantillon, type PlanImport,
 } from "../../shared/importPlan.ts";
 import { insertRows, missingRequired } from "../../shared/bulkInsert.ts";
+import { buildBusinessContext } from "../../shared/businessContext.ts";
+import { resolveFieldSemantics } from "../../shared/semanticEngine.ts";
+import { normalizeRow as normalizeRowForCore } from "../../shared/normalizationEngine.ts";
+import { profileData } from "../../shared/dataProfiler.ts";
+import { matchConcept } from "../../shared/semanticMatcher.ts";
+import { detectGrain } from "../../shared/grainEngine.ts";
+import { generateObservations } from "../../shared/observationEngine.ts";
 import { deduplicateRows } from "../../shared/deduplication.ts";
 import { getSchema, ENTITY_SCHEMAS } from "../../shared/entitySchemas.ts";
 import * as XLSX from "npm:xlsx@0.18.5";
@@ -168,6 +175,7 @@ async function importRows(
   });
 
   const toCreate: Record<string, any>[] = [];
+  const rawObservations = [];
   let quarantined = 0;
   const missingFields = new Set<string>();
   const samples: string[] = [];
@@ -175,6 +183,19 @@ async function importRows(
   // per value so the report can name them instead of claiming the field is absent.
   const refusedValues: Record<string, Record<string, number>> = {};
   const allowedByField: Record<string, string[]> = {};
+
+  // ── NOUVEAU PIPELINE SÉMANTIQUE (Phase 1) ──
+  let profile, matchedConcepts, grain;
+  try {
+    profile = profileData(rows.slice(0, 50));
+    matchedConcepts = {};
+    for (const [col, p] of Object.entries(profile.columns)) {
+      const match = matchConcept(p);
+      if (match) matchedConcepts[col] = match;
+    }
+    grain = detectGrain(profile, matchedConcepts);
+  } catch(e) { console.error("Semantic engine failed", e); }
+
   rows.forEach((row) => {
     if (!row || typeof row !== "object") { quarantined++; return; }
     const enumIssues: { field: string; value: string; allowed: string[] }[] = [];
@@ -199,6 +220,13 @@ async function importRows(
       return;
     }
     toCreate.push(normalized);
+
+    // Génération de l'Observation
+    if (profile && matchedConcepts && grain) {
+      const normalizedObs = normalizeRowForCore(row, profile.columns);
+      const obsList = generateObservations(normalizedObs, matchedConcepts, fileLabel, grain);
+      rawObservations.push(...obsList);
+    }
   });
 
   const messages: string[] = [];
@@ -211,6 +239,16 @@ async function importRows(
 
   const { created, quarantined: rejected, errors } = await insertRows(base44, entityName, newRows);
   quarantined += rejected + duplicateCount;
+
+  // Sauvegarde des Observations (Silencieuse pour ne pas bloquer l'import)
+  if (rawObservations.length > 0) {
+    try {
+      // On sauvegarde par lots de 100
+      for (let i = 0; i < rawObservations.length; i += 100) {
+        await base44.entities.Observation.bulkCreate(rawObservations.slice(i, i + 100));
+      }
+    } catch(e) { console.warn("Failed to save observations", e); }
+  }
 
   // Refused values first: this is the actionable one, and it used to be
   // reported as a missing field, which sent users looking for a column that

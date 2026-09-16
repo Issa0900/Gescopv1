@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useCompany } from "@/hooks/useCompany";
 import { fetchAll } from "@/lib/fetchAll";
 import { computeLiveAlerts } from "@/lib/liveAlerts";
+import { useObservations } from "@/hooks/useObservations";
 
 const formatImpact = (amount) => {
   if (!amount || amount === 0) return null;
@@ -50,6 +51,7 @@ export default function Insights() {
     queryKey: ["recommendations"],
     queryFn: async () => { const l = await base44.entities.Recommendation.list("-created_date", 20); return l || []; },
   });
+  const { data: observations, isLoading: lobs } = useObservations({ limit: 50 });
 
   // Fetch full data for live interconnected alerts
   const { company } = useCompany();
@@ -71,6 +73,12 @@ export default function Insights() {
 
   const insights = useMemo(() => {
     const items = [];
+    
+    const getPreuves = (id) => {
+      if (!observations) return [];
+      return observations.filter(o => o.entity_id === id || o.source_id === id);
+    };
+
     (liveData || []).forEach((a) => {
       // Les alertes croisées contiennent "&" dans la catégorie
       const isCrossDomain = a.category.includes("&");
@@ -83,6 +91,7 @@ export default function Insights() {
         impactLabel: null,
         confiance: 100, 
         recommandation: isCrossDomain ? "Vérifiez immédiatement les impacts en chaîne." : null, 
+        preuves: getPreuves(a.id),
         source: { severity: a.level, priority: a.level },
       });
     });
@@ -90,31 +99,39 @@ export default function Insights() {
       id: `a-${a.id}`, type: "anomalie", typeLabel: "Anomalie",
       fait: a.title, analyse: a.explanation || a.description,
       impactLabel: a.financial_impact ? `${formatImpact(a.financial_impact)}/mois` : (a.deviation_pct ? `${a.deviation_pct > 0 ? "+" : ""}${Math.round(a.deviation_pct)}%` : null),
-      confiance: a.confidence_pct || 0, recommandation: null, source: a,
+      confiance: a.confidence_pct || 0, recommandation: null, 
+      preuves: getPreuves(a.id),
+      source: a,
     }));
     (risks || []).forEach((r) => items.push({
       id: `r-${r.id}`, type: "risque", typeLabel: "Risque",
       fait: r.title, analyse: r.description,
       impactLabel: formatImpact(r.financial_impact),
-      confiance: r.confidence_pct || 0, recommandation: null, source: r,
+      confiance: r.confidence_pct || 0, recommandation: null, 
+      preuves: getPreuves(r.id),
+      source: r,
     }));
     (opportunities || []).forEach((o) => items.push({
       id: `o-${o.id}`, type: "opportunite", typeLabel: "Opportunité",
       fait: o.title, analyse: o.description,
       impactLabel: formatImpact(o.financial_impact),
-      confiance: o.confidence_pct || 0, recommandation: null, source: o,
+      confiance: o.confidence_pct || 0, recommandation: null, 
+      preuves: getPreuves(o.id),
+      source: o,
     }));
     (recommendations || []).forEach((r) => items.push({
       id: `rec-${r.id}`, type: "recommandation", typeLabel: "Recommandation",
       fait: r.situation || r.title, analyse: r.analysis,
       impactLabel: formatImpact(r.financial_impact) || r.impact,
-      confiance: r.confidence_pct || 0, recommandation: r.action, source: r,
+      confiance: r.confidence_pct || 0, recommandation: r.action, 
+      preuves: getPreuves(r.id),
+      source: r,
     }));
     return items.sort((a, b) => (Math.abs(b.source.financial_impact || 0) + b.confiance / 2) - (Math.abs(a.source.financial_impact || 0) + a.confiance / 2));
-  }, [anomalies, risks, opportunities, recommendations]);
+  }, [anomalies, risks, opportunities, recommendations, liveData, observations]);
 
   const filtered = filter === "tous" ? insights : insights.filter((i) => i.type === filter);
-  const isLoading = la || lr || lo || lrec;
+  const isLoading = la || lr || lo || lrec || lobs || llive;
 
   const handleCreateAction = async (insight) => {
     try {
