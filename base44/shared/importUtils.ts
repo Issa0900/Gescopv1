@@ -1362,14 +1362,16 @@ export function normalizeKeys(row: Record<string, any>, properties?: Record<stri
 const ENUM_TRANSLATIONS: Record<string, string[]> = {
   "paid": ["paye"], "pending": ["en_attente", "en_cours"], "failed": ["echoue"], "refunded": ["rembourse"],
   "shipped": ["expedie"], "processing": ["en_preparation"], "completed": ["livre", "terminee"], "cancelled": ["annule"], "returned": ["retourne"],
+  "received": ["recu"],
   "none": ["aucun"], "requested": ["demande"], "approved": ["approuve"], "rejected": ["refuse"],
   "web": ["shopify"],
   "google ads": ["google_ads"], "meta ads": ["meta_ads"],
-  "paused": ["pause"], "planned": ["planifiee"], "active": ["active"],
+  "paused": ["pause"], "planned": ["planifiee"], "active": ["active", "actif"], "inactive": ["inactif"],
   "dormant": ["dormant"],
   // French capitalized/common variants → canonical enum values
   "alerte": ["proche_rupture", "faible"], "normal": ["optimal"],
   "bas": ["inferieur"], "moyen": ["egal"], "eleve": ["superieur"],
+  "depart": ["depart"], "conge": ["conge"], "essai": ["essai"], "perdu": ["perdu"],
   "haute": ["elevee", "urgente"], "critique": ["urgente"], "basse": ["faible"],
   "en retard": ["non_atteint"], "en attente": ["en_attente", "en_cours"],
   "avis": ["avis", "question"], "reclamation": ["reclamation", "plainte"], "rh": ["administration", "service_client"],
