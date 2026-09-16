@@ -55,7 +55,18 @@ Sois précis et concis. Si une information n'est pas trouvable sur le site, lais
       response_json_schema: schema
     });
 
-    return Response.json({ company_info: result });
+    let companyInfo = {};
+    if (typeof result === 'string') {
+      try {
+        companyInfo = JSON.parse(result);
+      } catch (e) {
+        console.error("Failed to parse LLM response:", result);
+      }
+    } else {
+      companyInfo = result;
+    }
+
+    return Response.json({ company_info: companyInfo });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
