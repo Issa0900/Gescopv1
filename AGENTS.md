@@ -3,9 +3,13 @@
 Failure to do so will result in localized fixes that break the global vision.
 
 ## 🎯 OVERARCHING GOAL (THE "NORTH STAR")
-The ultimate objective of GESCOP is to be a **Universal Business Intelligence & Decision-Making Platform**.
-It must be functionally resilient and capable of digesting ANY type of user data (e.g., standard Excel files, legacy ERP exports, international Kaggle datasets in English). 
-The system's core purpose is to **facilitate decision-making** for the user. Never block the user on trivial formatting issues. Maximize data ingestion, translate on the fly, and always provide actionable insights.
+The ultimate objective of GESCOP is to be a **Holistic AI Decision-Support System (Outil d'Aide à la Décision Éclairée)**.
+It must go beyond standard Business Intelligence by fusing three distinct pillars of data:
+1. **Quantitative Data** (Internal metrics: Finance, Sales, Inventory, universal CSV/Kaggle imports).
+2. **Qualitative Data** (Internal context: Customer feedback, employee sentiment, interactions).
+3. **External Signals** (Macro context: Government regulations, economic trends, market news, competitor moves).
+
+The system's core purpose is to **cross-analyze these dimensions to generate enlightened, strategic decisions**. Never restrict the system to mere data visualization; it must always connect the dots between raw numbers, human feedback, and the outside world to guide the user.
 
 ---
 
