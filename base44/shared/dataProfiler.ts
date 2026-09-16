@@ -61,6 +61,7 @@ export function profileData(rows: Record<string, any>[]): DatasetProfile {
 
 /**
  * DǸduit le type de donnǸe le plus probable pour une colonne donnǸe.
+ * DÉduit le type de donnÉe le plus probable pour une colonne donnÉe.
  */
 function inferColumnType(values: any[]): ColumnProfile['inferredType'] {
   if (values.length === 0) return 'unknown';
@@ -71,15 +72,18 @@ function inferColumnType(values: any[]): ColumnProfile['inferredType'] {
   let isDate = true;
   let isEmail = true;
   
-  const currencyRegex = /^[\$"!]?\s*-?\d+([.,]\d+)?\s*[\$"!]?$/;
+  const currencyRegex = /^[\$€£]?\s*-?[\d\s]+([.,]\d+)?\s*[\$€£]?$/;
   let isCurrency = true;
 
-  const percentRegex = /^-?\d+([.,]\d+)?\s*%$/;
+  const percentRegex = /^-?[\d\s]+([.,]\d+)?\s*%$/;
   let isPercentage = true;
 
   for (const val of values.slice(0, 50)) { // Ǹchantillonnage sur 50 valeurs
+  for (const val of values.slice(0, 50)) {
     const str = String(val).trim();
-    const num = Number(val);
+    // Enlever les espaces pour le test numerique standard
+    const numClean = str.replace(/\s/g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+    const num = Number(numClean);
 
     if (isInteger && (!Number.isInteger(num) || isNaN(num))) isInteger = false;
     if (isDecimal && isNaN(num)) isDecimal = false;
@@ -88,6 +92,10 @@ function inferColumnType(values: any[]): ColumnProfile['inferredType'] {
     if (isEmail && !/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(str)) isEmail = false;
     if (isCurrency && !currencyRegex.test(str)) isCurrency = false;
     if (isPercentage && !percentRegex.test(str)) isPercentage = false;
+    
+    // Un simple entier "12" ne doit pas tre une currency par dǸfaut s'il n'y a pas de symbole
+    if (isCurrency && (!currencyRegex.test(str) || !str.match(/[\$€£]/))) isCurrency = false;
+    if (isPercentage && (!percentRegex.test(str) || !str.includes('%'))) isPercentage = false;
   }
 
   if (isPercentage) return 'percentage';
@@ -100,3 +108,4 @@ function inferColumnType(values: any[]): ColumnProfile['inferredType'] {
 
   return 'string';
 }
+
