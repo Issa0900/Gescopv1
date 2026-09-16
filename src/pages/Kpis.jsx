@@ -12,6 +12,8 @@ import { downloadCSV } from "@/lib/exportUtils";
 import { computeDomainScores } from "@/lib/domainScores";
 import { fetchAll } from "@/lib/fetchAll";
 import { useCompany } from "@/hooks/useCompany";
+import { useObservations } from "@/hooks/useObservations";
+import { useKpiEngine } from "@/lib/useKpiEngine";
 import { getStockAlertSettings, computeStockAlerts } from "@/lib/stockAlerts";
 import { prepareTransactions } from "@/lib/financialData";
 import { isIncome, isExpense, txAmount } from "@/lib/transactionClassifier";
@@ -34,6 +36,8 @@ import {
   roasWindow,
   previousRoasWindow,
   anyColumnPresent,
+  isRefundedOrder,
+  validSalesOrders,
 } from "@/lib/metrics";
 
 const domainLabels = {
@@ -67,6 +71,8 @@ export default function Kpis() {
     },
     staleTime: 0,
   });
+  
+  const { data: observations } = useObservations();
 
   const { data: transactions } = useQuery({
     queryKey: ["transactions-summary"],
@@ -133,11 +139,24 @@ export default function Kpis() {
     staleTime: 0,
   });
 
+  const { kpis: engineKpis } = useKpiEngine({
+    transactions: transactions || [],
+    orders: orders || [],
+    customers: customers || [],
+    observations: observations || [],
+    cashflow: cashflow || [],
+  }, ["customer_sentiment_score"]);
+
   const computedKpis = useMemo(() => {
     const result = [];
     // Computed in the FINANCE block below and reused by CLIENTS to turn revenue
     // per customer into an actual LTV. Null when there is no margin to apply.
     let margin3Overall = null;
+
+    const sentiment = engineKpis.get("customer_sentiment_score")?.value;
+    if (sentiment !== undefined && sentiment !== null) {
+      result.push({ name: "Score de Sentiment Client", domain: "clients", value: sentiment.toFixed(1), previous: null, trend: "stable", unit: "/10" });
+    }
 
     // === FINANCE === (only if transactions exist)
     // All month-over-month figures use COMPLETE months: the in-progress month
@@ -197,20 +216,21 @@ export default function Kpis() {
     // donc explicitement la source pour qu'un ecart ne passe pas pour une erreur.
     // === VENTES === (only if orders exist)
     if ((orders || []).length > 0) {
-      const orderRevMonthly = monthlyAggComplete(orders, "date", "total");
-      const orderCntMonthly = monthlyAggComplete(orders, "date", "total", "count");
+      // Return rate is measured on EVERY order (refunded or not - that's the
+      // point). Revenue figures below use only the orders whose money stayed
+      // with the business: a refunded order's total was already reversed and
+      // must not be counted as revenue.
+      const salesOrders = validSalesOrders(orders);
+      const orderRevMonthly = monthlyAggComplete(salesOrders, "date", "total");
+      const orderCntMonthly = monthlyAggComplete(salesOrders, "date", "total", "count");
       const currOrders = lastVal(orderCntMonthly);
       const prevOrders = prevVal(orderCntMonthly);
       const currOrderRev = lastVal(orderRevMonthly);
       const prevOrderRev = prevVal(orderRevMonthly);
       const currAOV = currOrders > 0 ? currOrderRev / currOrders : 0;
       const prevAOV = prevOrders > 0 ? prevOrderRev / prevOrders : 0;
-      const totalOrderRev = orders.reduce((s, o) => s + (Number(o.total) || 0), 0);
-      const returns = orders.filter((o) =>
-        (o.return_status && o.return_status !== "aucun") ||
-        o.payment_status === "rembourse" ||
-        o.fulfillment_status === "retourne"
-      );
+      const totalOrderRev = salesOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
+      const returns = orders.filter(isRefundedOrder);
       // 0 % only means "no returns" when at least one column could have
       // reported one. If all three are absent from the import, the rate is
       // unknown and the KPI is withheld rather than shown as a clean zero.
@@ -320,10 +340,16 @@ export default function Kpis() {
       // only was inflating this by 1/(share of active) - 2x at 50% churn.
       const value = customerValue(orders, customers, margin3Overall);
 
-      result.push({ name: "Clients actifs", domain: "clients", value: churn.active, previous: null, trend: "stable", unit: "" });
-      // Cumulative share of the base ever lost - named as such, because it is
-      // not a rate over a period and can never go down.
-      result.push({ name: "Clients perdus (cumul)", domain: "clients", value: Math.round((churn.rate || 0) * 10) / 10, previous: null, trend: "stable", unit: "%" });
+      // "Clients actifs" / "Clients perdus" both read off the customer status
+      // field. When no row has ever carried "actif", "inactif" or "perdu" that
+      // field is unfilled, not a perfect 0 % churn - showing "0" here would
+      // claim a clean base instead of "we don't know".
+      if (churn.statusMeasured) {
+        result.push({ name: "Clients actifs", domain: "clients", value: churn.active, previous: null, trend: "stable", unit: "" });
+        // Cumulative share of the base ever lost - named as such, because it is
+        // not a rate over a period and can never go down.
+        result.push({ name: "Clients perdus (cumul)", domain: "clients", value: Math.round(churn.rate * 10) / 10, previous: null, trend: "stable", unit: "%" });
+      }
       // The actionable one: attrition measured on real purchase behaviour.
       if (churn.behaviourRate !== null) {
         result.push({ name: `Inactifs depuis ${churn.inactiveMonths} mois`, domain: "clients", value: Math.round(churn.behaviourRate * 10) / 10, previous: null, trend: "stable", unit: "%" });
@@ -342,7 +368,7 @@ export default function Kpis() {
     }
 
     return result;
-  }, [transactions, orders, customers, campaigns, campaignDaily, products, inventory, cashflow, stockSettings.threshold, stockSettings.useReorderPoint]);
+  }, [transactions, orders, customers, campaigns, campaignDaily, products, inventory, cashflow, stockSettings.threshold, stockSettings.useReorderPoint, engineKpis]);
 
   // Merge: computed KPIs first, then LLM-generated ones that aren't duplicated
   const allKpis = useMemo(() => {

@@ -8,7 +8,7 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from "recharts";
-import { churnStats, customerValue, columnPresent } from "@/lib/metrics";
+import { churnStats, customerValue, columnPresent, validSalesOrders } from "@/lib/metrics";
 import { fetchAll } from "@/lib/fetchAll";
 
 const segmentColors = {
@@ -56,10 +56,12 @@ export default function Clients() {
     );
   }
 
-  // Compute real revenue and order counts from orders
+  // Compute real revenue and order counts from orders. Refunded orders are
+  // excluded - their money went back to the customer, so counting them here
+  // overstated concentration, top-client ranking and every client's own CA.
   const revByCustomer = {};
   const ordersByCustomer = {};
-  (orders || []).forEach((o) => {
+  validSalesOrders(orders).forEach((o) => {
     const cid = o.customer_id;
     if (!cid) return;
     revByCustomer[cid] = (revByCustomer[cid] || 0) + (Number(o.total) || 0);
@@ -87,7 +89,9 @@ export default function Clients() {
   // This page used to also count "segment a_risque" as churned, so it showed a
   // higher rate than every other screen from the exact same rows.
   const churn = churnStats(customers, orders);
-  const churnRate = churn.rate === null ? 0 : Math.round(churn.rate);
+  // null when no customer row has ever carried a status ("actif"/"inactif"/
+  // "perdu") - that means the field was never filled in, not a 0 % churn.
+  const churnRate = churn.rate === null ? null : Math.round(churn.rate);
   // "0 client à risque" is only meaningful if the risk column was imported.
   const hasChurnRisk = columnPresent(customers, "churn_risk");
   const totalRevenue = enriched.reduce((s, c) => s + (c._total_revenue || 0), 0);
@@ -128,8 +132,10 @@ export default function Clients() {
             "who has stopped buying lately". Only the second one can improve. */}
         <StatCard
           label="Clients perdus (cumul)"
-          value={`${churnRate}%`}
-          sublabel={`${churn.churned} sur ${churn.total} depuis le début${hasChurnRisk ? ` · ${churn.atRisk} à risque` : ""}`}
+          value={churnRate === null ? "-" : `${churnRate}%`}
+          sublabel={churn.statusMeasured
+            ? `${churn.churned} sur ${churn.total} depuis le début${hasChurnRisk ? ` · ${churn.atRisk} à risque` : ""}`
+            : "statut client jamais renseigné"}
           icon={UserMinus}
           accent={churnRate > 20 ? "bg-red-50 text-red-600" : "bg-muted text-muted-foreground"}
         />

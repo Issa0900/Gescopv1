@@ -37,24 +37,37 @@ export function computeKpi({ kpiId, records, fieldSemantics, context = {} }) {
   let lowestQuality = 100;
   let status = KPI_STATUS.AVAILABLE;
 
+  let unavailableDeps = 0;
   for (const depId of kpiDef.dependencies) {
     if (resolvedDeps[depId] === undefined) {
       // Need to compute this dependency
       const depResult = computeKpi({ kpiId: depId, records, fieldSemantics, context: resolvedDeps });
-      
+
       resolvedDeps[depId] = depResult.value;
-      
+
       // Merge sources and quality
       lineageSources.push(...depResult.sources);
       lowestQuality = Math.min(lowestQuality, depResult.qualityScore);
-      
+
       // Propagate status
       if (depResult.status === KPI_STATUS.UNAVAILABLE) {
-        status = KPI_STATUS.UNAVAILABLE;
+        unavailableDeps += 1;
       } else if (depResult.status === KPI_STATUS.CONDITIONAL && status === KPI_STATUS.AVAILABLE) {
         status = KPI_STATUS.CONDITIONAL;
       }
     }
+  }
+  // A KPI is only UNAVAILABLE when EVERY dependency is. Many KPIs list several
+  // alternative sources for the same figure (e.g. total_revenue accepts
+  // income_amount OR transaction_amount) and their calculate() fn already
+  // handles a missing one via `deps.x || 0` - blocking calculate() the moment
+  // any single alternative is missing skipped that fallback entirely and
+  // silently produced a fake 0 (e.g. Finance page showing "0 $" of revenue
+  // while transaction_amount had the real, available total).
+  if (kpiDef.dependencies.length > 0 && unavailableDeps === kpiDef.dependencies.length) {
+    status = KPI_STATUS.UNAVAILABLE;
+  } else if (unavailableDeps > 0 && status === KPI_STATUS.AVAILABLE) {
+    status = KPI_STATUS.CONDITIONAL;
   }
 
   // Deduplicate sources
@@ -183,9 +196,13 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
   // --- NOUVEAU DATA CORE (PHASE 2) ---
   // Si le jeu de données contient des Observations, on utilise directement la valeur stockée
   // sans avoir besoin du vieux mappage de colonnes (fieldSemantics).
-  if (records && records.length > 0 && records[0].observation_type) {
-    const matchingObs = records.filter(r => 
-      r.concept === canonicalKey || r.concept === `finance.${canonicalKey}` || r.concept === `customer.${canonicalKey}`
+  // Note: les Observations sont mélangées avec d'autres entités dans le tableau `records`
+  // (voir useKpiEngine), donc on ne peut pas se fier à records[0] pour les détecter.
+  if (records && records.some(r => r && r.observation_type)) {
+    const matchingObs = records.filter(r =>
+      r.observation_type && (
+        r.concept === canonicalKey || r.concept === `finance.${canonicalKey}` || r.concept === `customer.${canonicalKey}`
+      )
     );
     
     if (matchingObs.length > 0) {
@@ -255,13 +272,12 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
   // Aggregate
   const method = getAggregationMethod(targetSemantic, "period_total");
   let value = null;
-  
+
   // GESCOP Phase 3 : Validation Sémantique SSOT avant calcul
-  const validValues = records
-    .filter(r => {
+  const filteredRecords = records.filter(r => {
       // Filtrage sémantique SSOT basé sur le statut et l'entité
       if (targetSemantic.source === "Order") {
-        // Utilisation d'un helper rudimentaire ici si on ne peut pas l'importer en haut, 
+        // Utilisation d'un helper rudimentaire ici si on ne peut pas l'importer en haut,
         // mais le mieux est de vérifier le status directement.
         const st = String(r.status || r.payment_status || r.fulfillment_status || "").toLowerCase();
         if (st.includes("annul") || st.includes("cancel") || st.includes("void") || st.includes("brouillon") || st.includes("draft") || st.includes("rembours")) {
@@ -274,9 +290,30 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
         }
       }
       return true;
-    })
-    .map(r => Number(r[targetField]))
-    .filter(n => Number.isFinite(n));
+    });
+
+  // "Last" must mean chronologically last, not last-in-input-order: callers
+  // fetch records sorted various ways (a page fetching "-date" for a table
+  // put the newest row first, so picking array-index -1 silently returned
+  // the OLDEST balance instead of the current one).
+  let validValues;
+  if (method === AGGREGATION_METHODS.LAST) {
+    const dated = filteredRecords
+      .map(r => ({ date: r.date || r.acquisition_date || r.period || null, value: Number(r[targetField]) }))
+      .filter(x => Number.isFinite(x.value));
+    const withDate = dated.filter(x => x.date);
+    if (withDate.length > 0) {
+      withDate.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+      validValues = withDate.map(x => x.value);
+    } else {
+      // No date field to sort by - fall back to input order as before.
+      validValues = dated.map(x => x.value);
+    }
+  } else {
+    validValues = filteredRecords
+      .map(r => Number(r[targetField]))
+      .filter(n => Number.isFinite(n));
+  }
 
   if (validValues.length > 0) {
     switch (method) {

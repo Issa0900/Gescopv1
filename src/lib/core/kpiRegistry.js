@@ -483,8 +483,31 @@ export const KPI_REGISTRY = Object.freeze({
     dataType: DATA_TYPES.PERCENTAGE,
     isAdditive: false,
     dependencies: [],
-    // Evaluated by the qualitativeEngine usually, but the KPI engine reads the pre-aggregated value
-    calculate: (deps) => deps.customer_sentiment_score || 0,
+    // No qualitative Observations yet => unavailable (null), never a fake 0.
+    // Naive keyword scoring mirroring base44/shared/qualitativeEngine.ts, done
+    // client-side since that module only runs server-side (Deno functions).
+    calculate: (deps) => {
+      const records = deps._records || [];
+      const qualObs = records.filter((r) => r.observation_type === "qualitative" && r.text);
+      if (qualObs.length === 0) return null;
+
+      const POSITIVE = ["super", "excellent", "bien", "satisfait", "merci", "top", "rapide", "parfait"];
+      const NEGATIVE = ["nul", "lent", "cher", "probleme", "problème", "decu", "déçu", "retard", "mauvais", "pire", "casse", "cassé", "incomplet"];
+
+      let positiveCount = 0;
+      let negativeCount = 0;
+      for (const obs of qualObs) {
+        const text = String(obs.text).toLowerCase();
+        let score = 0;
+        for (const word of POSITIVE) if (text.includes(word)) score += 1;
+        for (const word of NEGATIVE) if (text.includes(word)) score -= 1;
+        if (score > 0) positiveCount += 1;
+        else if (score < 0) negativeCount += 1;
+      }
+
+      const net = (positiveCount - negativeCount) / qualObs.length;
+      return Math.max(0, Math.min(10, 5 + net * 5));
+    },
   },
 
 });
@@ -576,10 +599,14 @@ export function sortKpisTopologically(kpiIds) {
     result.push(id);
   }
 
+  // Every explicitly requested id must be visited, even a raw canonical key
+  // with no KPI_REGISTRY entry (e.g. "cash_closing"). `visit()` already
+  // handles that case correctly - it just skips the dependency walk and adds
+  // the id straight to `result`. Skipping it here instead silently dropped it
+  // from `computeKpiBatch`'s run, so a page requesting it directly (not as
+  // another KPI's dependency) got no lineage entry at all and read as 0.
   kpiIds.forEach(id => {
-    if (getKpiDefinition(id)) {
-      visit(id);
-    }
+    visit(id);
   });
 
   return result;

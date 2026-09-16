@@ -31,6 +31,7 @@ import {
   churnStats,
   roasWindow,
   previousRoasWindow,
+  validSalesOrders,
 } from "@/lib/metrics";
 
 function clamp(v) {
@@ -141,12 +142,15 @@ export function computeDomainScores(data) {
   };
 
   // === VENTES - complete-month revenue and basket trend ===
+  // A refunded order's total was already reversed - counting it as revenue
+  // overstated this score's input by the store's full return rate.
+  const salesOrders = validSalesOrders(orders);
   const orderRevMonthly = monthlyAggComplete(
-    (orders || []).map(o => ({ ...o, _computed_rev: Number(o.total) || Number(o.revenue_amount) || Number(o.amount) || 0 })),
-    "date", 
+    salesOrders.map(o => ({ ...o, _computed_rev: Number(o.total) || Number(o.revenue_amount) || Number(o.amount) || 0 })),
+    "date",
     "_computed_rev"
   );
-  const orderCntMonthly = monthlyAggComplete(orders || [], "date", "order_id", "count");
+  const orderCntMonthly = monthlyAggComplete(salesOrders, "date", "order_id", "count");
   // 3-month blocks, but only when BOTH blocks are fully covered.
   const rev3 = sumLast(orderRevMonthly, 3);
   const revPrev3 = sumPrev(orderRevMonthly, 3);

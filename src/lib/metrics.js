@@ -175,13 +175,21 @@ export function churnStats(customers, orders, inactiveMonths = DEFAULT_INACTIVE_
     behaviourRate = buyers > 0 ? (lapsed / buyers) * 100 : null;
   }
 
+  // A base where NO customer carries "actif", "inactif" or "perdu" is not a
+  // base with 0 % churn - it is a status column that was never filled in.
+  // Without this guard, an unpopulated status field reads as a perfect churn
+  // score everywhere `rate` is consumed (domain score, KPI page, audit).
+  const statusMeasured = active > 0 || churned > 0;
+
   return {
     total,
     active,
     churned,
     atRisk,
     // Cumulative share of the base marked lost - NOT a period rate.
-    rate: total > 0 ? (churned / total) * 100 : null,
+    // null when there is no base, OR when the status field carries no signal.
+    rate: total > 0 && statusMeasured ? (churned / total) * 100 : null,
+    statusMeasured,
     // Period attrition from real purchase behaviour. null = not computable.
     inactiveMonths: months,
     buyers,
@@ -189,6 +197,25 @@ export function churnStats(customers, orders, inactiveMonths = DEFAULT_INACTIVE_
     behaviourRate,
     measurable: hasOrders,
   };
+}
+
+/**
+ * A refunded order's money went back to the customer - it must not count as
+ * revenue. Matches the same three columns already used to compute the
+ * "Taux de retour" KPI, so revenue and return rate agree on what happened
+ * instead of one excluding refunds and the other silently including them.
+ */
+export function isRefundedOrder(o) {
+  return Boolean(
+    (o.return_status && o.return_status !== "aucun") ||
+    o.payment_status === "rembourse" ||
+    o.fulfillment_status === "retourne"
+  );
+}
+
+/** Orders that represent real, kept revenue - refunds excluded. */
+export function validSalesOrders(orders) {
+  return (orders || []).filter((o) => !isRefundedOrder(o));
 }
 
 /**
@@ -203,7 +230,7 @@ export function churnStats(customers, orders, inactiveMonths = DEFAULT_INACTIVE_
  * Le calcul historique sur l'ensemble de la base faussait l'analyse périodique.
  */
 export function customerValue(orders, customers, marginPct = null) {
-  const ord = orders || [];
+  const ord = validSalesOrders(orders);
   const totalRevenue = ord.reduce((s, o) => s + (Number(o.total) || Number(o.revenue_amount) || 0), 0);
   const buyers = new Set(ord.map((o) => o.customer_id).filter(Boolean)).size;
   const totalCustomers = (customers || []).length;

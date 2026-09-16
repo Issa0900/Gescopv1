@@ -26,7 +26,7 @@ export default function Tresorerie() {
   });
 
   // GESCOP Phase 4 SSOT
-  const { kpis: engineKpis } = useKpiEngine({ cashflow: cashflow || [] }, ["cash_closing", "net_burn_rate"]);
+  const { kpis: engineKpis } = useKpiEngine({ cashflow: cashflow || [] }, ["cash_closing"]);
 
   // These query keys are shared with the Dashboard, so this page can render
   // instantly if the user just navigated from there.
@@ -45,9 +45,6 @@ export default function Tresorerie() {
 
   // Consommation officielle SSOT
   const currentCash = engineKpis.get("cash_closing")?.value || 0;
-  // Le moteur retourne un burn rate pour la période; s'il est négatif, c'est un déficit moyen
-  // Tresorerie.jsx affichait le "flux net", on peut l'approximer depuis le burn rate en l'inversant.
-  const avgNet = -(engineKpis.get("net_burn_rate")?.value || 0);
 
   const expenseRows = expenses || [];
   const payrollRows = payroll || [];
@@ -58,14 +55,14 @@ export default function Tresorerie() {
   // in/out are summed, the balance is the month's closing value.
   const sorted = [...(cashflow || [])].sort((a, b) => ((a.date || "") < (b.date || "") ? -1 : 1));
   const latestRow = sorted[sorted.length - 1];
-  
+
   const byMonthCash = {};
   sorted.forEach((c) => {
     const m = (c.date || "").slice(0, 7);
     if (!byMonthCash[m]) {
       byMonthCash[m] = { in: 0, out: 0, solde: 0, net: 0 };
     }
-    const flow = Number(c.net_flow) || ((Number(c.cash_in) || 0) - (Number(c.cash_out) || 0));
+    const flow = Number(c.net_cash_flow) || ((Number(c.cash_in) || 0) - (Number(c.cash_out) || 0));
     byMonthCash[m].in += Number(c.cash_in) || 0;
     byMonthCash[m].out += Number(c.cash_out) || 0;
     byMonthCash[m].net += flow;
@@ -73,6 +70,12 @@ export default function Tresorerie() {
   });
 
   const monthsCash = Object.keys(byMonthCash).sort();
+  // A raw sum over the whole imported history (positive = cash grew) presented
+  // as a MONTHLY figure overstated it by the number of months covered, and a
+  // stale assumption about the engine's sign convention flipped it negative on
+  // top - a company whose cash grew steadily read as "burning $158k/month".
+  const totalNetCash = monthsCash.reduce((s, m) => s + byMonthCash[m].net, 0);
+  const avgNet = monthsCash.length > 0 ? totalNetCash / monthsCash.length : 0;
   const chartData = monthsCash.slice(-12).map((m) => ({
     mois: m,
     entrées: Math.round(byMonthCash[m].in),
@@ -119,7 +122,7 @@ export default function Tresorerie() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Trésorerie actuelle" value={`${Math.round(currentCash).toLocaleString("fr-CA")} $`} sublabel={`au ${latestRow?.date || "-"}`} icon={Wallet} accent={currentCash < 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"} />
-        <StatCard label="Flux net moyen / mois" value={`${avgNet.toLocaleString()} $`} sublabel={`moyenne de la période`} icon={avgNet >= 0 ? TrendingUp : TrendingDown} accent={avgNet < 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"} />
+        <StatCard label="Flux net moyen / mois" value={`${Math.round(avgNet).toLocaleString()} $`} sublabel={`moyenne sur ${monthsCash.length} mois`} icon={avgNet >= 0 ? TrendingUp : TrendingDown} accent={avgNet < 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"} />
         <StatCard label="Coût paie / mois" value={`${Math.round(avgMonthlyPayroll).toLocaleString()} $`} sublabel={`moyenne sur ${payrollPeriods.size} périodes`} icon={RefreshCw} />
         <StatCard label="Abonnements/mois" value={`${Math.round(recurringTotal).toLocaleString()} $`} sublabel={`moyenne sur ${recDiv} mois`} icon={RefreshCw} accent={recurringTotal > 0 && currentCash > 0 && recurringTotal > currentCash * 0.15 ? "bg-red-50 text-red-600" : recurringTotal > 0 ? "bg-amber-50 text-amber-600" : "bg-muted text-muted-foreground"} />
       </div>

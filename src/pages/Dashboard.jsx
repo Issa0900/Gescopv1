@@ -13,7 +13,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { useKpiEngine } from "@/lib/useKpiEngine";
 import { financialMonthlySeries } from "@/lib/financialData";
-import { latestCashBalance } from "@/lib/metrics";
+import { latestCashBalance, validSalesOrders } from "@/lib/metrics";
 import { validateChartAggregation, METRIC_TYPES } from "@/components/ChartValidation";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import HealthHero from "@/components/dashboard/HealthHero";
@@ -234,9 +234,12 @@ export default function Dashboard() {
     const marginTrend = trendPct(lastVal(marginMonthly), prevVal(marginMonthly));
     const cashTrend = trendPct(lastVal(cashMonthly), prevVal(cashMonthly));
     
+    // Refunded orders' money went back to the customer - excluded so a
+    // refund-heavy month doesn't inflate the basket-size trend shown here.
+    const aovOrders = validSalesOrders(orders);
     const aovRevMode = validateChartAggregation(METRIC_TYPES.FLOW, "sum", "Order Revenue");
-    const aovRevMonthly = monthlyAggComplete(orders || [], "date", "total", aovRevMode.toLowerCase());
-    const aovCntMonthly = monthlyAggComplete(orders || [], "date", "total", "count");
+    const aovRevMonthly = monthlyAggComplete(aovOrders, "date", "total", aovRevMode.toLowerCase());
+    const aovCntMonthly = monthlyAggComplete(aovOrders, "date", "total", "count");
     const aovMonthly = aovRevMonthly.map((m) => {
       const cnt = aovCntMonthly.find((c) => c.month === m.month);
       return { month: m.month, val: cnt && cnt.val > 0 ? m.val / cnt.val : 0 };

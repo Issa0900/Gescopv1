@@ -20,6 +20,7 @@ import {
   churnStats,
   roasWindow,
   previousRoasWindow,
+  validSalesOrders,
 } from "@/lib/metrics";
 
 function alert(level, category, title, message) {
@@ -212,17 +213,20 @@ export function computeLiveAlerts(data) {
   // 2. Produits -> Ventes : Rupture sur les produits phares
   // Identifier si les ruptures concernent les produits qui génèrent le plus de CA
   if (ruptures.length > 0 && orders && orders.length > 0) {
+    // Refunded orders' money went back to the customer - counting them here
+    // could crown a heavily-returned product "top seller" and misdirect this alert.
+    const salesOrders = validSalesOrders(orders);
     const revenueByProduct = {};
-    orders.forEach(o => {
+    salesOrders.forEach(o => {
       const pid = o.product_id;
       if (pid) revenueByProduct[pid] = (revenueByProduct[pid] || 0) + (Number(o.total) || 0);
     });
     // Trier les produits en rupture par leur revenu historique
     const rupturesWithRev = ruptures.map(r => ({ ...r, rev: revenueByProduct[r.product_id] || 0 }));
     rupturesWithRev.sort((a, b) => b.rev - a.rev);
-    
+
     // Si le produit en rupture générait des revenus significatifs (> 5% du revenu total ou juste un top 5 absolu)
-    const totalOrderRev = orders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    const totalOrderRev = salesOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
     if (totalOrderRev > 0 && rupturesWithRev[0].rev > (totalOrderRev * 0.02)) {
       out.push(
         alert(
