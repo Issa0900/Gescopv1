@@ -63,6 +63,7 @@ Chaque suite se termine par `cas en echec : 0` quand tout va bien.
 | `../recette/DS06-kpi-donnee-absente.ts` | Marge brute / CAC / panier moyen : une dépendance non mesurée doit rester `null`, jamais un `0` inventé |
 | `../recette/DS07-colonne-inconnue.ts` | Une colonne non reconnue est signalée dans le message d'import, pas silencieusement absorbée |
 | `../recette/DS08-charge-volume.ts` | 1000/10000 lignes : invariant lues=valides+rejetées, débit, et détection d'un montant purement illisible |
+| `../recette/DS09-doublons-intra-fichier.ts` | Trois lignes identiques dans le même fichier ne doivent en persister qu'une |
 
 ## Défauts que ces tests ont trouvés
 

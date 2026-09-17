@@ -28,11 +28,19 @@ Convention : chaque ligne = un cas de test réel, exécuté contre le vrai code
 
 | 7 | Colonne inconnue/supplémentaire : disparaissait sans trace visible (seule `original_data`, jamais lue par l'UI, la gardait) | `tests/recette/DS07-colonne-inconnue.ts` | aucune remontée | 5/5, message explicite ajouté au résultat d'import | ✅ corrigé |
 | 8 | Charge 1000/10000 lignes a révélé : `parseNumber("abc")` / tout texte purement alphabétique → `0` au lieu de rejeté (`Number("")===0` en JS après avoir tout retiré) | `tests/recette/DS08-charge-volume.ts` | 4/8 échecs (0 ligne rejetée au lieu de 1/7) | 8/8, ~50-100k lignes/s | ✅ corrigé |
+| 9 | Doublons **à l'intérieur du même fichier** (pas juste entre deux imports) | `tests/recette/DS09-doublons-intra-fichier.ts` | déjà correct (2/2) | 2/2 | ✅ pas de bug — déjà couvert par le fix de l'item 3 |
+| 10 | Sécurité RLS : les 32 entités (`base44/entities/*.jsonc`) ont-elles toutes `rls.read/update/delete` scopé à `created_by_id: {{user.id}}` ? | lecture de code, script bash de vérification (pas de DB live possible dans ce sandbox) | — | 31/32 conformes ; `User.jsonc` seul sans bloc `rls` explicite | ⚠️ PASS avec réserve — voir notes |
+
+## Trouvé, non branché en production (ne pas confondre avec une protection active)
+
+- **`base44/functions/semanticIngest/entry.ts` simule une sauvegarde.** `savedCount += batch.length` sans jamais appeler `base44.entities.Observation.bulkCreate` (commenté dans le code, "Pour l'instant on simule le success") — la fonction renvoie `status: "success"` et un compte de lignes "sauvegardées" qui n'ont jamais été écrites. Vérifié : rien dans `base44/` ni `src/` n'appelle cette fonction — code mort, pas un bug actif. Si un jour elle est branchée à une route, il faudra retirer la simulation avant.
+- **`User.jsonc` n'a pas de bloc `rls` explicite**, contrairement aux 31 autres entités. À confirmer avec le porteur du projet : Base44 gère peut-être nativement l'isolation de l'entité `User` intégrée (chaque utilisateur ne voit que son propre profil par défaut) sans qu'un bloc RLS explicite soit nécessaire — je n'ai pas de moyen de le vérifier sans accès à la plateforme Base44 elle-même. Ne pas ajouter de bloc RLS ici sans confirmer le comportement par défaut, au risque de casser l'auth.
 
 ## À faire (ordre de priorité, cf. plan §1-19 du cahier des charges)
 
-- [ ] 9. Sécurité RLS / isolation tenant (base44/entities) — lecture de code, pas de test live DB possible dans ce sandbox
-- [ ] 10. Autres fonctionnalités de l'app (au-delà de l'import) : pages Dashboard/Kpis/Finance/Tresorerie — cohérence d'affichage, assistant IA §16
+- [ ] 11. Autres fonctionnalités de l'app (au-delà de l'import/KPI) : pages Dashboard/Kpis/Finance/Tresorerie — cohérence d'affichage, assistant IA §16
+- [ ] 12. Score de santé LLM (voir "Trouvé mais PAS corrigé" plus haut) — nécessite une décision produit avant de toucher au prompt/schema
+- [ ] 13. `point-entree.ts` : bootstrap SDK (`Base44-App-Id header is required`) jamais creusé
 
 ## Notes d'architecture à ne pas redécouvrir
 
