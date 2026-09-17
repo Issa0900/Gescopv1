@@ -26,9 +26,10 @@ Convention : chaque ligne = un cas de test réel, exécuté contre le vrai code
 - **`base44/shared/core/kpi/` (kpiCatalog.ts/metricEngine.ts) est du code mort en production** malgré une logique correcte : rien dans `base44/functions/` ni aucune page n'appelle `.calculate()` de ce module (seul `KpiManagementPanel.jsx` en lit les métadonnées). À clarifier avec le porteur du projet : le supprimer (dette), ou le brancher réellement en remplacement du calcul LLM ?
 - **Affichage UI du "non mesurable"** : les composants consomment déjà `kpi?.value || 0`, donc le `null` ne crashe rien, mais rien n'affiche encore "non mesurable" à la place de `0` dans Dashboard/Finance/Kpis — c'est un chantier UI, pas un bug de calcul.
 
+| 7 | Colonne inconnue/supplémentaire : disparaissait sans trace visible (seule `original_data`, jamais lue par l'UI, la gardait) | `tests/recette/DS07-colonne-inconnue.ts` | aucune remontée | 5/5, message explicite ajouté au résultat d'import | ✅ corrigé |
+
 ## À faire (ordre de priorité, cf. plan §1-19 du cahier des charges)
 
-- [ ] 7. Colonne inconnue / colonne supplémentaire non mappée : ne doit jamais disparaître sans trace
 - [ ] 8. Charge : 1000/10000 lignes — temps, pertes, doublons
 - [ ] 9. Sécurité RLS / isolation tenant (base44/entities) — lecture de code, pas de test live DB possible dans ce sandbox
 - [ ] 10. Autres fonctionnalités de l'app (au-delà de l'import) : pages Dashboard/Kpis/Finance/Tresorerie — cohérence d'affichage, assistant IA §16

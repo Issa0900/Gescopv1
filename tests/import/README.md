@@ -60,6 +60,8 @@ Chaque suite se termine par `cas en echec : 0` quand tout va bien.
 | `../recette/DS03-idempotence-reimport.ts` | Réimporter exactement le même fichier doit être reconnu comme doublon, pas dupliquer chaque ligne |
 | `../recette/DS04-null-vs-zero.ts` | `amount` vide/N/A/tiret doit rester non mesuré (quarantaine), jamais devenir `0` ; un `0` réel doit rester `0` |
 | `../recette/DS05-devises-et-dates.ts` | Devise explicite (USD/EUR) respectée, calendrier (bissextile, mois >12, 31 avril), ordinal français ("1er janvier") |
+| `../recette/DS06-kpi-donnee-absente.ts` | Marge brute / CAC / panier moyen : une dépendance non mesurée doit rester `null`, jamais un `0` inventé |
+| `../recette/DS07-colonne-inconnue.ts` | Une colonne non reconnue est signalée dans le message d'import, pas silencieusement absorbée |
 
 ## Défauts que ces tests ont trouvés
 
@@ -99,7 +101,12 @@ Ils ne sont pas théoriques — chacun a été trouvé par ces tests et corrigé
 12. **`parseDate` rejetait "1er janvier 2026".** Seul le format sans ordinal
     ("15 janvier 2026") était reconnu ; l'écriture du 1er du mois, très
     courante en français, partait systématiquement en quarantaine.
-13. **Réimporter le même fichier dupliquait toutes ses lignes.**
+13. **Une colonne non reconnue disparaissait sans trace visible.** Elle
+    survivait techniquement dans `original_data`, mais rien dans `src/` ne
+    lit jamais ce champ : pour l'utilisateur, la colonne était perdue sans
+    explication. Le résultat d'import liste désormais les colonnes
+    ignorées par entité.
+14. **Réimporter le même fichier dupliquait toutes ses lignes.**
     `generateFingerprint` valait `JSON.stringify(row)`, et chaque ligne
     normalisée porte un `import_id` propre à SON import — donc deux imports
     du même fichier produisaient deux empreintes différentes. La

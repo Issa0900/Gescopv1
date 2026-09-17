@@ -183,6 +183,10 @@ async function importRows(
   // per value so the report can name them instead of claiming the field is absent.
   const refusedValues: Record<string, Record<string, number>> = {};
   const allowedByField: Record<string, string[]> = {};
+  // Colonnes du fichier qui n'ont pu être associées à aucun champ de
+  // l'entité cible — un fichier peut "réussir" son import tout en ayant
+  // silencieusement ignoré une colonne financière que personne n'a vue.
+  const unmappedColumns = new Set<string>();
 
   // ── NOUVEAU PIPELINE SÉMANTIQUE (Phase 1) ──
   let profile, matchedConcepts, grain;
@@ -199,7 +203,7 @@ async function importRows(
   rows.forEach((row) => {
     if (!row || typeof row !== "object" || isSummaryOrTotalRow(row)) return;
     const enumIssues: { field: string; value: string; allowed: string[] }[] = [];
-    const normalized = normalizeRow(entityName, row, importRec.id, properties, sourceType, enumIssues);
+    const normalized = normalizeRow(entityName, row, importRec.id, properties, sourceType, enumIssues, unmappedColumns);
     if (Object.keys(normalized).filter((k) => k !== "import_id").length === 0) return;
     // Reject up front rather than letting one row fail its whole batch.
     const missing = missingRequired(normalized, required);
@@ -230,6 +234,13 @@ async function importRows(
   });
 
   const messages: string[] = [];
+  if (unmappedColumns.size > 0) {
+    messages.push(
+      `${unmappedColumns.size} colonne(s) non reconnue(s) et ignorée(s) pour ${entityName} : ${Array.from(unmappedColumns).slice(0, 10).join(", ")}` +
+      (unmappedColumns.size > 10 ? "…" : "") +
+      ". Leur contenu brut reste conservé dans original_data si besoin de le récupérer.",
+    );
+  }
 
   // GESCOP Phase 5 SSOT: Deduplication
   const { newRows, duplicateCount } = await deduplicateRows(base44, entityName, toCreate);

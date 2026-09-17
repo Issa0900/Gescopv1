@@ -1399,7 +1399,15 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
 const REVENUE_CONCEPT_ALIASES = new Set(["revenue", "net_revenue", "gross_revenue", "total_revenue"]);
 const REVENUE_LANDING_FIELDS = ["total_revenue", "amount", "gross_revenue", "net_revenue"];
 
-export function normalizeKeys(row: Record<string, any>, properties?: Record<string, any>): Record<string, any> {
+export function normalizeKeys(
+  row: Record<string, any>,
+  properties?: Record<string, any>,
+  // Filled with the ORIGINAL column names (not aliases) that could not be
+  // matched to any field of the target entity — a financial or business
+  // column must never disappear from a column that isn't in the schema
+  // without the user being told which one and why (sec6 of the audit).
+  unmapped?: Set<string>,
+): Record<string, any> {
   const out: Record<string, any> = {};
   const schemaFields = properties ? Object.keys(properties) : [];
   for (const [k, v] of Object.entries(row || {})) {
@@ -1432,6 +1440,7 @@ export function normalizeKeys(row: Record<string, any>, properties?: Record<stri
           continue;
         }
       }
+      if (unmapped) unmapped.add(k);
     }
     out[alias] = v;
   }
@@ -1825,11 +1834,12 @@ export function normalizeRow(
   properties: Record<string, any> | null = null,
   sourceType?: string,
   enumIssues?: EnumIssue[],
+  unmapped?: Set<string>,
 ): Record<string, any> {
   const schemaProps = properties || ENTITY_SCHEMAS[entityName]?.properties || null;
 
   if (isSummaryOrTotalRow(row)) return {};
-  const r = normalizeKeys(row, schemaProps);
+  const r = normalizeKeys(row, schemaProps, unmapped);
   if (isSummaryOrTotalRow(r)) return {};
 
   // Preserve explicit Transaction headers before aliases or legacy plans can
