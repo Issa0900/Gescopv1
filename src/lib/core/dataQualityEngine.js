@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GESCOP Data Intelligence Core — Data Quality Engine
+// GESCOP Data Intelligence Core - Data Quality Engine
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Computes a quality score (0–100) for each field and dataset.
@@ -30,9 +30,9 @@ const QUALITY_WEIGHTS = Object.freeze({
 /**
  * Compute the quality score for a single field across a set of records.
  *
- * @param {Array<Object>} records — Dataset records
- * @param {string} fieldName — Field to evaluate
- * @param {Object} fieldSemantic — FieldSemantic from entityFieldMap
+ * @param {Array<Object>} records - Dataset records
+ * @param {string} fieldName - Field to evaluate
+ * @param {Object} fieldSemantic - FieldSemantic from entityFieldMap
  * @returns {FieldQualityScore}
  */
 export function computeFieldQuality(records, fieldName, fieldSemantic) {
@@ -71,11 +71,11 @@ export function computeFieldQuality(records, fieldName, fieldSemantic) {
   );
 
   const issues = [];
-  if (completeness < 80) issues.push(`Complétude faible (${Math.round(completeness)} %) — ${total - nonNull} valeurs manquantes`);
-  if (validity < 80) issues.push(`Validité faible (${Math.round(validity)} %) — valeurs hors domaine attendu`);
-  if (consistency < 80) issues.push(`Cohérence faible (${Math.round(consistency)} %) — valeurs aberrantes détectées`);
+  if (completeness < 80) issues.push(`Complétude faible (${Math.round(completeness)} %) - ${total - nonNull} valeurs manquantes`);
+  if (validity < 80) issues.push(`Validité faible (${Math.round(validity)} %) - valeurs hors domaine attendu`);
+  if (consistency < 80) issues.push(`Cohérence faible (${Math.round(consistency)} %) - valeurs aberrantes détectées`);
   if (uniqueness < 80 && fieldSemantic?.economicRole === ECONOMIC_ROLES.DIMENSION && fieldSemantic?.semanticType === "identifier") {
-    issues.push(`Unicité faible (${Math.round(uniqueness)} %) — doublons détectés sur un identifiant`);
+    issues.push(`Unicité faible (${Math.round(uniqueness)} %) - doublons détectés sur un identifiant`);
   }
   if (freshness < 50) issues.push("Données potentiellement obsolètes");
 
@@ -100,7 +100,7 @@ export function computeFieldQuality(records, fieldName, fieldSemantic) {
  * Compute quality scores for all fields in a dataset.
  *
  * @param {Array<Object>} records
- * @param {Map<string, Object>} fieldSemantics — field name → FieldSemantic
+ * @param {Map<string, Object>} fieldSemantics - field name → FieldSemantic
  * @returns {DatasetQualityScore}
  */
 export function computeDatasetQuality(records, fieldSemantics) {
@@ -174,7 +174,7 @@ export function getQualityReport(scores) {
     criticalFields,
     recommendations,
     issues,
-    summary: `Qualité globale : ${grade.emoji} ${global}/100 (${grade.label}) — ${recordCount} enregistrements analysés.`,
+    summary: `Qualité globale : ${grade.emoji} ${global}/100 (${grade.label}) - ${recordCount} enregistrements analysés.`,
   };
 }
 
@@ -301,7 +301,7 @@ function _computeFreshness(records, fieldSemantic) {
     }
   }
 
-  if (!latestDate) return 75; // Unknown freshness — neutral score
+  if (!latestDate) return 75; // Unknown freshness - neutral score
 
   const now = new Date();
   const ageInDays = (now.getTime() - latestDate.getTime()) / (1000 * 60 * 60 * 24);
@@ -317,8 +317,8 @@ function _computeFreshness(records, fieldSemantic) {
 /**
  * Check if a field's quality is sufficient for KPI calculation.
  *
- * @param {Object} fieldQuality — Result from computeFieldQuality
- * @param {number} [threshold=60] — Minimum acceptable quality score
+ * @param {Object} fieldQuality - Result from computeFieldQuality
+ * @param {number} [threshold=60] - Minimum acceptable quality score
  * @returns {{ sufficient: boolean, reason: string|null }}
  */
 export function isQualitySufficient(fieldQuality, threshold = 60) {

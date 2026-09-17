@@ -153,7 +153,7 @@ export default function Kpis() {
       const prevExp = prevVal(expMonthly);
       const currMarginPct = currRev > 0 ? ((currRev - currExp) / currRev) * 100 : 0;
       const prevMarginPct = prevRev > 0 ? ((prevRev - prevExp) / prevRev) * 100 : 0;
-      // Aggregated 3-month margin — the same figure the audit page traces.
+      // Aggregated 3-month margin - the same figure the audit page traces.
       const margin3 = aggregateMarginPct(revMonthly, expMonthly, 3);
       const marginPrev3 = previousMarginPct(revMonthly, expMonthly, 3);
       margin3Overall = margin3;
@@ -288,7 +288,7 @@ export default function Kpis() {
 
     // === OPÉRATIONS === (only if products or inventory exist)
     if ((products || []).length > 0 || (inventory || []).length > 0) {
-      // Same shortage definition as the Produits page and the alert centre —
+      // Same shortage definition as the Produits page and the alert centre -
       // the company threshold included. "Alertes rupture" used to read the
       // imported stock_status alone and never moved when the user changed their
       // threshold, so the two screens disagreed on the same rows.
@@ -310,18 +310,18 @@ export default function Kpis() {
 
     // === CLIENTS === (only if customers exist)
     if ((customers || []).length > 0) {
-      // One shared churn definition (status only — "a_risque" is not churn).
+      // One shared churn definition (status only - "a_risque" is not churn).
       const churn = churnStats(customers, orders);
       const custMonthly = monthlyAggComplete(customers, "acquisition_date", "customer_id", "count");
       const newCustomers = lastVal(custMonthly);
       const prevNewCustomers = prevVal(custMonthly);
       // Revenue per customer: the numerator covers every buyer, so the
       // denominator must too. Dividing all-customer revenue by ACTIVE customers
-      // only was inflating this by 1/(share of active) — 2x at 50% churn.
+      // only was inflating this by 1/(share of active) - 2x at 50% churn.
       const value = customerValue(orders, customers, margin3Overall);
 
       result.push({ name: "Clients actifs", domain: "clients", value: churn.active, previous: null, trend: "stable", unit: "" });
-      // Cumulative share of the base ever lost — named as such, because it is
+      // Cumulative share of the base ever lost - named as such, because it is
       // not a rate over a period and can never go down.
       result.push({ name: "Clients perdus (cumul)", domain: "clients", value: Math.round((churn.rate || 0) * 10) / 10, previous: null, trend: "stable", unit: "%" });
       // The actionable one: attrition measured on real purchase behaviour.
@@ -335,7 +335,7 @@ export default function Kpis() {
       if (value.avgRevenue !== null) {
         result.push({ name: "Revenu moyen par client", domain: "clients", value: Math.round(value.avgRevenue), previous: null, trend: "stable", unit: "$" });
       }
-      // A real LTV is value, not turnover — only shown when a margin is known.
+      // A real LTV is value, not turnover - only shown when a margin is known.
       if (value.ltv !== null) {
         result.push({ name: "Valeur vie client (LTV, marge)", domain: "clients", value: Math.round(value.ltv), previous: null, trend: "stable", unit: "$" });
       }
@@ -373,7 +373,7 @@ export default function Kpis() {
   }), [transactions, orders, customers, campaigns, campaignDaily, products, inventory, cashflow, company]);
 
   // Trend chart data: revenue, AOV, margin % by month.
-  // The in-progress month is excluded — a partial month renders as a false cliff.
+  // The in-progress month is excluded - a partial month renders as a false cliff.
   const trendData = useMemo(() => {
     const revMonthly = monthlyAggComplete(
       (transactions || []).filter(isIncome).map(t => ({ ...t, _amount: txAmount(t, "income") })),

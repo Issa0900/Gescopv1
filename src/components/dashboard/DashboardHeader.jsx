@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion } from "@/lib/fake-framer-motion.jsx";
 import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 

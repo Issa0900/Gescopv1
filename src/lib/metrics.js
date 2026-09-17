@@ -4,7 +4,7 @@
 // four churn rates (two of them counting "a_risque" clients as already lost),
 // three LTVs (one dividing revenue from ALL customers by ACTIVE customers only,
 // which doubles the figure when half the base has churned), and two margins
-// (a mean of monthly percentages vs. an aggregated margin — 23% vs 10% on the
+// (a mean of monthly percentages vs. an aggregated margin - 23% vs 10% on the
 // same data). A dashboard that contradicts its own audit page is worse than no
 // dashboard, so every definition now lives here and every page imports it.
 
@@ -30,7 +30,7 @@ const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
  * Aggregated margin over the last n complete months: (revenus − dépenses) ÷ revenus.
  *
  * NOT the mean of the monthly margin percentages. A month at 2 000 $ of revenue
- * must not weigh as much as a month at 100 000 $ — on a real series the two
+ * must not weigh as much as a month at 100 000 $ - on a real series the two
  * methods differ by more than a factor of two.
  *
  * Returns null when there is no revenue to divide by.
@@ -42,7 +42,7 @@ export function aggregateMarginPct(revSeries, expSeries, n = 3) {
   return ((rev - exp) / rev) * 100;
 }
 
-/** Same metric over the n months preceding the last n — null if not covered. */
+/** Same metric over the n months preceding the last n - null if not covered. */
 export function previousMarginPct(revSeries, expSeries, n = 3) {
   const rev = sumPrev(revSeries, n);
   const exp = sumPrev(expSeries, n);
@@ -52,7 +52,7 @@ export function previousMarginPct(revSeries, expSeries, n = 3) {
 
 /**
  * Change in margin expressed in POINTS, not in percent of a percent.
- * Going from 2% to 4% is +2 points, not "+100% growth" — the relative reading
+ * Going from 2% to 4% is +2 points, not "+100% growth" - the relative reading
  * used to hand out a full trend bonus for a two-point move on a thin margin.
  */
 export function marginDeltaPoints(currPct, prevPct) {
@@ -95,7 +95,7 @@ export function runwayMonths(cash, burn) {
 }
 
 export function fmtRunway(months) {
-  if (months === null || months === undefined) return "—";
+  if (months === null || months === undefined) return "-";
   if (months === Infinity) return "trésorerie autofinancée";
   return `${months.toFixed(1)} mois`;
 }
@@ -113,7 +113,7 @@ export function latestCashBalance(cashflow) {
 
 /**
  * One churn definition for the whole app: a client is churned when its STATUS
- * says so. "a_risque" is a client still buying — counting it as lost inflated
+ * says so. "a_risque" is a client still buying - counting it as lost inflated
  * the rate on the Clients page and in every AI report while the KPI page showed
  * a lower one from the same rows.
  */
@@ -146,7 +146,7 @@ export function churnStats(customers, orders, inactiveMonths = DEFAULT_INACTIVE_
   // The status-based rate above is a CUMULATIVE share: every customer ever lost,
   // over the whole base. It only grows as the base ages, it cannot be compared
   // month to month, and it says nothing about what is happening now. Calling it
-  // a "taux de churn" oversold it — a rate is measured over a period.
+  // a "taux de churn" oversold it - a rate is measured over a period.
   //
   // This one is: among customers who have ever ordered, how many have stopped
   // buying over the chosen window. Computable whenever order history exists,
@@ -180,7 +180,7 @@ export function churnStats(customers, orders, inactiveMonths = DEFAULT_INACTIVE_
     active,
     churned,
     atRisk,
-    // Cumulative share of the base marked lost — NOT a period rate.
+    // Cumulative share of the base marked lost - NOT a period rate.
     rate: total > 0 ? (churned / total) * 100 : null,
     // Period attrition from real purchase behaviour. null = not computable.
     inactiveMonths: months,
@@ -196,7 +196,7 @@ export function churnStats(customers, orders, inactiveMonths = DEFAULT_INACTIVE_
  *
  * The numerator covers every customer that ordered, so the denominator must too.
  * Dividing all-customer revenue by ACTIVE customers only was inflating the
- * figure by 1/(share of active) — a 2x overstatement at 50% churn.
+ * figure by 1/(share of active) - a 2x overstatement at 50% churn.
  */
 /**
  * @deprecated GESCOP Phase 3 SSOT : Utilisez `ltv` via `useKpiEngine()`.
@@ -247,7 +247,7 @@ export function previousRoasWindow(spendSeries, revSeries, n = 3) {
  *
  * Imports routinely omit columns: `new_customers`, `churn_risk`, `cost`,
  * `inventory_value` were all empty in a real file. Every metric built on such a
- * column collapsed to 0 and was displayed as a fact — "CAC 0 $" next to 623 667 $
+ * column collapsed to 0 and was displayed as a fact - "CAC 0 $" next to 623 667 $
  * of spend, "0 % de risque" on every client. Zero and unknown are different
  * answers, and only one of them is honest here.
  */

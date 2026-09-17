@@ -10,7 +10,7 @@ const sections = [
     content: [
       "Conformément à la Loi 25 (Loi modernisant des dispositions législatives en matière de protection des renseignements personnels, Québec), GESCOP désigne un responsable de la protection des renseignements personnels.",
       "Pour toute question, demande d'accès, de correction ou de retrait de consentement concernant vos renseignements personnels, vous pouvez communiquer avec le responsable :",
-      "• Par courriel : privacy@gescop.app (à titre indicatif — remplacez par l'adresse officielle de votre organisation)",
+      "• Par courriel : privacy@gescop.app (à titre indicatif - remplacez par l'adresse officielle de votre organisation)",
       "• Le responsable s'engage à accuser réception de votre demande dans les 30 jours suivant sa réception, conformément à la loi.",
     ],
   },
@@ -60,7 +60,7 @@ const sections = [
     content: [
       "GESCOP ne vend, ne loue et n'échange jamais vos renseignements personnels avec des tiers à des fins commerciales.",
       "Vos renseignements personnels peuvent être communiqués uniquement dans les cas suivants :",
-      "• À des fournisseurs de services technologiques nécessaires au fonctionnement de la plateforme (hébergement cloud, infrastructure) — ces fournisseurs sont soumis à des ententes de confidentialité et sont tenus de protéger vos données conformément à la Loi 25.",
+      "• À des fournisseurs de services technologiques nécessaires au fonctionnement de la plateforme (hébergement cloud, infrastructure) - ces fournisseurs sont soumis à des ententes de confidentialité et sont tenus de protéger vos données conformément à la Loi 25.",
       "• Lorsqu'une loi l'exige ou en réponse à une demande valide d'une autorité gouvernementale ou judiciaire.",
       "• En cas de fusion, acquisition ou vente d'actifs, sous réserve de notification préalable et du maintien des protections de confidentialité.",
       "• À un mandataire (tiers autorisé) uniquement avec votre consentement explicite et pour une fin spécifique que vous avez autorisée.",
@@ -159,9 +159,9 @@ const sections = [
       "Si vous estimez que GESCOP n'a pas respecté ses obligations en matière de protection des renseignements personnels, vous pouvez :",
       "• Déposer une plainte auprès du responsable de la protection des renseignements personnels de GESCOP.",
       "• Déposer une plainte auprès de la Commission d'accès à l'information du Québec (CAI) :",
-      "   — Site web : access.gouv.qc.ca",
-      "   — Téléphone : 1 877 353-0434 (sans frais)",
-      "   — Courriel : plaintes@access.gouv.qc.ca",
+      "   - Site web : access.gouv.qc.ca",
+      "   - Téléphone : 1 877 353-0434 (sans frais)",
+      "   - Courriel : plaintes@access.gouv.qc.ca",
       "• GESCOP s'engage à coopérer pleinement avec la CAI dans le traitement de toute plainte.",
     ],
   },
@@ -188,7 +188,7 @@ export default function PolitiqueConfidentialite() {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Politique de confidentialité</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Conforme à la Loi 25 (Québec) — Protection des renseignements personnels</p>
+            <p className="mt-1 text-sm text-muted-foreground">Conforme à la Loi 25 (Québec) - Protection des renseignements personnels</p>
           </div>
         </div>
         <p className="mt-4 text-sm leading-relaxed text-muted-foreground">

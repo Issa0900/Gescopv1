@@ -49,7 +49,7 @@ export default function KpiTrendChart({ data }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <h2 className="mb-1 font-semibold">Tendance des indicateurs clés</h2>
-      <p className="mb-4 text-sm text-muted-foreground">Revenus et panier moyen ($, axe gauche) — marge brute (%, axe droit)</p>
+      <p className="mb-4 text-sm text-muted-foreground">Revenus et panier moyen ($, axe gauche) - marge brute (%, axe droit)</p>
       <ResponsiveContainer width="100%" height={300}>
         <ComposedChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
           <defs>

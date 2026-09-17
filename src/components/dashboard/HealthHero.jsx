@@ -60,7 +60,7 @@ export default function HealthHero({ score, dimensions, summary, trend, onDomain
                   <p className="text-xs font-medium text-muted-foreground">{dimLabels[key]}</p>
                   {d.measured === false ? (
                     <>
-                      <p className="mt-1 text-xl font-bold text-muted-foreground">—</p>
+                      <p className="mt-1 text-xl font-bold text-muted-foreground">-</p>
                       <p className="mt-1 text-xs font-medium text-muted-foreground">Non mesuré</p>
                     </>
                   ) : (

@@ -1,5 +1,7 @@
-import { createClientFromRequest } from "npm:@base44/sdk@0.8.44";
+import { createFixedClientFromRequest as createClientFromRequest } from "../../shared/client.ts";
 import { buildBusinessContext } from "../../shared/businessContext.ts";
+import { analyzeQualitativeObservations } from "../../shared/qualitativeEngine.ts";
+import { buildContextGraph } from "../../shared/contextEngine.ts";
 
 export default async function(req) {
   try {
@@ -10,25 +12,30 @@ export default async function(req) {
     const ctx = await buildBusinessContext(base44);
     const { company, transactions, context, totals } = ctx;
 
+    const recentObs = await base44.entities.Observation.findMany({ limit: 500, orderBy: { date: 'desc' } });
+    const qualSignals = analyzeQualitativeObservations(recentObs);
+    const contextGraph = buildContextGraph(totals, qualSignals, recentObs);
+
     if (!company) {
       return Response.json({ error: "Veuillez configurer votre entreprise d'abord." }, { status: 400 });
     }
     const hasData = (transactions && transactions.length > 0) || 
                     (totals.orderCount && totals.orderCount > 0) || 
-                    (totals.currentCash && totals.currentCash > 0);
+                    (recentObs && recentObs.length > 0);
     
     if (!hasData) {
       return Response.json({
-        error: "Données insuffisantes. Importez au moins quelques transactions, commandes ou données de trésorerie avant l'analyse.",
+        error: "Aucune donnée financière trouvée. Importez des données d'abord.",
+        requireOnboarding: true,
       }, { status: 400 });
     }
 
-    const prompt = `Tu es GESCOP, un système intelligent de pilotage pour PME. Analyse les données multi-sources de cette entreprise et produis un diagnostic complet en croisant toutes les sources disponibles.
+    const prompt = `Tu es un conseiller stratégique expert pour une PME.
+Fais un audit complet de la situation de l'entreprise : ${company.name} (${company.industry}).
 
+CONTEXTE BUSINESS :
 ${context}
 
-RÈGLES ABSOLUES SUR LES CHIFFRES (priorité sur tout le reste)
-Tu n'es PAS autorisé à inventer, estimer au hasard, extrapoler ou compléter un chiffre.
 1. Tout nombre que tu écris doit soit apparaître littéralement dans les DONNÉES ci-dessus, soit être le résultat d'un calcul simple (somme, différence, moyenne, ratio, pourcentage de variation) effectué UNIQUEMENT sur des nombres présents ci-dessus.
 2. Dans chaque description, explanation ou analysis qui cite un chiffre, indique entre parenthèses son origine : la valeur source ou le calcul. Exemple : « marge de 38 % (CA 120 000 $ - coûts 74 400 $) / 120 000 $ ».
 3. Si une donnée nécessaire est absente ou insuffisante, tu NE produis PAS l'élément concerné. N'utilise aucune valeur de référence sectorielle, aucune moyenne de marché, aucun ordre de grandeur « typique ».

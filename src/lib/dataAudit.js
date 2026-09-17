@@ -1,6 +1,6 @@
 // Data audit: cross-checks between independent sources, import quality checks,
 // and metric traceability (formula + source + period + intermediate values).
-// Read-only — it never modifies data, it only reports what the metrics are built on.
+// Read-only - it never modifies data, it only reports what the metrics are built on.
 
 import { monthlyAgg, monthlyAggComplete, currentMonthKey, sumLast, sumPrev, latestByKey, meanOf } from "@/lib/periods";
 import {
@@ -16,7 +16,7 @@ import {
 const num = (v) => Number(v) || 0;
 const sum = (arr, f) => (arr || []).reduce((s, x) => s + num(f(x)), 0);
 // null means "not computable" and must render as such, never as 0 $.
-const fmt$ = (v) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? "—" : `${Math.round(v).toLocaleString("fr-CA")} $`);
+const fmt$ = (v) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? "-" : `${Math.round(v).toLocaleString("fr-CA")} $`);
 const pctGap = (a, b) => {
   const base = Math.max(Math.abs(a), Math.abs(b));
   return base > 0 ? (Math.abs(a - b) / base) * 100 : 0;
@@ -51,7 +51,7 @@ function sharedMonths(rowsA, dateA, valA, rowsB, dateB, valB) {
   };
 }
 
-/** Level 2 — coherence cross-checks between independent data sources. */
+/** Level 2 - coherence cross-checks between independent data sources. */
 export function runCoherenceChecks(d) {
   const { transactions = [], orders = [], customers = [], products = [], inventory = [], cashflow = [], campaigns = [], campaignDaily = [], expenses = [], payroll = [], employees = [] } = d;
   const out = [];
@@ -261,7 +261,7 @@ export function runCoherenceChecks(d) {
 }
 
 /**
- * Level 0 — reconciliation: does the database hold exactly what the files contained?
+ * Level 0 - reconciliation: does the database hold exactly what the files contained?
  * Every later calculation is wrong if rows were silently lost at import time,
  * so this compares the import journal to the records actually stored.
  */
@@ -308,7 +308,7 @@ export function runReconciliation(imports = [], d = {}) {
     const stored = rows.length;
     const gap = Math.abs(declared - stored);
     out.push(check(
-      `${entity} — journal d'import vs base de données`,
+      `${entity} - journal d'import vs base de données`,
       gap === 0 ? "ok" : gap / Math.max(declared, 1) < 0.02 ? "warn" : "error",
       gap === 0
         ? `${stored} lignes importées, ${stored} lignes présentes.`
@@ -321,7 +321,7 @@ export function runReconciliation(imports = [], d = {}) {
   return out;
 }
 
-/** Level 2b — import quality: missing, aberrant or duplicated data. */
+/** Level 2b - import quality: missing, aberrant or duplicated data. */
 export function runQualityChecks(d) {
   const sets = [
     { name: "Transactions", rows: d.transactions, date: "date", amount: "amount", key: null },
@@ -373,7 +373,7 @@ export function runQualityChecks(d) {
     const hasPartial = months.some((m) => m.month === cm);
     const coverage = months.length > 0 ? `${months[0].month} → ${months[months.length - 1].month} (${months.length} mois)` : "période indéterminée";
 
-    // Gaps in the monthly series — a missing month silently distorts every trend.
+    // Gaps in the monthly series - a missing month silently distorts every trend.
     let gaps = 0;
     const complete = months.filter((m) => m.month !== cm);
     for (let i = 1; i < complete.length; i += 1) {
@@ -395,7 +395,7 @@ export function runQualityChecks(d) {
   });
 }
 
-/** Level 1 — traceability: formula, source, period and intermediate values per metric. */
+/** Level 1 - traceability: formula, source, period and intermediate values per metric. */
 export function buildMetricTraces(d) {
   const { transactions = [], orders = [], customers = [], products = [], inventory = [], cashflow = [], campaignDaily = [], campaigns = [] } = d;
   const traces = [];
@@ -412,12 +412,12 @@ export function buildMetricTraces(d) {
     domain: "Finance",
     metric: "Marge nette (3 mois)",
     formula: "(revenus − dépenses) ÷ revenus, agrégé sur les 3 derniers mois complets",
-    source: `Transactions — ${incomes.length} revenus, ${txnExp.length} dépenses`,
-    period: revM.length >= 3 ? revM.slice(-3).map((m) => m.month).join(", ") : "—",
+    source: `Transactions - ${incomes.length} revenus, ${txnExp.length} dépenses`,
+    period: revM.length >= 3 ? revM.slice(-3).map((m) => m.month).join(", ") : "-",
     steps: [
       ["Revenus 3 mois", fmt$(rev3)],
       ["Dépenses 3 mois", fmt$(exp3)],
-      ["Marge", margin3 !== null ? `${margin3.toFixed(1)} %` : "—"],
+      ["Marge", margin3 !== null ? `${margin3.toFixed(1)} %` : "-"],
     ],
     note: "Marge agrégée sur le trimestre, et non moyenne des marges mensuelles : un mois à 2 000 $ de revenus ne doit pas peser autant qu'un mois à 100 000 $. Nette et non brute : toutes les dépenses sont déduites, pas seulement le coût des ventes. Le mois en cours est exclu.",
   });
@@ -430,13 +430,13 @@ export function buildMetricTraces(d) {
     domain: "Trésorerie",
     metric: "Autonomie (runway)",
     formula: "solde de clôture le plus récent ÷ consommation NETTE de trésorerie par mois (dépenses − revenus, sur 3 mois)",
-    source: `Trésorerie — ${cashflow.length} relevés quotidiens`,
-    period: cfSorted[0]?.date ? `solde au ${cfSorted[0].date}` : "—",
+    source: `Trésorerie - ${cashflow.length} relevés quotidiens`,
+    period: cfSorted[0]?.date ? `solde au ${cfSorted[0].date}` : "-",
     steps: [
       ["Solde actuel", fmt$(latestCash)],
       ["Revenus 3 mois", fmt$(rev3)],
       ["Dépenses 3 mois", fmt$(exp3)],
-      ["Burn net / mois", burn === null ? "—" : burn === 0 ? "aucun (autofinancée)" : fmt$(burn)],
+      ["Burn net / mois", burn === null ? "-" : burn === 0 ? "aucun (autofinancée)" : fmt$(burn)],
       ["Autonomie", fmtRunway(runway)],
     ],
     note: "Le burn est NET : une entreprise qui encaisse plus qu'elle ne dépense n'a pas de problème d'autonomie. Comparer le solde aux dépenses brutes déclenchait une alerte critique sur une entreprise rentable. Le solde vient du fichier trésorerie importé, jamais du cumul des marges.",
@@ -453,12 +453,12 @@ export function buildMetricTraces(d) {
     domain: "Ventes",
     metric: "Évolution du CA (3 mois)",
     formula: "(CA des 3 derniers mois − CA des 3 mois précédents) ÷ CA des 3 mois précédents",
-    source: `Commandes — ${orders.length} lignes`,
-    period: oRevM.length >= 6 ? `${oRevM.slice(-6)[0].month} → ${oRevM[oRevM.length - 1].month}` : "—",
+    source: `Commandes - ${orders.length} lignes`,
+    period: oRevM.length >= 6 ? `${oRevM.slice(-6)[0].month} → ${oRevM[oRevM.length - 1].month}` : "-",
     steps: [
       ["CA 3 derniers mois", fmt$(orev3)],
       ["CA 3 mois précédents", fmt$(orevPrev3)],
-      ["Variation", orevPrev3 !== null && orevPrev3 > 0 && orev3 !== null ? `${(((orev3 - orevPrev3) / orevPrev3) * 100).toFixed(1)} %` : "—"],
+      ["Variation", orevPrev3 !== null && orevPrev3 > 0 && orev3 !== null ? `${(((orev3 - orevPrev3) / orevPrev3) * 100).toFixed(1)} %` : "-"],
     ],
     note: oRevM.length < 6
       ? `Seulement ${oRevM.length} mois complets disponibles : 6 sont nécessaires pour comparer deux trimestres. Aucune variation n'est affichée plutôt qu'une variation calculée sur une fenêtre incomplète.`
@@ -471,12 +471,12 @@ export function buildMetricTraces(d) {
     domain: "Ventes",
     metric: "Panier moyen",
     formula: "CA du dernier mois complet ÷ nombre de commandes du même mois",
-    source: `Commandes — ${orders.length} lignes`,
-    period: lastCnt?.month || "—",
+    source: `Commandes - ${orders.length} lignes`,
+    period: lastCnt?.month || "-",
     steps: [
-      ["CA du mois", lastRev ? fmt$(lastRev.val) : "—"],
-      ["Commandes", lastCnt ? String(lastCnt.val) : "—"],
-      ["Panier moyen", lastCnt?.val ? fmt$(lastRev.val / lastCnt.val) : "—"],
+      ["CA du mois", lastRev ? fmt$(lastRev.val) : "-"],
+      ["Commandes", lastCnt ? String(lastCnt.val) : "-"],
+      ["Panier moyen", lastCnt?.val ? fmt$(lastRev.val / lastCnt.val) : "-"],
     ],
   });
 
@@ -488,12 +488,12 @@ export function buildMetricTraces(d) {
     domain: "Marketing",
     metric: "ROAS (3 mois)",
     formula: "revenus publicitaires ÷ dépenses publicitaires, sur les 3 derniers mois complets",
-    source: s3 > 0 ? `Campagnes quotidiennes — ${campaignDaily.length} lignes` : `Totaux de campagnes — ${campaigns.length} campagnes`,
-    period: spendM.length ? spendM.slice(-3).map((m) => m.month).join(", ") : "—",
+    source: s3 > 0 ? `Campagnes quotidiennes - ${campaignDaily.length} lignes` : `Totaux de campagnes - ${campaigns.length} campagnes`,
+    period: spendM.length ? spendM.slice(-3).map((m) => m.month).join(", ") : "-",
     steps: [
       ["Dépenses", fmt$(s3 > 0 ? s3 : sum(campaigns, (c) => c.spend))],
       ["Revenus", fmt$(s3 > 0 ? r3 : sum(campaigns, (c) => c.revenue))],
-      ["ROAS", s3 > 0 ? `${(r3 / s3).toFixed(2)}x` : sum(campaigns, (c) => c.spend) > 0 ? `${(sum(campaigns, (c) => c.revenue) / sum(campaigns, (c) => c.spend)).toFixed(2)}x` : "—"],
+      ["ROAS", s3 > 0 ? `${(r3 / s3).toFixed(2)}x` : sum(campaigns, (c) => c.spend) > 0 ? `${(sum(campaigns, (c) => c.revenue) / sum(campaigns, (c) => c.spend)).toFixed(2)}x` : "-"],
     ],
     note: "Les données quotidiennes sont utilisées en priorité car elles seules sont datables.",
   });
@@ -505,13 +505,13 @@ export function buildMetricTraces(d) {
     domain: "Opérations",
     metric: "Santé du stock",
     formula: "(produits dormants + en rupture) ÷ produits suivis, sur le dernier instantané de chaque produit",
-    source: `Inventaire — ${inventory.length} lignes, ${latestInv.length} produits suivis`,
-    period: latestInv.length ? "dernier relevé par produit" : "—",
+    source: `Inventaire - ${inventory.length} lignes, ${latestInv.length} produits suivis`,
+    period: latestInv.length ? "dernier relevé par produit" : "-",
     steps: [
       ["Produits suivis", String(latestInv.length)],
       ["Ruptures", String(rupture)],
       ["Dormants", String(dormant)],
-      ["Ratio problème", latestInv.length ? `${(((dormant + rupture) / latestInv.length) * 100).toFixed(1)} %` : "—"],
+      ["Ratio problème", latestInv.length ? `${(((dormant + rupture) / latestInv.length) * 100).toFixed(1)} %` : "-"],
     ],
     note: "Un seul instantané par produit : compter tout l'historique multiplierait le même problème.",
   });
@@ -521,14 +521,14 @@ export function buildMetricTraces(d) {
     domain: "Clients",
     metric: "Clients perdus (cumul)",
     formula: "(clients au statut inactif + perdu) ÷ total des clients",
-    source: `Clients — ${customers.length} fiches`,
+    source: `Clients - ${customers.length} fiches`,
     period: "état actuel des fiches",
     steps: [
       ["Total clients", String(churn.total)],
       ["Actifs", String(churn.active)],
       ["Inactifs / perdus", String(churn.churned)],
       ["Dont actifs à risque (non comptés)", String(churn.atRisk)],
-      ["Part cumulée perdue", churn.rate !== null ? `${churn.rate.toFixed(1)} %` : "—"],
+      ["Part cumulée perdue", churn.rate !== null ? `${churn.rate.toFixed(1)} %` : "-"],
     ],
     note: "Un client « à risque » achète encore : il n'entre pas dans ce compte. Attention à la lecture : c'est une part CUMULÉE depuis le début, pas un taux par période. Elle ne peut que monter à mesure que la base vieillit. Pour piloter, utilisez l'indicateur d'inactivité ci-dessous.",
   });
@@ -537,12 +537,12 @@ export function buildMetricTraces(d) {
     domain: "Clients",
     metric: `Inactifs depuis ${churn.inactiveMonths} mois`,
     formula: "clients ayant déjà commandé mais sans aucune commande sur la fenêtre ÷ clients ayant déjà commandé",
-    source: `Commandes — ${orders.length} lignes`,
+    source: `Commandes - ${orders.length} lignes`,
     period: `${churn.inactiveMonths} derniers mois`,
     steps: [
-      ["Clients ayant déjà commandé", churn.buyers !== null ? String(churn.buyers) : "—"],
-      ["Sans commande sur la fenêtre", churn.lapsed !== null ? String(churn.lapsed) : "—"],
-      ["Taux d'inactivité", churn.behaviourRate !== null ? `${churn.behaviourRate.toFixed(1)} %` : "—"],
+      ["Clients ayant déjà commandé", churn.buyers !== null ? String(churn.buyers) : "-"],
+      ["Sans commande sur la fenêtre", churn.lapsed !== null ? String(churn.lapsed) : "-"],
+      ["Taux d'inactivité", churn.behaviourRate !== null ? `${churn.behaviourRate.toFixed(1)} %` : "-"],
     ],
     note: "Mesuré sur les achats réels, pas sur le champ « statut » du fichier clients. C'est le seul des deux qui peut s'améliorer et se comparer d'une période à l'autre.",
   });
@@ -558,10 +558,10 @@ export function buildMetricTraces(d) {
       ["CA total", fmt$(value.totalRevenue)],
       ["Clients ayant commandé", String(value.buyers)],
       ["Revenu moyen / client", fmt$(value.avgRevenue)],
-      ["Marge appliquée", margin3 !== null ? `${margin3.toFixed(1)} %` : "—"],
+      ["Marge appliquée", margin3 !== null ? `${margin3.toFixed(1)} %` : "-"],
       ["LTV (revenu × marge)", fmt$(value.ltv)],
     ],
-    note: "Le numérateur couvre tous les acheteurs, donc le dénominateur aussi. Diviser le CA de TOUS les clients par les seuls clients ACTIFS gonflait le chiffre de 1/(part d'actifs) — le double quand la moitié de la base a churné. Une LTV est une valeur, pas un chiffre d'affaires : la marge est appliquée.",
+    note: "Le numérateur couvre tous les acheteurs, donc le dénominateur aussi. Diviser le CA de TOUS les clients par les seuls clients ACTIFS gonflait le chiffre de 1/(part d'actifs) - le double quand la moitié de la base a churné. Une LTV est une valeur, pas un chiffre d'affaires : la marge est appliquée.",
   });
 
   traces.push({

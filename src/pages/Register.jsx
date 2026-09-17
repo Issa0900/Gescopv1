@@ -100,8 +100,10 @@ export default function Register() {
       // vu cette case : pour eux, la modale reste le point de consentement.
       try {
         await base44.auth.updateMe({
-          privacy_consent_accepted: true,
-          privacy_consent_date: new Date().toISOString(),
+          public_metadata: {
+            privacy_consent_accepted: true,
+            privacy_consent_date: new Date().toISOString(),
+          }
         });
       } catch {
         // Echec d'enregistrement : la modale de consentement prendra le relais.
@@ -289,7 +291,7 @@ export default function Register() {
           />
         </div>
 
-        {/* Consentement Loi 25 — enregistre des la verification du compte */}
+        {/* Consentement Loi 25 - enregistre des la verification du compte */}
         <div className="rounded-lg border border-border bg-muted/20 p-3">
           <ConsentCheckbox id="consent" checked={consent} onChange={setConsent}>
             J'ai lu et j'accepte la{" "}

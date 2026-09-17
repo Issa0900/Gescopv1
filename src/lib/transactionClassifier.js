@@ -156,6 +156,6 @@ export function txAmount(t, classification) {
   if (classification === "expense") {
     return Math.abs(Number(t.expense_amount) || Number(t.revenue_amount) || 0);
   }
-  // No hint — try both.
+  // No hint - try both.
   return Math.abs(Number(t.revenue_amount) || Number(t.expense_amount) || 0);
 }

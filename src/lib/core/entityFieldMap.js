@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GESCOP Data Intelligence Core — Entity Field Map
+// GESCOP Data Intelligence Core - Entity Field Map
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Declarative mapping of every field in every Base44 entity to its semantic
@@ -49,7 +49,7 @@ export const ENTITY_FIELD_MAP = Object.freeze({
   // ── TRANSACTIONS ───────────────────────────────────────────────────────
   // Transaction.amount is CONTEXT-DEPENDENT: its meaning changes based on
   // Transaction.type. This is the canonical example of why naive column
-  // recognition fails — "Montant" means different things in different tables.
+  // recognition fails - "Montant" means different things in different tables.
   Transaction: {
     date:        { canonicalKey: "transaction_date", semanticType: "date", grain: GRAIN_TYPES.TRANSACTION },
     description: { canonicalKey: "transaction_desc", semanticType: "description", grain: GRAIN_TYPES.TRANSACTION },
@@ -231,8 +231,8 @@ export const ENTITY_FIELD_MAP = Object.freeze({
  *
  * For example, Transaction.amount → revenue if type=income, expense if type=expense.
  *
- * @param {Object} fieldDef — The field definition from ENTITY_FIELD_MAP
- * @param {Object} record — The actual data record containing context fields
+ * @param {Object} fieldDef - The field definition from ENTITY_FIELD_MAP
+ * @param {Object} record - The actual data record containing context fields
  * @returns {{ canonicalKey: string, semanticType: string }}
  */
 export function resolveContextualField(fieldDef, record) {
@@ -294,10 +294,10 @@ export function resolveContextualField(fieldDef, record) {
 /**
  * Get a complete FieldSemantic for a specific entity.field combination.
  *
- * @param {string} entityName — e.g., "Order", "Transaction"
- * @param {string} fieldName — e.g., "total", "amount"
- * @param {Object} [record] — optional record for context resolution
- * @param {Object} [options] — override options (confidence, status, etc.)
+ * @param {string} entityName - e.g., "Order", "Transaction"
+ * @param {string} fieldName - e.g., "total", "amount"
+ * @param {Object} [record] - optional record for context resolution
+ * @param {Object} [options] - override options (confidence, status, etc.)
  * @returns {FieldSemantic|null}
  */
 export function getFieldSemantic(entityName, fieldName, record = null, options = {}) {
@@ -329,7 +329,7 @@ export function getFieldSemantic(entityName, fieldName, record = null, options =
  * record can be provided; otherwise the default fallback is used.
  *
  * @param {string} entityName
- * @param {Object} [representativeRecord] — for resolving contextual fields
+ * @param {Object} [representativeRecord] - for resolving contextual fields
  * @returns {Map<string, FieldSemantic>} fieldName → FieldSemantic
  */
 export function getEntitySemantics(entityName, representativeRecord = null) {
@@ -363,7 +363,7 @@ export function getNumericFields(entityName) {
 /**
  * Find all entities that contain a given canonical key.
  *
- * @param {string} canonicalKey — e.g., "revenue"
+ * @param {string} canonicalKey - e.g., "revenue"
  * @returns {{ entity: string, field: string }[]}
  */
 export function findEntitiesByCanonicalKey(canonicalKey) {

@@ -36,7 +36,13 @@ export default function Assistant() {
       if (data.error) {
         setMessages((m) => [...m, { role: "assistant", content: "Erreur: " + data.error }]);
       } else {
-        setMessages((m) => [...m, { role: "assistant", content: data.response, sources: data.sources || [] }]);
+        setMessages((m) => [...m, { 
+          role: "assistant", 
+          content: data.response, 
+          sources: data.sources || [],
+          classification: data.classification,
+          confidence: data.confidence
+        }]);
       }
     } catch (e) {
       setMessages((m) => [...m, { role: "assistant", content: "Erreur: " + (e.response?.data?.error || e.message) }]);
@@ -75,6 +81,18 @@ export default function Assistant() {
               <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
                 {m.role === "assistant" ? (
                   <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0.5">
+                    {m.classification && (
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="rounded-full bg-primary/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary border border-primary/30">
+                          {m.classification}
+                        </span>
+                        {m.confidence != null && (
+                          <span className="text-[11px] font-medium text-muted-foreground">
+                            Confiance: {m.confidence > 1 ? Math.round(m.confidence) : Math.round(m.confidence * 100)}%
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <ReactMarkdown>{m.content}</ReactMarkdown>
                     {m.sources && m.sources.length > 0 && (
                       <div className="mt-3 space-y-1 border-t border-border/50 pt-2">

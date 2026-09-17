@@ -6,9 +6,9 @@ import PriorityBadge from "@/components/PriorityBadge";
 import { computeLiveAlerts } from "@/lib/liveAlerts";
 import { fetchAll } from "@/lib/fetchAll";
 import { useCompany } from "@/hooks/useCompany";
-import { Bell, Check, Activity, Plus } from "lucide-react";
+import { useObservations } from "@/hooks/useObservations";
+import { Bell, Check, Activity, Plus, TrendingDown, Radio } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-
 const levelOrder = { critique: 0, important: 1, modere: 2, info: 3, faible: 4 };
 
 export default function Alertes() {
@@ -21,6 +21,13 @@ export default function Alertes() {
     queryKey: ["alerts-all"],
     queryFn: () => base44.entities.Alert.list("-created_date", 50),
   });
+
+  const { data: anomalies } = useQuery({
+    queryKey: ["anomalies"],
+    queryFn: () => base44.entities.Anomaly.list("-created_date", 50),
+  });
+
+  const { data: observations } = useObservations();
 
   const { data: live } = useQuery({
     queryKey: ["alerts-live", company?.stock_alert_threshold, company?.stock_alert_use_reorder_point],
@@ -48,14 +55,41 @@ export default function Alertes() {
     qc.invalidateQueries(["alerts-unread"]);
   };
 
-  const alerts = React.useMemo(
-    () =>
-      [...(live || []), ...(stored || [])].sort(
-        (a, b) => (levelOrder[a.level] ?? 5) - (levelOrder[b.level] ?? 5)
-      ),
-    [live, stored]
-  );
+  const alerts = React.useMemo(() => {
+    const list = [...(live || []), ...(stored || [])];
+    
+    const externals = (observations || [])
+      .filter((o) => o.observation_type === "external")
+      .map((o) => ({
+        id: `obs-${o.id}`,
+        level: "important",
+        title: o.concept || "Signal externe",
+        message: o.text || `Valeur: ${o.value} ${o.unit || ""}`,
+        created_date: o.date || new Date().toISOString(),
+        category: "Externe",
+        status: "non_lue",
+        live: false,
+        isExternal: true,
+      }));
 
+    const anoms = (anomalies || [])
+      .filter((a) => a.status !== "resolu")
+      .map((a) => ({
+        id: `anom-${a.id}`,
+        level: a.severity || "important",
+        title: "Anomalie : " + (a.title || a.dimension || ""),
+        message: a.description || "Écart significatif détecté.",
+        created_date: a.created_date || new Date().toISOString(),
+        category: "Anomalie",
+        status: "non_lue",
+        live: false,
+        isAnomaly: true,
+      }));
+
+    return [...list, ...externals, ...anoms].sort(
+      (a, b) => (levelOrder[a.level] ?? 5) - (levelOrder[b.level] ?? 5)
+    );
+  }, [live, stored, observations, anomalies]);
   if (isLoading) return <p className="text-sm text-muted-foreground">Chargement…</p>;
 
   if (alerts.length === 0) {
@@ -99,7 +133,19 @@ export default function Alertes() {
                     Temps réel
                   </span>
                 )}
-                {!a.live && a.status === "non_lue" && <span className="h-2 w-2 rounded-full bg-primary" />}
+                {a.isExternal && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600">
+                    <Radio className="h-3 w-3" />
+                    Observation Externe
+                  </span>
+                )}
+                {a.isAnomaly && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600">
+                    <TrendingDown className="h-3 w-3" />
+                    Anomalie
+                  </span>
+                )}
+                {!a.live && !a.isExternal && !a.isAnomaly && a.status === "non_lue" && <span className="h-2 w-2 rounded-full bg-primary" />}
               </div>
               <p className="mt-2 font-medium">{a.title}</p>
               {a.message && <p className="text-sm text-muted-foreground">{a.message}</p>}

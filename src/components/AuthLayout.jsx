@@ -29,7 +29,7 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
               Le copilote stratégique<br />de votre entreprise
             </h2>
             <p className="mt-4 text-base leading-relaxed text-sidebar-foreground/70 max-w-md">
-              Anticipez les risques, saisissez les opportunités et prenez les bonnes décisions — propulsé par l'intelligence artificielle.
+              Anticipez les risques, saisissez les opportunités et prenez les bonnes décisions - propulsé par l'intelligence artificielle.
             </p>
           </div>
 

@@ -1,11 +1,11 @@
-// Shared domain score computation — used by both Dashboard and KPIs page
+// Shared domain score computation - used by both Dashboard and KPIs page
 // to ensure "vue d'ensemble" and KPIs are always synchronized.
 //
 // Rules applied to every domain here:
 //  1. Scores read RECENT performance (3 complete months), never all-time
 //     cumulative totals, which hide a recent downturn behind good history.
 //  2. Trends compare COMPLETE months only, on FULLY COVERED windows. When the
-//     history is too short to compare, the score stays neutral and says so —
+//     history is too short to compare, the score stays neutral and says so -
 //     it never falls back to a made-up 0% change.
 //  3. Every business definition (margin, runway, churn) comes from
 //     src/lib/metrics.js so this file and the audit page cannot disagree.
@@ -41,7 +41,7 @@ function clamp(v) {
 
 /**
  * Apply a trend bonus/penalty to a base score.
- * A null pct means "unknown" — the score is left untouched rather than penalised.
+ * A null pct means "unknown" - the score is left untouched rather than penalised.
  */
 function applyTrend(score, pct, bonus = 8, penalty = 12, threshold = 5) {
   if (pct === null || pct === undefined || !Number.isFinite(pct)) return score;
@@ -54,7 +54,7 @@ export function computeDomainScores(data) {
   const { transactions, orders, customers, campaigns, campaignDaily, products, inventory, cashflow, company } = data;
   const scores = {};
 
-  // === FINANCE — aggregated margin over 3 complete months ===
+  // === FINANCE - aggregated margin over 3 complete months ===
   const isIncome = (t) => {
     if (!t.type) return false;
     const s = String(t.type).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -96,7 +96,7 @@ export function computeDomainScores(data) {
   scores.finance = {
     // measured=false : aucune donnee pour ce domaine. Le score neutre de 50
     // qui suit n'est qu'un repli d'affichage et NE DOIT PAS entrer dans la
-    // moyenne globale — une absence de mesure n'est pas une demi-sante.
+    // moyenne globale - une absence de mesure n'est pas une demi-sante.
     measured: recentMargin !== null,
     score: clamp(financeScore),
     trend: marginDelta === null ? "stable" : marginDelta > 3 ? "up" : marginDelta < -3 ? "down" : "stable",
@@ -106,7 +106,7 @@ export function computeDomainScores(data) {
         : "Historique insuffisant (3 mois complets requis)",
   };
 
-  // === TRÉSORERIE — runway on NET burn, not gross expenses ===
+  // === TRÉSORERIE - runway on NET burn, not gross expenses ===
   const cfSorted = (cashflow || []).slice().sort((a, b) => ((a.date || "") < (b.date || "") ? 1 : -1));
   const cashVals = (arr) => arr.map((c) => Number(c.closing_cash) || 0);
   const avg = (a) => (a.length > 0 ? a.reduce((s, v) => s + v, 0) / a.length : 0);
@@ -130,7 +130,7 @@ export function computeDomainScores(data) {
   scores.tresorerie = {
     // measured=false : aucune donnee pour ce domaine. Le score neutre de 50
     // qui suit n'est qu'un repli d'affichage et NE DOIT PAS entrer dans la
-    // moyenne globale — une absence de mesure n'est pas une demi-sante.
+    // moyenne globale - une absence de mesure n'est pas une demi-sante.
     measured: runway !== null,
     score: clamp(tresoScore),
     trend: trendDir(cash7, cashPrev7, 1),
@@ -140,7 +140,7 @@ export function computeDomainScores(data) {
         : `${Math.round(latestCash).toLocaleString("fr-CA")} $ · ${fmtRunway(runway)}`,
   };
 
-  // === VENTES — complete-month revenue and basket trend ===
+  // === VENTES - complete-month revenue and basket trend ===
   const orderRevMonthly = monthlyAggComplete(
     (orders || []).map(o => ({ ...o, _computed_rev: Number(o.total) || Number(o.revenue_amount) || Number(o.amount) || 0 })),
     "date", 
@@ -167,7 +167,7 @@ export function computeDomainScores(data) {
   scores.ventes = {
     // measured=false : aucune donnee pour ce domaine. Le score neutre de 50
     // qui suit n'est qu'un repli d'affichage et NE DOIT PAS entrer dans la
-    // moyenne globale — une absence de mesure n'est pas une demi-sante.
+    // moyenne globale - une absence de mesure n'est pas une demi-sante.
     measured: revTrend !== null,
     score: clamp(ventesScore),
     trend: trendDir(rev3, revPrev3),
@@ -178,13 +178,13 @@ export function computeDomainScores(data) {
           ? ""
           : revPrev3 === null
             // Not enough history to line up two 3-month blocks.
-            ? `${orderRevMonthly.length} mois complets — 6 requis pour comparer`
+            ? `${orderRevMonthly.length} mois complets - 6 requis pour comparer`
             // Two blocks exist but the earlier one is empty: a percentage
             // change from zero has no meaning, so none is shown.
             : `${Math.round(rev3).toLocaleString("fr-CA")} $ sur 3 mois · aucune vente sur les 3 mois précédents`,
   };
 
-  // === MARKETING — recent ROAS with a real computed trend ===
+  // === MARKETING - recent ROAS with a real computed trend ===
   // Prefer daily campaign data (it is dated, so it can be windowed);
   // fall back to campaign totals when daily rows are absent.
   const spendMonthly = monthlyAggComplete(campaignDaily || [], "date", "spend");
@@ -212,10 +212,10 @@ export function computeDomainScores(data) {
   scores.marketing = {
     // measured=false : aucune donnee pour ce domaine. Le score neutre de 50
     // qui suit n'est qu'un repli d'affichage et NE DOIT PAS entrer dans la
-    // moyenne globale — une absence de mesure n'est pas une demi-sante.
+    // moyenne globale - une absence de mesure n'est pas une demi-sante.
     measured: roas !== null,
     score: clamp(marketingScore),
-    // Real trend when a comparison window exists — never inferred from the level.
+    // Real trend when a comparison window exists - never inferred from the level.
     trend: trendDir(roas, roasPrev),
     explanation:
       roas !== null
@@ -223,7 +223,7 @@ export function computeDomainScores(data) {
         : "Aucune donnée publicitaire",
   };
 
-  // === OPÉRATIONS — latest stock snapshot per product, not every history row ===
+  // === OPÉRATIONS - latest stock snapshot per product, not every history row ===
   // Uses the SAME shortage definition as the Produits page and the alert centre,
   // including the threshold the user set on their company. This score used to
   // read the imported stock_status only, so lowering the threshold changed the
@@ -244,7 +244,7 @@ export function computeDomainScores(data) {
   scores.operations = {
     // measured=false : aucune donnee pour ce domaine. Le score neutre de 50
     // qui suit n'est qu'un repli d'affichage et NE DOIT PAS entrer dans la
-    // moyenne globale — une absence de mesure n'est pas une demi-sante.
+    // moyenne globale - une absence de mesure n'est pas une demi-sante.
     measured: trackedCount > 0,
     score: clamp(opsScore),
     trend: "stable",
@@ -252,7 +252,7 @@ export function computeDomainScores(data) {
     details: { trackedCount, dormantCount, ruptureCount, lowCount },
   };
 
-  // === CLIENTS — single churn definition + acquisition trend ===
+  // === CLIENTS - single churn definition + acquisition trend ===
   const churn = churnStats(customers, orders);
   const custMonthly = monthlyAggComplete(customers || [], "acquisition_date", "customer_id", "count");
   const new3 = sumLast(custMonthly, 3);
@@ -268,7 +268,7 @@ export function computeDomainScores(data) {
   scores.clients = {
     // measured=false : aucune donnee pour ce domaine. Le score neutre de 50
     // qui suit n'est qu'un repli d'affichage et NE DOIT PAS entrer dans la
-    // moyenne globale — une absence de mesure n'est pas une demi-sante.
+    // moyenne globale - une absence de mesure n'est pas une demi-sante.
     measured: churn.rate !== null,
     score: clamp(clientsScore),
     trend: trendDir(new3, newPrev3),

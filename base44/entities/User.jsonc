@@ -7,6 +7,14 @@
         "admin",
         "user"
       ]
+    },
+    "privacy_consent_accepted": {
+      "type": "boolean",
+      "description": "Whether the user accepted the Loi 25 privacy policy"
+    },
+    "privacy_consent_date": {
+      "type": "string",
+      "description": "ISO timestamp of when the user accepted the privacy policy"
     }
   },
   "required": [

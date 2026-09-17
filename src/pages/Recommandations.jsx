@@ -90,8 +90,8 @@ export default function Recommandations() {
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {blocks.map((b) => (
                 <div key={b.key} className="rounded-lg bg-muted/30 p-3">
-                  <p className="text-xs font-medium text-muted-foreground">{b.label} — {b.q}</p>
-                  <p className="mt-1 text-sm">{r[b.key] || "—"}</p>
+                  <p className="text-xs font-medium text-muted-foreground">{b.label} - {b.q}</p>
+                  <p className="mt-1 text-sm">{r[b.key] || "-"}</p>
                 </div>
               ))}
             </div>

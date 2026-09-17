@@ -28,7 +28,7 @@ function formatMonth(m) {
 }
 
 function formatValue(v, format) {
-  if (v == null) return "—";
+  if (v == null) return "-";
   if (format === "percent") return `${Math.round(v)}%`;
   if (format === "count") return Math.round(v).toLocaleString("fr-CA");
   return `${Math.round(v).toLocaleString("fr-CA")} $`;

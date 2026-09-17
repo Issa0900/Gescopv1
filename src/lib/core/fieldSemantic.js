@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GESCOP Data Intelligence Core — Field Semantic Object Builder
+// GESCOP Data Intelligence Core - Field Semantic Object Builder
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Creates and manages semantic descriptors for individual data fields.
@@ -30,16 +30,16 @@ import {
  * Creates a complete semantic descriptor for a data field.
  *
  * @param {Object} params
- * @param {string} params.source       — Entity name (e.g., "Order", "Cashflow")
- * @param {string} params.field        — Field name in the entity (e.g., "total", "closing_cash")
- * @param {string} params.canonicalKey — Unique semantic key (e.g., "revenue", "cash_closing")
- * @param {string} params.semanticType — Key into SEMANTIC_TYPES catalog
- * @param {string} [params.grain]      — Record granularity (e.g., "order", "day")
- * @param {string} [params.unit]       — Display unit override (e.g., "CAD", "days")
- * @param {string} [params.currencyCode] — ISO currency code (default: "CAD")
- * @param {number} [params.confidence] — Recognition confidence 0–1 (default: 1.0)
- * @param {string} [params.status]     — Verification status (default: "verified")
- * @param {Object} [params.overrides]  — Override any auto-derived property
+ * @param {string} params.source       - Entity name (e.g., "Order", "Cashflow")
+ * @param {string} params.field        - Field name in the entity (e.g., "total", "closing_cash")
+ * @param {string} params.canonicalKey - Unique semantic key (e.g., "revenue", "cash_closing")
+ * @param {string} params.semanticType - Key into SEMANTIC_TYPES catalog
+ * @param {string} [params.grain]      - Record granularity (e.g., "order", "day")
+ * @param {string} [params.unit]       - Display unit override (e.g., "CAD", "days")
+ * @param {string} [params.currencyCode] - ISO currency code (default: "CAD")
+ * @param {number} [params.confidence] - Recognition confidence 0–1 (default: 1.0)
+ * @param {string} [params.status]     - Verification status (default: "verified")
+ * @param {Object} [params.overrides]  - Override any auto-derived property
  * @returns {FieldSemantic} Complete semantic descriptor
  */
 export function createFieldSemantic({
@@ -154,13 +154,13 @@ export function areFieldsAdditive(fieldA, fieldB) {
   if (!fieldA.isAdditive) {
     return {
       valid: false,
-      reason: `« ${fieldA.label?.fr || fieldA.field} » (${fieldA.economicRole}) n'est pas additionnable — c'est un ${fieldA.temporalType === "stock" ? "solde ponctuel" : "taux/ratio"}.`,
+      reason: `« ${fieldA.label?.fr || fieldA.field} » (${fieldA.economicRole}) n'est pas additionnable - c'est un ${fieldA.temporalType === "stock" ? "solde ponctuel" : "taux/ratio"}.`,
     };
   }
   if (!fieldB.isAdditive) {
     return {
       valid: false,
-      reason: `« ${fieldB.label?.fr || fieldB.field} » (${fieldB.economicRole}) n'est pas additionnable — c'est un ${fieldB.temporalType === "stock" ? "solde ponctuel" : "taux/ratio"}.`,
+      reason: `« ${fieldB.label?.fr || fieldB.field} » (${fieldB.economicRole}) n'est pas additionnable - c'est un ${fieldB.temporalType === "stock" ? "solde ponctuel" : "taux/ratio"}.`,
     };
   }
 
@@ -240,7 +240,7 @@ export function areFieldsComparable(fieldA, fieldB) {
  * time series, "sum" for flow in period totals).
  *
  * @param {FieldSemantic} fieldSemantic
- * @param {string} [context] — 'timeseries' | 'period_total' | 'cross_section'
+ * @param {string} [context] - 'timeseries' | 'period_total' | 'cross_section'
  * @returns {string} Aggregation method key
  */
 export function getAggregationMethod(fieldSemantic, context = "period_total") {
@@ -355,7 +355,7 @@ export function describeField(fs) {
     DIMENSION: "dimension descriptive",
   };
   const typeDesc = roleFr[fs.economicRole] || fs.economicRole;
-  return `${fs.label?.fr || fs.field} (${fs.source}.${fs.field}) — ${typeDesc}, agrégation par ${fs.aggregation || "aucune"}`;
+  return `${fs.label?.fr || fs.field} (${fs.source}.${fs.field}) - ${typeDesc}, agrégation par ${fs.aggregation || "aucune"}`;
 }
 
 /**

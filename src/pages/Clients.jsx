@@ -74,7 +74,7 @@ export default function Clients() {
       : 0,
     // churn_risk is imported as a 0–1 ratio; displaying it raw showed "1%" for
     // a client with a 70% departure risk.
-    // null when the column is absent — rendered as « — ». Showing 0 % on every
+    // null when the column is absent - rendered as « - ». Showing 0 % on every
     // client would read as "nobody is at risk", which is not what an empty
     // column says.
     _churnPct: c.churn_risk === null || c.churn_risk === undefined || c.churn_risk === ""
@@ -135,7 +135,7 @@ export default function Clients() {
         />
         <StatCard
           label={`Inactifs depuis ${churn.inactiveMonths} mois`}
-          value={churn.behaviourRate !== null ? `${Math.round(churn.behaviourRate)}%` : "—"}
+          value={churn.behaviourRate !== null ? `${Math.round(churn.behaviourRate)}%` : "-"}
           sublabel={churn.measurable
             ? `${churn.lapsed} sur ${churn.buyers} clients ayant déjà commandé`
             : "historique de commandes absent"}
@@ -195,7 +195,7 @@ export default function Clients() {
                 <td className="px-4 py-3">
                   <span className="inline-flex items-center gap-1.5 text-xs">
                     <span className="h-2 w-2 rounded-full" style={{ background: segmentColors[c.segment] || "#94a3b8" }} />
-                    {segmentLabels[c.segment] || c.segment || "—"}
+                    {segmentLabels[c.segment] || c.segment || "-"}
                   </span>
                 </td>
                 <td className="px-4 py-3">{c._total_orders}</td>
@@ -203,7 +203,7 @@ export default function Clients() {
                 <td className="px-4 py-3">{Math.round(c._aov || 0).toLocaleString()} $</td>
                 <td className="px-4 py-3">
                   {c._churnPct === null ? (
-                    <span className="text-muted-foreground">—</span>
+                    <span className="text-muted-foreground">-</span>
                   ) : (
                     <span className={c._churnPct > 60 ? "text-red-600 font-medium" : c._churnPct > 30 ? "text-amber-600" : "text-muted-foreground"}>
                       {c._churnPct}%
@@ -212,7 +212,7 @@ export default function Clients() {
                 </td>
                 <td className="px-4 py-3">
                   <span className={c.status === "actif" ? "text-emerald-600" : c.status === "inactif" ? "text-red-600" : "text-amber-600"}>
-                    {c.status || "—"}
+                    {c.status || "-"}
                   </span>
                 </td>
               </tr>

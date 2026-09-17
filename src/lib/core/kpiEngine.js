@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GESCOP Data Intelligence Core — KPI Execution Engine
+// GESCOP Data Intelligence Core - KPI Execution Engine
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Calculates KPIs by evaluating their dependencies, aggregating raw data
@@ -17,10 +17,10 @@ import { KPI_STATUS, ECONOMIC_ROLES, AGGREGATION_METHODS, TEMPORAL_TYPES } from 
  * Execute calculation for a specific KPI or measure over a dataset.
  *
  * @param {Object} params
- * @param {string} params.kpiId — The canonical key of the KPI
- * @param {Array<Object>} params.records — The raw data records
- * @param {Map<string, Object>} params.fieldSemantics — Resolved semantics for the records
- * @param {Object} [params.context={}] — Pre-computed dependencies or context variables
+ * @param {string} params.kpiId - The canonical key of the KPI
+ * @param {Array<Object>} params.records - The raw data records
+ * @param {Map<string, Object>} params.fieldSemantics - Resolved semantics for the records
+ * @param {Object} [params.context={}] - Pre-computed dependencies or context variables
  * @returns {import("./dataLineage").KpiLineage} The calculated KPI with its lineage
  */
 export function computeKpi({ kpiId, records, fieldSemantics, context = {} }) {
@@ -180,11 +180,35 @@ export function computeKpiBatch(kpiIds, records, fieldSemantics) {
  * This is the ultimate defense against summing stocks.
  */
 function _aggregateRawField(canonicalKey, records, fieldSemantics) {
+  // --- NOUVEAU DATA CORE (PHASE 2) ---
+  // Si le jeu de données contient des Observations, on utilise directement la valeur stockée
+  // sans avoir besoin du vieux mappage de colonnes (fieldSemantics).
+  if (records && records.length > 0 && records[0].observation_type) {
+    const matchingObs = records.filter(r => 
+      r.concept === canonicalKey || r.concept === `finance.${canonicalKey}` || r.concept === `customer.${canonicalKey}`
+    );
+    
+    if (matchingObs.length > 0) {
+      const sum = matchingObs.reduce((acc, obs) => acc + (obs.value || 0), 0);
+      
+      return buildKpiLineage({
+        kpiKey: canonicalKey,
+        name: canonicalKey,
+        value: sum,
+        unit: matchingObs[0].unit || null,
+        formula: "Agrégation d'Observations Sémantiques",
+        sources: [{ entity: "Observation", field: "value", canonicalKey, records: matchingObs.length, qualityScore: matchingObs[0].confidence ? matchingObs[0].confidence * 100 : 100 }],
+        status: 1 // KPI_STATUS.AVAILABLE
+      });
+    }
+  }
+
+  // --- ANCIEN SYSTEME (Rétrocompatibilité) ---
   // Find the field in the records that matches this canonicalKey
   let targetField = null;
   let targetSemantic = null;
 
-  for (const [fieldName, fs] of fieldSemantics.entries()) {
+  for (const [fieldName, fs] of (fieldSemantics || new Map()).entries()) {
     if (fs.canonicalKey === canonicalKey) {
       targetField = fieldName;
       targetSemantic = fs;

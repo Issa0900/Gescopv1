@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion } from "@/lib/fake-framer-motion.jsx";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { formatPct } from "@/lib/utils";
 import { useCompany } from "@/hooks/useCompany";
+import { useObservations } from "@/hooks/useObservations";
 import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/EmptyState";
 import { useToast } from "@/components/ui/use-toast";
@@ -11,7 +12,7 @@ import { Sparkles, RefreshCw, ArrowRight, Check, Loader2, ChevronDown, Upload, B
 import { Link, useNavigate } from "react-router-dom";
 
 import { useKpiEngine } from "@/lib/useKpiEngine";
-import { financialSummary, financialMonthlySeries } from "@/lib/financialData";
+import { financialMonthlySeries } from "@/lib/financialData";
 import { latestCashBalance } from "@/lib/metrics";
 import { validateChartAggregation, METRIC_TYPES } from "@/components/ChartValidation";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -68,6 +69,8 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  const { data: observations } = useObservations();
 
   // Every source below is read with fetchAll: a single list() call caps at 500
   // rows, so passing 500 or 1000 silently truncated the history and left this
@@ -174,14 +177,16 @@ export default function Dashboard() {
   const fOrders = useMemo(() => (orders || []).filter((o) => inPeriod(o.date)), [orders, cutoffDate]);
   const fExpenses = useMemo(() => (expenseRecords || []).filter((e) => inPeriod(e.date)), [expenseRecords, cutoffDate]);
   const fCustomers = useMemo(() => (customers || []).filter((c) => inPeriod(c.acquisition_date)), [customers, cutoffDate]);
+  const fObservations = useMemo(() => (observations || []).filter((o) => inPeriod(o.date)), [observations, cutoffDate]);
 
   const { kpis: engineKpis } = useKpiEngine({
     transactions: fTxn,
     orders: fOrders,
     expenses: fExpenses,
     customers: fCustomers,
+    observations: fObservations,
     cashflow: cashflow || []
-  }, ["total_revenue", "total_expense", "gross_margin_amount", "gross_margin_pct", "aov", "active_customers"]);
+  }, ["total_revenue", "total_expense", "gross_margin_amount", "gross_margin_pct", "aov", "active_customers", "customer_sentiment_score"]);
 
   // === COMPUTATIONS (Hybride : Ancien + Nouveau) ===
   const computed = useMemo(() => {
@@ -193,6 +198,7 @@ export default function Dashboard() {
     
     const aov = engineKpis.get("aov")?.value || 0;
     const activeCustomers = engineKpis.get("active_customers")?.value || 0;
+    const customerSentiment = engineKpis.get("customer_sentiment_score")?.value || 0;
     const totalExpenseAmount = totalExpensesTxn;
 
     // Trésorerie : cashflow ne se filtre pas par période car c'est un stock continu
@@ -282,7 +288,7 @@ export default function Dashboard() {
 
     return {
       totalIncome, totalExpensesTxn, margin, marginPct, orderRevenue, orderCount, aov,
-      activeCustomers, latestCash, totalExpenseAmount,
+      activeCustomers, latestCash, totalExpenseAmount, customerSentiment,
       monthlyData, spark, aovMonthly,
       revTrend, marginTrend, cashTrend, aovTrend, clientTrend, costTrend,
       projectedRevenue, projectedCash, forecastRevData, forecastCashData,
@@ -500,7 +506,7 @@ export default function Dashboard() {
             {showDetails && (
               <div className="space-y-6 border-t border-border p-4">
                 {/* KPI secondaires */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <KpiCard label="Coûts opérationnels" value={`${Math.round(computed.totalExpenseAmount).toLocaleString("fr-CA")} $`}
                     change={`${formatPct(Math.abs(computed.costTrend))}`} changeDir={computed.costTrend >= 0 ? "up" : "down"}
                     sparkline={computed.spark(computed.monthlyData.costs)} status={computed.costTrend > 5 ? "warning" : "neutral"} statusLabel={computed.costTrend > 5 ? "Attention" : "Stable"} onClick={() => navigate("/tresorerie")} />
@@ -510,6 +516,9 @@ export default function Dashboard() {
                   <KpiCard label="Panier moyen" value={`${computed.aov.toFixed(2)} $`}
                     change={`${formatPct(Math.abs(computed.aovTrend))}`} changeDir={computed.aovTrend >= 0 ? "up" : "down"}
                     sparkline={computed.spark(computed.aovMonthly)} status={computed.aovTrend >= 0 ? "neutral" : "warning"} statusLabel={computed.aovTrend >= 0 ? "Stable" : "Attention"} onClick={() => navigate("/clients")} />
+                  <KpiCard label="Sentiment Client" value={`${computed.customerSentiment.toFixed(1)}/10`}
+                    change={null} changeDir="stable"
+                    sparkline={[]} status={computed.customerSentiment >= 7 ? "good" : computed.customerSentiment <= 4 ? "critical" : "warning"} statusLabel={computed.customerSentiment >= 7 ? "Bon" : computed.customerSentiment <= 4 ? "Critique" : "Moyen"} onClick={() => navigate("/kpis")} />
                 </div>
 
                 {/* Insights */}

@@ -80,7 +80,7 @@ export function computeLiveAlerts(data) {
     }
   }
   // Variation de marge exprimée en POINTS : passer de 2 % à 4 % est +2 points,
-  // pas "+100 %" — la lecture relative déclenchait des alertes sur du bruit.
+  // pas "+100 %" - la lecture relative déclenchait des alertes sur du bruit.
   const marginDrop = marginDeltaPoints(recentMargin, priorMargin);
   if (marginDrop !== null && marginDrop < -5) {
     out.push(

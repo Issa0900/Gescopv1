@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GESCOP Data Intelligence Core — Duplicate Import Detector
+// GESCOP Data Intelligence Core - Duplicate Import Detector
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Detects potentially duplicated imports by comparing:
@@ -14,10 +14,10 @@
  * Compute a simple hash string for a row (deterministic, no crypto needed).
  *
  * Uses a subset of the row's values sorted by key to produce a consistent
- * fingerprint. Not cryptographically secure — just needs to detect identical rows.
+ * fingerprint. Not cryptographically secure - just needs to detect identical rows.
  *
- * @param {Object} row — A record object
- * @param {string[]} [keyFields] — Optional subset of fields to hash (default: all)
+ * @param {Object} row - A record object
+ * @param {string[]} [keyFields] - Optional subset of fields to hash (default: all)
  * @returns {string} Hash string
  */
 export function hashRow(row, keyFields = null) {
@@ -50,7 +50,7 @@ export function hashFile(rows, keyFields = null) {
  * Detect duplicate rows within a single dataset.
  *
  * @param {Array<Object>} rows
- * @param {string[]} [keyFields] — Fields that define uniqueness (e.g., ['order_id'])
+ * @param {string[]} [keyFields] - Fields that define uniqueness (e.g., ['order_id'])
  * @returns {{ duplicateCount: number, duplicateIndices: number[][], uniqueCount: number }}
  */
 export function detectInternalDuplicates(rows, keyFields = null) {
@@ -89,11 +89,11 @@ export function detectInternalDuplicates(rows, keyFields = null) {
  * Check if an import potentially duplicates existing data.
  *
  * @param {Object} params
- * @param {string} params.fileHash — Hash of the incoming file
- * @param {string} params.entityType — Target entity
- * @param {string} [params.periodStart] — Earliest date in the incoming data
- * @param {string} [params.periodEnd] — Latest date in the incoming data
- * @param {Array<Object>} params.existingImports — Previous Import entity records
+ * @param {string} params.fileHash - Hash of the incoming file
+ * @param {string} params.entityType - Target entity
+ * @param {string} [params.periodStart] - Earliest date in the incoming data
+ * @param {string} [params.periodEnd] - Latest date in the incoming data
+ * @param {Array<Object>} params.existingImports - Previous Import entity records
  * @returns {DuplicateCheckResult}
  */
 export function checkImportDuplicate({

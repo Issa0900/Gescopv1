@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GESCOP Data Intelligence Core — KPI Registry
+// GESCOP Data Intelligence Core - KPI Registry
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Declarative registry of all business KPIs.
@@ -84,9 +84,19 @@ export const KPI_REGISTRY = Object.freeze({
     dataType: DATA_TYPES.NUMBER,
     isAdditive: false,
     dependencies: [],
-    // Since it has NO dependencies, it receives `deps` which is the context.
-    // Wait, kpiEngine doesn't pass raw `records` to the calculate function! It only passes resolved deps.
-    // Let me fix employee_count to not rely on employee_count_raw.
+    // This is a LEVEL 1 measure with no computed dependencies: the engine
+    // exposes the raw dataset through the `_records` context variable, so we
+    // count distinct employees directly from it. If no employee identifier is
+    // present, fall back to the semantic aggregation of `employee_id`.
+    calculate: (deps) => {
+      const records = deps._records || [];
+      const empIds = new Set(
+        records
+          .map((r) => r.employee_id)
+          .filter((id) => id !== null && id !== undefined && String(id).trim() !== "")
+      );
+      return empIds.size;
+    },
   },
 
   employee_count: {
@@ -97,8 +107,37 @@ export const KPI_REGISTRY = Object.freeze({
     semanticType: "count",
     dataType: DATA_TYPES.NUMBER,
     isAdditive: false, // Stock metric
-    dependencies: [], // We'll compute it dynamically in the component or we have to feed it as context.
-    calculate: (deps) => deps.employee_count_raw || 0,
+    dependencies: [],
+    // Counts distinct ACTIVE employees from the raw dataset. A record without
+    // an explicit status is considered active; otherwise the status must
+    // contain an "active" marker. Falls back to the raw employee count when no
+    // status information is available at all.
+    calculate: (deps) => {
+      const records = deps._records || [];
+      const employees = records.filter(
+        (r) => r.employee_id !== null && r.employee_id !== undefined && String(r.employee_id).trim() !== ""
+      );
+      if (employees.length === 0) return deps.employee_count_raw || 0;
+
+      const hasStatus = employees.some((r) => r.status !== null && r.status !== undefined && String(r.status).trim() !== "");
+      if (!hasStatus) return deps.employee_count_raw || 0;
+
+      const activeIds = new Set(
+        employees
+          .filter((r) => {
+            const st = String(r.status || "").toLowerCase();
+            return (
+              st.includes("actif") ||
+              st.includes("active") ||
+              st.includes("en poste") ||
+              st.includes("employé") ||
+              st.includes("employee")
+            );
+          })
+          .map((r) => r.employee_id)
+      );
+      return activeIds.size;
+    },
   },
 
   rh_expense_ratio: {
@@ -431,6 +470,21 @@ export const KPI_REGISTRY = Object.freeze({
       if (!deps.cac || deps.cac === 0) return 0;
       return (deps.ltv || 0) / deps.cac;
     },
+  },
+
+  // ── QUALITATIVE & SENTIMENT (LEVEL 2) ────────────────────────────────────
+  customer_sentiment_score: {
+    id: "customer_sentiment_score",
+    name: { fr: "Score de Sentiment Client", en: "Customer Sentiment Score" },
+    level: KPI_LEVELS.KPI_STRATEGIQUE,
+    domain: DOMAINS.CLIENTS,
+    semanticType: "score",
+    economicRole: ECONOMIC_ROLES.RESULT,
+    dataType: DATA_TYPES.PERCENTAGE,
+    isAdditive: false,
+    dependencies: [],
+    // Evaluated by the qualitativeEngine usually, but the KPI engine reads the pre-aggregated value
+    calculate: (deps) => deps.customer_sentiment_score || 0,
   },
 
 });

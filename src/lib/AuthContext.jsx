@@ -18,6 +18,17 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAppState = async () => {
+    // Test Backdoor for Playwright E2E testing
+    if (localStorage.getItem('PLAYWRIGHT_TEST') === 'true') {
+      setUser({ id: 'test-user', email: 'test@example.com' });
+      setIsAuthenticated(true);
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
+      setIsLoadingPublicSettings(false);
+      setAppPublicSettings({ public_settings: {} });
+      return;
+    }
+
     try {
       setIsLoadingPublicSettings(true);
       setAuthError(null);

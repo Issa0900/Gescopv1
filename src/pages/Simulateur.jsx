@@ -90,8 +90,8 @@ export default function Simulateur() {
     { label: "Volume (nb de transactions de vente)", actual: Math.round(current.volume).toLocaleString("fr-CA"), sim: Math.round(sim.newVolume).toLocaleString("fr-CA") },
     { label: "Chiffre d'affaires", actual: fmt(current.income), sim: fmt(sim.newIncome) },
     { label: "Dépenses", actual: fmt(current.expense), sim: fmt(sim.newExpense) },
-    { label: "— dont coûts fixes", actual: fmt(current.expense * (1 - Math.min(100, Math.max(0, variableShare)) / 100)), sim: fmt(sim.fixedCost * (1 + expenseChange / 100)) },
-    { label: "— dont coûts variables", actual: fmt(current.expense * (Math.min(100, Math.max(0, variableShare)) / 100)), sim: fmt(sim.variableCost * (1 + expenseChange / 100)) },
+    { label: "- dont coûts fixes", actual: fmt(current.expense * (1 - Math.min(100, Math.max(0, variableShare)) / 100)), sim: fmt(sim.fixedCost * (1 + expenseChange / 100)) },
+    { label: "- dont coûts variables", actual: fmt(current.expense * (Math.min(100, Math.max(0, variableShare)) / 100)), sim: fmt(sim.variableCost * (1 + expenseChange / 100)) },
     { label: "Marge nette", actual: fmt(current.margin), sim: fmt(sim.newMargin) },
     { label: "Taux de marge", actual: fmtPct(sim.currentMarginPct), sim: fmtPct(sim.newMarginPct) },
   ];
@@ -125,7 +125,7 @@ export default function Simulateur() {
       </div>
 
       <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 text-xs leading-relaxed text-amber-900">
-        <span className="font-semibold">Limites du modèle — à lire avant de décider.</span> Le prix et le volume
+        <span className="font-semibold">Limites du modèle - à lire avant de décider.</span> Le prix et le volume
         sont indépendants dans cette simulation : aucune élasticité n'est appliquée, donc une hausse de prix
         sans perte de volume est une hypothèse de votre part, pas une prévision. La base de calcul est un seul
         mois complet ({current.baseMonth}), sans saisonnalité. Ajustez la part des coûts variables à votre

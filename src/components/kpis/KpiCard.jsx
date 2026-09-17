@@ -26,7 +26,7 @@ export default function KpiCard({ kpi, domainColor }) {
         <TIcon className={`h-4 w-4 ${trendColor}`} />
       </div>
       <p className="mt-2 text-2xl font-bold tracking-tight">
-        {kpi.value != null ? (numeric ? kpi.value.toLocaleString("fr-CA") : String(kpi.value)) : "—"}
+        {kpi.value != null ? (numeric ? kpi.value.toLocaleString("fr-CA") : String(kpi.value)) : "-"}
         <span className="ml-1 text-sm font-normal text-muted-foreground">{kpi.unit || ""}</span>
       </p>
       <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">

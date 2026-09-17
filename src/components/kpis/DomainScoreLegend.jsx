@@ -18,7 +18,7 @@ export default function DomainScoreLegend() {
       </p>
       <p className="mt-2">
         <span className="font-semibold text-foreground">La flèche</span> indique la direction par rapport
-        à la période précédente — elle est indépendante du score. Un domaine peut donc être « Bon » et en
+        à la période précédente - elle est indépendante du score. Un domaine peut donc être « Bon » et en
         baisse, ou « Attention » et en progression.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">

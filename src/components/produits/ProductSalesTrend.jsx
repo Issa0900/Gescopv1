@@ -34,7 +34,7 @@ export default function ProductSalesTrend({ orders }) {
   const data = useMemo(() => {
     // The month in progress holds only a few days of orders. Plotted as the
     // last point of the curve it looks like sales just collapsed, when it is
-    // simply not over yet — so it is left out, as everywhere else in the app.
+    // simply not over yet - so it is left out, as everywhere else in the app.
     const cm = currentMonthKey();
     const map = {};
     (orders || []).forEach((o) => {

@@ -45,7 +45,7 @@ function fit(xs, ys) {
  * Forecast at x with a prediction interval that grows with the horizon:
  *   SE(x) = s * sqrt(1 + 1/n + (x - x̄)² / Sxx)
  * The "1 +" is what makes it a PREDICTION interval (a future single month)
- * rather than a confidence interval on the mean — the latter is far too narrow
+ * rather than a confidence interval on the mean - the latter is far too narrow
  * to put in front of someone making a cash decision.
  */
 function forecastAt(f, x) {
@@ -219,8 +219,8 @@ export default function Previsions() {
         Qualité d'ajustement : R² de {(result.incomeFit.r2 * 100).toFixed(0)} % sur le chiffre d'affaires
         et {(result.marginFit.r2 * 100).toFixed(0)} % sur la marge
         {result.incomeFit.r2 < 0.5 || result.marginFit.r2 < 0.5
-          ? " — en dessous de 50 %, la tendance explique moins de la moitié des variations : lisez la fourchette, pas le chiffre central."
-          : " — la tendance explique l'essentiel des variations observées."}
+          ? " - en dessous de 50 %, la tendance explique moins de la moitié des variations : lisez la fourchette, pas le chiffre central."
+          : " - la tendance explique l'essentiel des variations observées."}
         {" "}La fourchette grise est un intervalle de prédiction : elle s'élargit avec l'horizon, car une
         projection à 90 jours est mécaniquement moins précise qu'à 30 jours.
         {" "}{result.usesRealCashFlow
@@ -266,7 +266,7 @@ export default function Previsions() {
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
             <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-            <Tooltip formatter={(v) => (v != null ? `${Math.round(v).toLocaleString("fr-CA")} $` : "—")} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+            <Tooltip formatter={(v) => (v != null ? `${Math.round(v).toLocaleString("fr-CA")} $` : "-")} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
             <Area dataKey="range" stroke="none" fill="rgba(59, 130, 246, 0.1)" />
             <Line dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} connectNulls={false} />
             <Line dataKey="forecast" stroke="rgba(59, 130, 246, 0.6)" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />

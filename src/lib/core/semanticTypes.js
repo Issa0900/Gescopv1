@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GESCOP Data Intelligence Core — Semantic Types Catalog
+// GESCOP Data Intelligence Core - Semantic Types Catalog
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // This is the foundational dictionary of the Data Intelligence Core.
@@ -15,31 +15,31 @@
 
 /**
  * Economic roles define how a value behaves in business logic.
- * This is the most critical classification — it determines what operations
+ * This is the most critical classification - it determines what operations
  * are valid on a value (sum, average, compare, compose).
  */
 export const ECONOMIC_ROLES = Object.freeze({
-  /** Cumulative over time — can be summed across periods (revenue, expenses, orders) */
+  /** Cumulative over time - can be summed across periods (revenue, expenses, orders) */
   FLOW: "FLOW",
-  /** Point-in-time value — CANNOT be summed across periods (cash balance, inventory) */
+  /** Point-in-time value - CANNOT be summed across periods (cash balance, inventory) */
   STOCK: "STOCK",
-  /** A rate or percentage — must be weighted-averaged, never summed */
+  /** A rate or percentage - must be weighted-averaged, never summed */
   RATE: "RATE",
-  /** A ratio of two measures — context-dependent aggregation */
+  /** A ratio of two measures - context-dependent aggregation */
   RATIO: "RATIO",
-  /** A count of discrete items — can be summed */
+  /** A count of discrete items - can be summed */
   COUNT: "COUNT",
-  /** A measurable quantity (hours, units, weight) — can be summed if same unit */
+  /** A measurable quantity (hours, units, weight) - can be summed if same unit */
   QUANTITY: "QUANTITY",
-  /** An outstanding balance (receivable, payable) — point-in-time, not summable */
+  /** An outstanding balance (receivable, payable) - point-in-time, not summable */
   BALANCE: "BALANCE",
-  /** An owned resource (equipment, property) — point-in-time valuation */
+  /** An owned resource (equipment, property) - point-in-time valuation */
   ASSET: "ASSET",
-  /** An owed obligation — point-in-time */
+  /** An owed obligation - point-in-time */
   LIABILITY: "LIABILITY",
   /** A computed result from other values (margin amount, net income) */
   RESULT: "RESULT",
-  /** A categorical or identifier field — no arithmetic operations */
+  /** A categorical or identifier field - no arithmetic operations */
   DIMENSION: "DIMENSION",
 });
 
@@ -48,11 +48,11 @@ export const ECONOMIC_ROLES = Object.freeze({
  * This prevents errors like summing monthly cash balances.
  */
 export const TEMPORAL_TYPES = Object.freeze({
-  /** Accumulated over a period — summing across periods is valid */
+  /** Accumulated over a period - summing across periods is valid */
   FLOW: "flow",
-  /** Snapshot at a point in time — only the latest value matters */
+  /** Snapshot at a point in time - only the latest value matters */
   STOCK: "stock",
-  /** A single observation at a moment — similar to stock but event-driven */
+  /** A single observation at a moment - similar to stock but event-driven */
   SNAPSHOT: "snapshot",
   /** Not time-dependent (categories, identifiers) */
   STATIC: "static",
@@ -74,7 +74,7 @@ export const DATA_TYPES = Object.freeze({
 });
 
 /**
- * Aggregation methods — how a value should be combined across records.
+ * Aggregation methods - how a value should be combined across records.
  */
 export const AGGREGATION_METHODS = Object.freeze({
   SUM: "sum",
@@ -103,7 +103,7 @@ export const DOMAINS = Object.freeze({
 });
 
 /**
- * Grain types — the level of detail of each record.
+ * Grain types - the level of detail of each record.
  */
 export const GRAIN_TYPES = Object.freeze({
   TRANSACTION: "transaction",
@@ -125,16 +125,16 @@ export const GRAIN_TYPES = Object.freeze({
 });
 
 /**
- * KPI status — the reliability state of a computed indicator.
+ * KPI status - the reliability state of a computed indicator.
  */
 export const KPI_STATUS = Object.freeze({
   /** All dependencies present, quality sufficient, calculation valid */
   AVAILABLE: "AVAILABLE",
-  /** Some optional data missing — result is valid but incomplete */
+  /** Some optional data missing - result is valid but incomplete */
   CONDITIONAL: "CONDITIONAL",
-  /** Using proxy data or extrapolation — value is an estimate */
+  /** Using proxy data or extrapolation - value is an estimate */
   ESTIMATED: "ESTIMATED",
-  /** Critical dependencies missing — cannot compute */
+  /** Critical dependencies missing - cannot compute */
   UNAVAILABLE: "UNAVAILABLE",
   /** Calculation produced an invalid result (NaN, division by zero) */
   INVALID: "INVALID",
@@ -145,7 +145,7 @@ export const KPI_STATUS = Object.freeze({
 });
 
 /**
- * KPI levels — the hierarchy from raw data to strategic insight.
+ * KPI levels - the hierarchy from raw data to strategic insight.
  */
 export const KPI_LEVELS = Object.freeze({
   /** Raw aggregated value from source data (e.g., total revenue) */
@@ -157,7 +157,7 @@ export const KPI_LEVELS = Object.freeze({
 });
 
 /**
- * Evidence tags for AI governance — how a statement was produced.
+ * Evidence tags for AI governance - how a statement was produced.
  */
 export const EVIDENCE_TAGS = Object.freeze({
   /** Raw verifiable data from the source */
@@ -707,7 +707,7 @@ export const SEMANTIC_TYPES = Object.freeze({
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Defines which economic roles can be combined in charts and calculations.
-// This is the core of the "test ultime" — preventing invalid compositions.
+// This is the core of the "test ultime" - preventing invalid compositions.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -828,7 +828,7 @@ export const COMPARISON_COMPATIBILITY = Object.freeze({
 
 /**
  * Get the full semantic type definition for a given type key.
- * @param {string} typeKey — e.g., 'revenue', 'cash_balance', 'margin'
+ * @param {string} typeKey - e.g., 'revenue', 'cash_balance', 'margin'
  * @returns {object|null} The semantic type definition or null if unknown.
  */
 export function getSemanticType(typeKey) {
@@ -859,7 +859,7 @@ export function canCompare(roleA, roleB) {
 
 /**
  * Get all semantic types that belong to a given domain.
- * @param {string} domain — e.g., 'finance', 'ventes'
+ * @param {string} domain - e.g., 'finance', 'ventes'
  * @returns {string[]} Array of semantic type keys.
  */
 export function getTypesByDomain(domain) {
@@ -870,7 +870,7 @@ export function getTypesByDomain(domain) {
 
 /**
  * Get all semantic types that have a given economic role.
- * @param {string} role — e.g., 'FLOW', 'STOCK'
+ * @param {string} role - e.g., 'FLOW', 'STOCK'
  * @returns {string[]} Array of semantic type keys.
  */
 export function getTypesByRole(role) {

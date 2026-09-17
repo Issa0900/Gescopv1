@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GESCOP Data Intelligence Core — Data Lineage Engine
+// GESCOP Data Intelligence Core - Data Lineage Engine
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Traces the complete path from raw data to computed KPI:
@@ -13,30 +13,30 @@ import { KPI_STATUS } from "./semanticTypes";
 
 /**
  * @typedef {Object} LineageSource
- * @property {string} entity      — Base44 entity name
- * @property {string} field       — Field name in the entity
- * @property {string} canonicalKey — Semantic canonical key
- * @property {number} recordCount — Number of records used
- * @property {string} periodStart — Earliest date in the data (ISO)
- * @property {string} periodEnd   — Latest date in the data (ISO)
- * @property {number} qualityScore — Quality score of this source (0-100)
+ * @property {string} entity      - Base44 entity name
+ * @property {string} field       - Field name in the entity
+ * @property {string} canonicalKey - Semantic canonical key
+ * @property {number} recordCount - Number of records used
+ * @property {string} periodStart - Earliest date in the data (ISO)
+ * @property {string} periodEnd   - Latest date in the data (ISO)
+ * @property {number} qualityScore - Quality score of this source (0-100)
  */
 
 /**
  * @typedef {Object} KpiLineage
- * @property {string} kpiKey         — Canonical KPI key
- * @property {string} name           — Display name
- * @property {*}      value          — Computed value
- * @property {string} unit           — Display unit
- * @property {LineageSource[]} sources — All data sources used
- * @property {string} formula        — Human-readable formula
- * @property {string} formulaCode    — Code-level formula reference
- * @property {string} period         — Period description
- * @property {number} qualityScore   — Aggregated quality score
- * @property {string} status         — KPI_STATUS value
- * @property {string} evidenceTag    — FAIT | CALCUL | INFÉRENCE | HYPOTHÈSE
- * @property {string[]} warnings     — Any warnings about data quality or methodology
- * @property {string} methodology    — Explanation of calculation method
+ * @property {string} kpiKey         - Canonical KPI key
+ * @property {string} name           - Display name
+ * @property {*}      value          - Computed value
+ * @property {string} unit           - Display unit
+ * @property {LineageSource[]} sources - All data sources used
+ * @property {string} formula        - Human-readable formula
+ * @property {string} formulaCode    - Code-level formula reference
+ * @property {string} period         - Period description
+ * @property {number} qualityScore   - Aggregated quality score
+ * @property {string} status         - KPI_STATUS value
+ * @property {string} evidenceTag    - FAIT | CALCUL | INFÉRENCE | HYPOTHÈSE
+ * @property {string[]} warnings     - Any warnings about data quality or methodology
+ * @property {string} methodology    - Explanation of calculation method
  */
 
 /**
@@ -47,9 +47,9 @@ import { KPI_STATUS } from "./semanticTypes";
  * @param {string} params.name
  * @param {*}      params.value
  * @param {string} params.unit
- * @param {string} params.formula — e.g., "(sum(total) - sum(cost)) / sum(total) * 100"
- * @param {string} [params.formulaCode] — Reference to source code function
- * @param {string} [params.methodology] — Why this calculation method was chosen
+ * @param {string} params.formula - e.g., "(sum(total) - sum(cost)) / sum(total) * 100"
+ * @param {string} [params.formulaCode] - Reference to source code function
+ * @param {string} [params.methodology] - Why this calculation method was chosen
  * @param {LineageSource[]} params.sources
  * @param {string} params.status
  * @returns {KpiLineage}
@@ -110,10 +110,10 @@ export function buildKpiLineage({
     warnings.push("Certaines sources ne contiennent aucun enregistrement.");
   }
   if (status === KPI_STATUS.ESTIMATED) {
-    warnings.push("Valeur estimée — données incomplètes.");
+    warnings.push("Valeur estimée - données incomplètes.");
   }
   if (status === KPI_STATUS.CONDITIONAL) {
-    warnings.push("Données optionnelles manquantes — résultat partiel.");
+    warnings.push("Données optionnelles manquantes - résultat partiel.");
   }
 
   return Object.freeze({
@@ -140,9 +140,9 @@ export function buildKpiLineage({
  * @param {string} params.entity
  * @param {string} params.field
  * @param {string} params.canonicalKey
- * @param {Array} params.records — The actual records (used to count and find date range)
- * @param {string} [params.dateField] — Field to use for period detection
- * @param {number} [params.qualityScore] — Pre-computed quality score
+ * @param {Array} params.records - The actual records (used to count and find date range)
+ * @param {string} [params.dateField] - Field to use for period detection
+ * @param {number} [params.qualityScore] - Pre-computed quality score
  * @returns {LineageSource}
  */
 export function buildLineageSource({
@@ -158,7 +158,7 @@ export function buildLineageSource({
     .filter(Boolean)
     .map((d) => new Date(d))
     .filter((d) => !isNaN(d.getTime()))
-    .sort((a, b) => a - b);
+    .sort((a, b) => a.getTime() - b.getTime());
 
   return {
     entity,
@@ -189,7 +189,7 @@ export function formatLineage(lineage) {
   lines.push("Sources :");
   for (const src of lineage.sources) {
     lines.push(
-      `  • ${src.entity}.${src.field} — ${src.recordCount} enregistrements (${src.periodStart || "?"} → ${src.periodEnd || "?"})`
+      `  • ${src.entity}.${src.field} - ${src.recordCount} enregistrements (${src.periodStart || "?"} → ${src.periodEnd || "?"})`
     );
   }
   lines.push("");

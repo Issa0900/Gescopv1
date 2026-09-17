@@ -22,7 +22,7 @@ export default function QualityCard({ set }) {
       {set.coverage && <p className="mt-2 text-xs text-muted-foreground">Couverture : {set.coverage}</p>}
       {set.partialMonth && (
         <p className="mt-1 text-xs text-amber-600">
-          Mois en cours ({set.partialMonth}) présent — exclu des comparaisons
+          Mois en cours ({set.partialMonth}) présent - exclu des comparaisons
         </p>
       )}
       <ul className="mt-2 space-y-1">

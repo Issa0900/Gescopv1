@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GESCOP Data Intelligence Core — Chart Validator
+// GESCOP Data Intelligence Core - Chart Validator
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Validates whether a specific set of KPIs/fields can be visualized together
@@ -14,9 +14,9 @@ import { getSemanticType } from "./semanticTypes";
  * Validates a chart configuration before rendering.
  * 
  * @param {Object} params
- * @param {string} params.chartType — 'composition' (pie, stacked), 'comparison' (bar, line), etc.
- * @param {string[]} params.kpiIds — The IDs of the KPIs or measures to plot
- * @param {Map<string, Object>} params.fieldSemantics — Resolved semantics, if plotting raw fields
+ * @param {string} params.chartType - 'composition' (pie, stacked), 'comparison' (bar, line), etc.
+ * @param {string[]} params.kpiIds - The IDs of the KPIs or measures to plot
+ * @param {Map<string, Object>} params.fieldSemantics - Resolved semantics, if plotting raw fields
  * @returns {Object} Validation result with { valid, reason, suggestion }
  */
 export function validateChartConfig({ chartType, kpiIds = [], fieldSemantics = new Map() }) {
