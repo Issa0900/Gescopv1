@@ -1,5 +1,7 @@
 // Shared import normalization utilities — used by importData and importMultiData
 
+import { buildFieldAliasesFromRegistry } from "../../registry/generateAliases.ts";
+
 // Strip accents/diacritics for comparison (é→e, à→a, etc.)
 export function stripAccents(str: string): string {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -1334,7 +1336,17 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "store_id": "location_id",
   "demand_forecast": "predicted_sales",
   "economic_indicator": "external_metric",
-  "competitor_price": "competitor_price"
+  "competitor_price": "competitor_price",
+
+  // Genere depuis le registre unique (registry/conceptRegistry.ts, spec v2
+  // section 3) : concepts de mesure (revenu, couts, marketing...), y compris
+  // les en-tetes de canal publicitaire ("Facebook Ads", "Google Ads"...) qui
+  // n'avaient jamais d'alias de COLONNE ici — seulement de VALEUR de cellule
+  // dans ENUM_TRANSLATIONS, ce qui les rendait invisibles a l'import quand un
+  // fichier a une colonne nommee "Facebook Ads" plutot qu'une colonne
+  // "canal" contenant la valeur "Facebook Ads". Place en dernier : gagne sur
+  // toute collision avec les alias structurels ecrits a la main ci-dessus.
+  ...buildFieldAliasesFromRegistry(),
 };
 
 export function normalizeKeys(row: Record<string, any>, properties?: Record<string, any>): Record<string, any> {

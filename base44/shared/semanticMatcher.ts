@@ -7,6 +7,7 @@
  */
 
 import { ColumnProfile } from './dataProfiler.ts';
+import { buildConceptMappingsFromRegistry } from '../../registry/generateAliases.ts';
 
 export type SemanticMatch = {
   concept: string;         // e.g. "finance.revenue", "temporal.date", "customer.id"
@@ -15,15 +16,11 @@ export type SemanticMatch = {
   requiresValidation: boolean;
 };
 
-// Dictionnaire basique (qui sera plus tard alimentǸ par un vrai SemanticDictionary)
-const CONCEPT_MAPPINGS = [
-  { concept: 'temporal.date', type: 'date', keywords: ['date', 'periode', 'mois', 'annee', 'timestamp', 'created_at'] },
-  { concept: 'finance.revenue', type: ['decimal', 'currency', 'integer'], keywords: ['ca', 'chiffre', 'affaire', 'revenu', 'revenue', 'ventes', 'sales', 'montant'] },
-  { concept: 'finance.cogs', type: ['decimal', 'currency', 'integer'], keywords: ['cout', 'achat', 'cogs', 'cost', 'depense'] },
-  { concept: 'customer.count', type: 'integer', keywords: ['clients', 'acheteurs', 'customers', 'nb', 'nombre'] },
-  { concept: 'customer.id', type: ['string', 'integer'], keywords: ['client_id', 'id_client', 'customer_id'] },
-  { concept: 'qualitative.feedback', type: 'string', keywords: ['commentaire', 'avis', 'feedback', 'review', 'remarque'] },
-];
+// Genere depuis le registre unique (registry/conceptRegistry.ts, spec v2 section 3).
+// Ne plus ajouter de concept ici : l'ajouter au registre, qui alimente aussi
+// FIELD_ALIASES et contextualRecognition.ts pour que les trois couches ne
+// puissent plus diverger comme elles l'ont fait pour "Facebook Ads".
+const CONCEPT_MAPPINGS = buildConceptMappingsFromRegistry();
 
 function normalizeString(str: string): string {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
