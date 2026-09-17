@@ -1772,8 +1772,8 @@ export function parseDate(value: any, convention?: ConventionDate | null): strin
     if (!dateReelle(year, month, day)) return null;
     return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
   }
-  // "15 janv. 2025" / "15 janvier 2025"
-  m = stripAccents(s.toLowerCase()).match(/^(\d{1,2})\s+([a-z]+)\.?\s+(\d{4})$/);
+  // "15 janv. 2025" / "15 janvier 2025" / "1er janvier 2025" (ordinal du 1er du mois)
+  m = stripAccents(s.toLowerCase()).match(/^(\d{1,2})(?:er|e|eme)?\s+([a-z]+)\.?\s+(\d{4})$/);
   if (m) {
     const mm = MONTHS_FR[m[2].slice(0, 4)] || MONTHS_FR[m[2].slice(0, 3)];
     if (mm) return dateReelle(m[3], mm, m[1]) ? `${m[3]}-${mm}-${m[1].padStart(2, "0")}` : null;
@@ -1900,7 +1900,10 @@ export function normalizeRow(
       type: normalizedType,
       category: r.category || "",
       source: sourceType || "csv",
-      currency: "CAD",
+      // Une colonne Devise/Currency explicite doit etre respectee : sans ce
+      // fallback, un fichier en USD ou EUR etait toujours etiquete CAD,
+      // faussant silencieusement toute conversion ou tout total multi-devise.
+      currency: r.currency || "CAD",
       client: r.client || r.customer_id || "",
       product: r.product || r.product_id || "",
       import_id: importId,

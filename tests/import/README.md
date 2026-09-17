@@ -58,6 +58,8 @@ Chaque suite se termine par `cas en echec : 0` quand tout va bien.
 | `kpi.mjs` | Fenêtres calendaires, marge pondérée, autonomie de trésorerie |
 | `../recette/DS02-synonymes-revenu.ts` | Synonymes de la colonne revenu (CA, Sales, Revenue, "Chiffre d'affaires"…) sur les entités qui stockent le montant sous des noms différents (`amount` vs `total_revenue`) |
 | `../recette/DS03-idempotence-reimport.ts` | Réimporter exactement le même fichier doit être reconnu comme doublon, pas dupliquer chaque ligne |
+| `../recette/DS04-null-vs-zero.ts` | `amount` vide/N/A/tiret doit rester non mesuré (quarantaine), jamais devenir `0` ; un `0` réel doit rester `0` |
+| `../recette/DS05-devises-et-dates.ts` | Devise explicite (USD/EUR) respectée, calendrier (bissextile, mois >12, 31 avril), ordinal français ("1er janvier") |
 
 ## Défauts que ces tests ont trouvés
 
@@ -91,7 +93,13 @@ Ils ne sont pas théoriques — chacun a été trouvé par ces tests et corrigé
     ExecutiveSummary ont `total_revenue`) : la valeur était perdue et la ligne
     mise en quarantaine pour champ obligatoire manquant, sur la colonne
     financière la plus centrale d'un relevé.
-11. **Réimporter le même fichier dupliquait toutes ses lignes.**
+11. **La devise était toujours écrite `"CAD"` en dur**, même quand le fichier
+    avait sa propre colonne Devise/Currency (USD, EUR...) : toute transaction
+    étrangère était silencieusement réétiquetée dans la mauvaise devise.
+12. **`parseDate` rejetait "1er janvier 2026".** Seul le format sans ordinal
+    ("15 janvier 2026") était reconnu ; l'écriture du 1er du mois, très
+    courante en français, partait systématiquement en quarantaine.
+13. **Réimporter le même fichier dupliquait toutes ses lignes.**
     `generateFingerprint` valait `JSON.stringify(row)`, et chaque ligne
     normalisée porte un `import_id` propre à SON import — donc deux imports
     du même fichier produisaient deux empreintes différentes. La
