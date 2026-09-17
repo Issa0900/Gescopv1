@@ -1,71 +1,173 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useCompany } from "@/hooks/useCompany";
-import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { Settings, Save, Check, Shield, LogOut, User, FileLock2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import {
+  Building2,
+  Briefcase,
+  GitBranch,
+  Package,
+  Users2,
+  Target,
+  BarChart3,
+  BookOpen,
+  BrainCircuit,
+  Radar,
+  Database,
+  Shield,
+  Sliders,
+  Save,
+  Check,
+  CheckCircle2,
+  Sparkles
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import CompetitorsManager from "@/components/settings/CompetitorsManager";
 
-const objectives = [
-  "Augmenter les ventes",
-  "Améliorer la rentabilité",
-  "Réduire les coûts",
-  "Améliorer la trésorerie",
-  "Automatiser",
-  "Développer un marché",
-  "Réduire les risques",
-  "Améliorer la productivité",
-  "Préparer une croissance",
+// Settings Subpanels
+import CompanyProfilePanel from "@/components/settings/CompanyProfilePanel";
+import BusinessModelPanel from "@/components/settings/BusinessModelPanel";
+import OrganizationPanel from "@/components/settings/OrganizationPanel";
+import ProductsServicesPanel from "@/components/settings/ProductsServicesPanel";
+import ClientsMarketsPanel from "@/components/settings/ClientsMarketsPanel";
+import StrategicGoalsPanel from "@/components/settings/StrategicGoalsPanel";
+import KpiManagementPanel from "@/components/settings/KpiManagementPanel";
+import DictionaryPanel from "@/components/settings/DictionaryPanel";
+import UnderstandingPanel from "@/components/settings/UnderstandingPanel";
+import RadarSettingsPanel from "@/components/settings/RadarSettingsPanel";
+import SourcesConnectionsPanel from "@/components/settings/SourcesConnectionsPanel";
+import UsersAccessPanel from "@/components/settings/UsersAccessPanel";
+import PreferencesPanel from "@/components/settings/PreferencesPanel";
+
+const SETTINGS_SECTIONS = [
+  {
+    group: "Contexte Entreprise",
+    items: [
+      { id: "entreprise", label: "Entreprise", icon: Building2, desc: "Profil de référence & fiche d'identité" },
+      { id: "activite", label: "Activité & Modèle", icon: Briefcase, desc: "Modèle d'affaires & flux de revenus" },
+      { id: "organisation", label: "Organisation & Succursales", icon: GitBranch, desc: "Régions, succursales et départements" },
+      { id: "produits", label: "Produits & Services", icon: Package, desc: "Catalogue, gammes et fournisseurs" },
+      { id: "clients", label: "Clients & Marchés", icon: Users2, desc: "Typologie de clientèle et canaux" },
+      { id: "objectifs", label: "Objectifs Stratégiques", icon: Target, desc: "Cibles de croissance & priorités" },
+    ]
+  },
+  {
+    group: "Intelligence & Sémantique",
+    items: [
+      { id: "kpis", label: "KPI & Indicateurs", icon: BarChart3, desc: "Indicateurs découverts & éligibles" },
+      { id: "dictionnaire", label: "Dictionnaire Entreprise", icon: BookOpen, desc: "Vocabulaire interne & concepts GESCOP" },
+      { id: "comprehension", label: "Ce que GESCOP a compris", icon: BrainCircuit, desc: "Niveau de confiance & audit sémantique" },
+    ]
+  },
+  {
+    group: "Surveillance",
+    items: [
+      { id: "radar", label: "Radar & 12 Domaines", icon: Radar, desc: "Veille externe & signaux concurrentiels" },
+    ]
+  },
+  {
+    group: "Données & Flux",
+    items: [
+      { id: "sources", label: "Sources & Connexions", icon: Database, desc: "Fichiers, ERP Acomba, Shopify, API" },
+    ]
+  },
+  {
+    group: "Système & Accès",
+    items: [
+      { id: "utilisateurs", label: "Utilisateurs & Accès", icon: Shield, desc: "Équipe, rôles et matrice de permissions" },
+      { id: "preferences", label: "Préférences & Conformité", icon: Sliders, desc: "Devise, date, alertes et Loi 25" },
+    ]
+  }
 ];
 
 export default function Parametres() {
   const { company, refetch } = useCompany();
-  const { user, logout } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "entreprise");
   const [saving, setSaving] = useState(false);
+  const [hasSavedOnce, setHasSavedOnce] = useState(false);
   const [form, setForm] = useState(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     if (company) {
       setForm({
         name: company.name || "",
+        trade_name: company.trade_name || "",
+        description: company.description || "",
         website: company.website || "",
         sector: company.sector || "",
+        subsector: company.subsector || "",
         location: company.location || "",
+        creation_year: company.creation_year || "",
         employee_count: company.employee_count || 1,
+        revenue: company.revenue || "",
+        currency: company.currency || "CAD",
+        language: company.language || "fr",
         business_model: company.business_model || "",
         products: company.products || "",
         services: company.services || "",
         clientele: company.clientele || "",
         suppliers: company.suppliers || "",
-        revenue: company.revenue || "",
         tools: company.tools || "",
         objectives: company.objectives || [],
+        strategic_goals: company.strategic_goals || [],
+        organization_structure: company.organization_structure || {
+          regions: ["Grand Montréal", "Laurentides", "Estrie", "Québec Capitale"],
+          branches: [
+            { id: "b1", name: "Succursale Montréal - Centre", region: "Grand Montréal", type: "Succursale physique" },
+            { id: "b2", name: "Succursale Laval", region: "Grand Montréal", type: "Succursale physique" },
+            { id: "b3", name: "Succursale Saint-Jérôme", region: "Laurentides", type: "Succursale physique" },
+            { id: "b4", name: "Boutique en ligne (E-commerce)", region: "National", type: "Canal numérique" }
+          ],
+          departments: [
+            { id: "d1", name: "Ventes & Conseil Client", manager: "Direction des Ventes" },
+            { id: "d2", name: "Achats & Gestion des stocks", manager: "Approvisionnement" },
+            { id: "d3", name: "Comptabilité & Finance", manager: "Contrôleur financier" },
+            { id: "d4", name: "Marketing & Acquisition", manager: "Responsable Marketing" }
+          ]
+        },
+        company_dictionary: company.company_dictionary || [
+          { term: "Succursale", maps_to: "location_id", description: "Point de vente géographique distinct" },
+          { term: "Coût Total ($)", maps_to: "total_cost", description: "Coût d'acquisition des marchandises vendues (COGS)" },
+          { term: "Profit Brut ($)", maps_to: "gross_profit", description: "Bénéfice brut avant charges d'exploitation" },
+          { term: "% Marge", maps_to: "gross_margin", description: "Taux de marge brute calculé en pourcentage" },
+          { term: "Date Transaction", maps_to: "date", description: "Horodatage de la vente au point de caisse" }
+        ],
+        target_markets: company.target_markets || {},
+        monitored_domains: company.monitored_domains || [
+          "concurrence", "marche_demande", "clients_comportements", "prix_offres",
+          "produits_services", "marketing_communication", "technologie_innovation",
+          "economie_finance_externe", "reglementation_juridique", "territoire_environnement",
+          "chaine_approvisionnement", "rh_emploi"
+        ],
+        connected_sources: company.connected_sources || [],
+        preferences: company.preferences || {
+          alert_frequency: "daily",
+          notify_anomalies: true,
+          notify_radar_signals: true,
+          date_format: "YYYY-MM-DD",
+          number_format: "fr-CA"
+        }
       });
     }
   }, [company]);
 
-  if (!company) {
-    return <p className="text-sm text-muted-foreground">Aucune entreprise configurée.</p>;
-  }
-  if (!form) return null;
-
-  const toggleObjective = (obj) => {
-    setForm((f) => ({
-      ...f,
-      objectives: f.objectives.includes(obj)
-        ? f.objectives.filter((o) => o !== obj)
-        : [...f.objectives, obj],
-    }));
+  const selectTab = (tabId) => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId });
   };
 
-  const save = async () => {
+  const handleSave = async () => {
+    if (!company?.id) return;
     setSaving(true);
     try {
       await base44.entities.Company.update(company.id, {
@@ -74,156 +176,198 @@ export default function Parametres() {
         employee_count: Number(form.employee_count) || 1,
       });
       await refetch();
-      toast({ title: "Modifications enregistrées" });
+      setHasSavedOnce(true);
+      toast({
+        title: "Configuration enregistrée",
+        description: "Le profil de contexte d'entreprise et les paramètres GESCOP ont été mis à jour avec succès."
+      });
     } catch (e) {
-      toast({ title: "Erreur: " + e.message, variant: "destructive" });
+      toast({
+        title: "Erreur d'enregistrement",
+        description: e.message || "Une erreur est survenue lors de la sauvegarde.",
+        variant: "destructive"
+      });
     } finally {
       setSaving(false);
     }
   };
 
+  if (!company) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-sm text-muted-foreground">Aucune entreprise configurée.</p>
+      </div>
+    );
+  }
+
+  if (!form) return null;
+
+  // Active section metadata
+  const allItems = SETTINGS_SECTIONS.flatMap((s) => s.items);
+  const currentItem = allItems.find((item) => item.id === activeTab) || allItems[0];
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Paramètres</h1>
-        <p className="mt-1 text-muted-foreground">Profil de l'entreprise et objectifs de pilotage.</p>
-      </div>
-
-      {/* Company profile */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <Settings className="h-5 w-5 text-muted-foreground" />
-          <h2 className="font-semibold">Profil de l'entreprise</h2>
+    <div className="space-y-6">
+      {/* Header with quick status and Save Button */}
+      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Building2 className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                Centre de Configuration & Contexte Entreprise
+              </h1>
+              <p className="text-xs text-muted-foreground sm:text-sm">
+                Référentiel central alimentant l'intelligence sémantique, les KPI, le Radar et la prise de décision.
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <Label>Nom</Label>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          </div>
-          <div className="sm:col-span-2">
-            <Label>Site web</Label>
-            <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://exemple.com" />
-          </div>
-          <div>
-            <Label>Secteur</Label>
-            <Input value={form.sector} onChange={(e) => setForm({ ...form, sector: e.target.value })} />
-          </div>
-          <div>
-            <Label>Localisation</Label>
-            <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
-          </div>
-          <div>
-            <Label>Employés</Label>
-            <Input type="number" value={form.employee_count} onChange={(e) => setForm({ ...form, employee_count: e.target.value })} />
-          </div>
-          <div>
-            <Label>Chiffre d'affaires ($)</Label>
-            <Input type="number" value={form.revenue} onChange={(e) => setForm({ ...form, revenue: e.target.value })} />
-          </div>
-          <div className="sm:col-span-2">
-            <Label>Modèle d'affaires</Label>
-            <Input value={form.business_model} onChange={(e) => setForm({ ...form, business_model: e.target.value })} />
-          </div>
-          <div>
-            <Label>Produits</Label>
-            <Textarea value={form.products} onChange={(e) => setForm({ ...form, products: e.target.value })} rows={2} />
-          </div>
-          <div>
-            <Label>Services</Label>
-            <Textarea value={form.services} onChange={(e) => setForm({ ...form, services: e.target.value })} rows={2} />
-          </div>
-          <div>
-            <Label>Clientèle</Label>
-            <Textarea value={form.clientele} onChange={(e) => setForm({ ...form, clientele: e.target.value })} rows={2} />
-          </div>
-          <div>
-            <Label>Fournisseurs</Label>
-            <Textarea value={form.suppliers} onChange={(e) => setForm({ ...form, suppliers: e.target.value })} rows={2} placeholder="Principaux fournisseurs" />
-          </div>
-          <div className="sm:col-span-2">
-            <Label>Outils utilisés</Label>
-            <Input value={form.tools} onChange={(e) => setForm({ ...form, tools: e.target.value })} />
-          </div>
+
+        <div className="flex items-center gap-3">
+          {hasSavedOnce && (
+            <span className="hidden items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 sm:inline-flex">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Synchronisé
+            </span>
+          )}
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="shadow-sm transition-all gap-2"
+          >
+            {saving ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                Enregistrement…
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                Enregistrer les modifications
+              </>
+            )}
+          </Button>
         </div>
       </div>
 
-      {/* Objectives */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h2 className="mb-1 font-semibold">Objectifs</h2>
-        <p className="mb-4 text-sm text-muted-foreground">Ces objectifs orientent les recommandations du système.</p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {objectives.map((obj) => (
-            <button
-              key={obj}
-              onClick={() => toggleObjective(obj)}
-              className={cn(
-                "flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm font-medium transition-all",
-                form.objectives.includes(obj)
-                  ? "border-primary bg-primary/5"
-                  : "border-border text-muted-foreground hover:border-primary/40"
-              )}
-            >
-              <div className={cn(
-                "flex h-5 w-5 items-center justify-center rounded border",
-                form.objectives.includes(obj) ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/30"
-              )}>
-                {form.objectives.includes(obj) && <Check className="h-3 w-3" />}
+      {/* Main Layout: Navigation Sidebar + Content Area */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* Navigation Sidebar (3 cols on desktop) */}
+        <div className="lg:col-span-3">
+          <div className="sticky top-4 space-y-5 rounded-2xl border border-border bg-card p-4 shadow-xs">
+            {SETTINGS_SECTIONS.map((section, sIdx) => (
+              <div key={sIdx} className="space-y-1.5">
+                <h3 className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {section.group}
+                </h3>
+                <nav className="space-y-1">
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => selectTab(item.id)}
+                        className={cn(
+                          "w-full flex items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-medium transition-all",
+                          isActive
+                            ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                        )}
+                      >
+                        <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </nav>
               </div>
-              {obj}
-            </button>
-          ))}
-        </div>
-      </div>
+            ))}
 
-      {/* Security info */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <div className="mb-3 flex items-center gap-2">
-          <Shield className="h-5 w-5 text-emerald-600" />
-          <h2 className="font-semibold">Sécurité & conformité</h2>
-        </div>
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <p>✓ Données hébergées au Canada</p>
-          <p>✓ Conforme à la Loi 25 (protection des renseignements personnels, Québec)</p>
-          <p>✓ Chiffrement des données au repos et en transit</p>
-          <p>✓ Séparation des organisations — vos données ne sont jamais partagées</p>
-          <p>✓ Journal d'audit complet des imports</p>
-        </div>
-        <Link
-          to="/politique-confidentialite"
-          className="mt-4 inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-accent/30"
-        >
-          <FileLock2 className="h-4 w-4 text-primary" />
-          Consulter la politique de confidentialité
-        </Link>
-      </div>
-
-      {/* Competitors */}
-      <CompetitorsManager />
-
-      {/* Account */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <User className="h-5 w-5 text-muted-foreground" />
-          <h2 className="font-semibold">Compte</h2>
-        </div>
-        {user && (
-          <div className="mb-4 space-y-1">
-            <p className="text-sm font-medium">{user.full_name || user.email}</p>
-            <p className="text-sm text-muted-foreground">{user.email}</p>
-            <p className="text-xs capitalize text-muted-foreground">Rôle: {user.role || "utilisateur"}</p>
+            {/* Micro Knowledge Summary */}
+            <div className="border-t border-border pt-4">
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-[11px] text-muted-foreground space-y-1">
+                <div className="flex items-center gap-1.5 font-medium text-foreground">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  Mémoire GESCOP
+                </div>
+                <p className="leading-relaxed">
+                  Toute information renseignée ici permet au moteur d'import d'éviter les faux rejets et d'adapter instantanément les formules de calcul.
+                </p>
+              </div>
+            </div>
           </div>
-        )}
-        <Button variant="outline" onClick={() => logout()}>
-          <LogOut className="mr-2 h-4 w-4" />
-          Se déconnecter
-        </Button>
-      </div>
+        </div>
 
-      <div className="flex justify-end">
-        <Button onClick={save} disabled={saving}>
-          <Save className="mr-2 h-4 w-4" />
-          {saving ? "Enregistrement…" : "Enregistrer les modifications"}
-        </Button>
+        {/* Dynamic Content Panel (9 cols on desktop) */}
+        <div className="space-y-6 lg:col-span-9">
+          {activeTab === "entreprise" && (
+            <CompanyProfilePanel form={form} setForm={setForm} />
+          )}
+
+          {activeTab === "activite" && (
+            <BusinessModelPanel form={form} setForm={setForm} />
+          )}
+
+          {activeTab === "organisation" && (
+            <OrganizationPanel form={form} setForm={setForm} />
+          )}
+
+          {activeTab === "produits" && (
+            <ProductsServicesPanel form={form} setForm={setForm} />
+          )}
+
+          {activeTab === "clients" && (
+            <ClientsMarketsPanel form={form} setForm={setForm} />
+          )}
+
+          {activeTab === "objectifs" && (
+            <StrategicGoalsPanel form={form} setForm={setForm} />
+          )}
+
+          {activeTab === "kpis" && (
+            <KpiManagementPanel form={form} setForm={setForm} />
+          )}
+
+          {activeTab === "dictionnaire" && (
+            <DictionaryPanel form={form} setForm={setForm} />
+          )}
+
+          {activeTab === "comprehension" && (
+            <UnderstandingPanel form={form} setForm={setForm} />
+          )}
+
+          {activeTab === "radar" && (
+            <RadarSettingsPanel form={form} setForm={setForm} />
+          )}
+
+          {activeTab === "sources" && (
+            <SourcesConnectionsPanel form={form} setForm={setForm} />
+          )}
+
+          {activeTab === "utilisateurs" && (
+            <UsersAccessPanel form={form} setForm={setForm} />
+          )}
+
+          {activeTab === "preferences" && (
+            <PreferencesPanel form={form} setForm={setForm} />
+          )}
+
+          {/* Bottom Save Bar */}
+          <div className="flex items-center justify-between rounded-xl border border-border bg-card p-4 shadow-xs">
+            <div className="text-xs text-muted-foreground">
+              Modifications en cours pour <span className="font-semibold text-foreground">{form.name || "l'entreprise"}</span>
+            </div>
+            <Button onClick={handleSave} disabled={saving} size="sm" className="gap-2">
+              <Save className="h-4 w-4" />
+              {saving ? "Enregistrement…" : "Enregistrer les modifications"}
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

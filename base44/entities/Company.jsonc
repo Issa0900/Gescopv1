@@ -69,6 +69,53 @@
     "stock_dormant_months": {
       "type": "number",
       "default": 3
+    },
+    "trade_name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "subsector": {
+      "type": "string"
+    },
+    "currency": {
+      "type": "string",
+      "default": "CAD"
+    },
+    "language": {
+      "type": "string",
+      "default": "fr"
+    },
+    "creation_year": {
+      "type": "number"
+    },
+    "organization_structure": {
+      "type": "object"
+    },
+    "company_dictionary": {
+      "type": "object"
+    },
+    "connected_sources": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "target_markets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "monitored_domains": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "preferences": {
+      "type": "object"
     }
   },
   "required": [
