@@ -8,9 +8,23 @@
     "description": {
       "type": "string"
     },
+    "domain": {
+      "type": "string"
+    },
+    "subdomain": {
+      "type": "string"
+    },
     "family": {
       "type": "string",
       "enum": [
+        "market",
+        "competitors",
+        "commercial",
+        "tech",
+        "economy",
+        "legal",
+        "territory_resources",
+        "ecosystem",
         "gouvernement",
         "economie",
         "marche",
@@ -20,7 +34,16 @@
         "actualites"
       ]
     },
+    "entity_name": {
+      "type": "string"
+    },
+    "event": {
+      "type": "string"
+    },
     "relevance_score": {
+      "type": "number"
+    },
+    "confidence": {
       "type": "number"
     },
     "impact": {
@@ -41,10 +64,25 @@
       "type": "string",
       "format": "date"
     },
+    "location": {
+      "type": "string"
+    },
+    "fact": {
+      "type": "string"
+    },
+    "inference": {
+      "type": "string"
+    },
+    "monitoring_tip": {
+      "type": "string"
+    },
     "relevance_reason": {
       "type": "string"
     },
     "recommended_action": {
+      "type": "string"
+    },
+    "affected_kpis": {
       "type": "string"
     },
     "status": {

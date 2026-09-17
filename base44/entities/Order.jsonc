@@ -21,7 +21,11 @@
         "shopify",
         "boutique",
         "b2b",
-        "instagram"
+        "instagram",
+        "web",
+        "en_ligne",
+        "magasin",
+        "autre"
       ]
     },
     "product_id": {
@@ -110,6 +114,15 @@
       ]
     },
     "region": {
+      "type": "string"
+    },
+    "location_id": {
+      "type": "string"
+    },
+    "succursale": {
+      "type": "string"
+    },
+    "store": {
       "type": "string"
     },
     "status": {

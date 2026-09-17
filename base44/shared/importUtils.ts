@@ -1,4 +1,5 @@
 // Shared import normalization utilities — used by importData and importMultiData
+import { ENTITY_SCHEMAS } from "./entitySchemas.ts";
 
 import { buildFieldAliasesFromRegistry } from "../../registry/generateAliases.ts";
 
@@ -1016,6 +1017,15 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "identifiant_commande": "order_id",
   "numero_commande": "order_id",
   "no_commande": "order_id",
+  "num_commande": "order_id",
+  "num_cde": "order_id",
+  "no_cde": "order_id",
+  "cde_no": "order_id",
+  "cde_id": "order_id",
+  "ref_cde": "order_id",
+  "ref_commande": "order_id",
+  "bon_commande": "order_id",
+  "bc_no": "order_id",
   "order_id": "order_id",
   "order_number": "order_id",
   "order_reference": "order_id",
@@ -1070,14 +1080,40 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "branch": "store",
   "retail_location": "store",
   "location": "store",
-  "canal_de_vente": "sales_channel",
-  "canal_commercial": "sales_channel",
-  "canal": "sales_channel",
-  "mode_de_vente": "sales_channel",
-  "circuit_de_vente": "sales_channel",
-  "sales_channel": "sales_channel",
-  "sales_source": "sales_channel",
-  "distribution_channel": "sales_channel",
+  "canal_de_vente": "channel",
+  "canal_commercial": "channel",
+  "canal": "channel",
+  "canal_publicitaire": "channel",
+  "canal_marketing": "channel",
+  "canal_de_campagne": "channel",
+  "canal_de_communication": "channel",
+  "mode_de_vente": "channel",
+  "circuit_de_vente": "channel",
+  "sales_channel": "channel",
+  "sales_source": "channel",
+  "distribution_channel": "channel",
+  "budget_alloue": "budget",
+  "budget_total": "budget",
+  "budget_campagne": "budget",
+  "depenses_reelles": "spend",
+  "depense_reelle": "spend",
+  "depense": "spend",
+  "depenses": "spend",
+  "cout_campagne": "spend",
+  "frais_marketing": "spend",
+  "revenu_ventes": "revenue",
+  "revenus_ventes": "revenue",
+  "chiffre_affaires_campagne": "revenue",
+  "ca_genere": "revenue",
+  "ventes_generees": "revenue",
+  "cout_achat": "unit_cost",
+  "cout_unitaire": "unit_cost",
+  "prix_achat": "unit_cost",
+  "purchase_cost": "unit_cost",
+  "statut_paiement": "payment_status",
+  "etat_paiement": "payment_status",
+  "etat_livraison": "fulfillment_status",
+  "statut_livraison": "fulfillment_status",
   "vendeur": "sales_rep",
   "representant_commercial": "sales_rep",
   "conseiller_ventes": "sales_rep",
@@ -1321,9 +1357,27 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "cash_flow": "amount", // General money movement
   
   // Inventory & Supply Chain
-  "inventory": "stock_quantity",
-  "inventaire": "stock_quantity",
-  "stock_on_hand": "stock_quantity",
+  "inventory": "inventory_level",
+  "inventaire": "inventory_level",
+  "stock_on_hand": "inventory_level",
+  "qte_en_stock": "inventory_level",
+  "qte_stock": "inventory_level",
+  "quantite_en_stock": "inventory_level",
+  "stock_quantity": "inventory_level",
+  "stock_disponible": "inventory_level",
+  "seuil_d_alerte": "reorder_point",
+  "seuil_alerte": "reorder_point",
+  "seuil_reapprovisionnement": "reorder_point",
+  "point_de_commande": "reorder_point",
+  "reorder_point": "reorder_point",
+  "valeur_du_stock_cout": "inventory_value",
+  "valeur_stock_cout": "inventory_value",
+  "valeur_stock_vente": "inventory_value",
+  "valeur_du_stock": "inventory_value",
+  "valeur_stock": "inventory_value",
+  "prix_de_vente": "selling_price",
+  "prix_vente": "selling_price",
+  "ugs": "sku",
   "fournisseur": "supplier_name",
   "supplier": "supplier_name",
   "lead_time": "delivery_time",
@@ -1404,7 +1458,7 @@ const ENUM_TRANSLATIONS: Record<string, string[]> = {
   "shipped": ["expedie"], "processing": ["en_preparation", "en_cours"], "completed": ["livre", "terminee", "complete"], "cancelled": ["annule", "annulee"], "returned": ["retourne"],
   "received": ["recu"], "done": ["terminee"], "todo": ["a_faire"], "in progress": ["en_cours"], "in_progress": ["en_cours"],
   "none": ["aucun"], "requested": ["demande"], "approved": ["approuve"], "rejected": ["refuse", "rejetee"],
-  
+
   // Levels, Priorities, Risks
   "low": ["faible", "bas", "basse", "inferieur"], "medium": ["moyenne", "modere", "moyen", "egal"], "high": ["elevee", "eleve", "important", "superieur", "haute"], "urgent": ["urgente", "critique"],
   "critical": ["critique", "urgente"],
@@ -1413,9 +1467,29 @@ const ENUM_TRANSLATIONS: Record<string, string[]> = {
   "new": ["nouveau", "nouvelle"], "seen": ["vu", "lue"], "resolved": ["resolu"], "archived": ["archivee", "archive"],
   "active": ["active", "actif"], "actif": ["active", "actif"], "inactive": ["inactif", "pause", "terminee"], "inactif": ["inactif", "pause", "terminee"], "lost": ["perdu"], "dormant": ["dormant"], "terminated": ["terminee"],
   "paused": ["pause"], "planned": ["planifiee"], "discontinued": ["discontinue"],
-  
+  "terminee": ["terminee"], "termine": ["terminee"],
+
   // Channels & Marketing
-  "web": ["shopify"], "google ads": ["google_ads"], "meta ads": ["meta_ads"], "facebook ads": ["meta_ads"], "facebook": ["meta_ads"], "fb ads": ["meta_ads"], "fb": ["meta_ads"], "instagram": ["instagram"], "email": ["email"], "courriel": ["email"], "tiktok": ["tiktok"], "affichage / web": ["google_ads"], "affichage": ["google_ads"],
+  "web": ["web", "shopify", "display"],
+  "google ads": ["google_ads"], "google": ["google_ads"], "sea": ["google_ads"],
+  "meta ads": ["meta_ads"], "meta": ["meta_ads"], "facebook ads": ["meta_ads"],
+  "facebook": ["meta_ads"], "fb ads": ["meta_ads"], "fb": ["meta_ads"],
+  "instagram": ["instagram", "meta_ads"], "instagram ads": ["instagram", "meta_ads"],
+  "tiktok": ["tiktok"], "tiktok ads": ["tiktok"],
+  "email": ["email"], "courriel": ["email"], "courriels": ["email"],
+  "infolettre": ["email"], "infolettres": ["email"], "newsletter": ["email"], "newsletters": ["email"],
+  "mailing": ["email"], "mail": ["email"], "e-mail": ["email"],
+  "affichage / web": ["display", "web"], "affichage": ["display", "web"],
+  "web / affichage": ["display", "web"], "display": ["display", "web"],
+  "banniere": ["display", "web"], "banner": ["display", "web"],
+  "partenariat": ["partenariat", "affiliation"], "partenariats": ["partenariat"],
+  "sponsor": ["partenariat"], "sponsoring": ["partenariat"], "sepaq": ["partenariat"],
+  "affiliation": ["affiliation"], "affilie": ["affiliation"],
+  "influenceur": ["influenceurs", "instagram", "tiktok"], "influenceurs": ["influenceurs"],
+  "linkedin": ["linkedin"], "linkedin ads": ["linkedin"],
+  "youtube": ["youtube"], "youtube ads": ["youtube"],
+  "sms": ["sms"], "print": ["print"], "courrier": ["print"],
+  "autre": ["autre"], "other": ["autre"], "divers": ["autre"],
 
   // Employee & Customer types & Departments
   "full time": ["temps_plein"], "part time": ["temps_partiel"], "contractor": ["contractuel"], "intern": ["stagiaire"],
@@ -1431,7 +1505,6 @@ const ENUM_TRANSLATIONS: Record<string, string[]> = {
 
   // Inventory
   "optimal": ["optimal"], "out of stock": ["rupture"], "overstock": ["surstock"], "low stock": ["faible", "proche_rupture"],
-
   // French capitalized/common variants → canonical enum values
   "alerte": ["proche_rupture", "faible"], "normal": ["optimal"],
   "bas": ["inferieur"], "moyen": ["egal"], "eleve": ["superieur"],
@@ -1502,7 +1575,74 @@ export function coerceEnum(value: any, enumOptions: string[]): any {
     const viaTranslation = (ENUM_TRANSLATIONS[w] || []).find((t) => enumOptions.includes(t));
     if (viaTranslation) return viaTranslation;
   }
+  // Si la valeur spécifique est inconnue mais que l'entité prévoit "autre",
+  // replier sur "autre" au lieu de rejeter la ligne de données.
+  if (enumOptions.includes("autre")) {
+    return "autre";
+  }
   return value;
+}
+
+/**
+ * Détecte si une ligne brute (tableau) ou un enregistrement (objet) représente une ligne
+ * de total, sous-total, synthèse ou moyenne Excel qui ne doit pas être traitée
+ * comme un enregistrement individuel de données (évite les fausses alertes de quarantaine
+ * et les doublons de chiffres d'affaires).
+ */
+export function isSummaryOrTotalRow(rowOrArray: any): boolean {
+  if (!rowOrArray) return false;
+
+  const SUMMARY_KEYWORDS = [
+    "total", "totaux", "sous-total", "sous total", "subtotal", "sub-total",
+    "total general", "total global", "grand total", "somme", "sum", "moyenne",
+    "average", "recapitulatif", "synthese", "totales", "totale"
+  ];
+
+  // Cas 1 : Matrice brute (tableau de cellules)
+  if (Array.isArray(rowOrArray)) {
+    const nonEmpties = rowOrArray.filter((c) => String(c ?? "").trim() !== "");
+    if (nonEmpties.length === 0) return false;
+
+    const firstVal = stripAccents(String(nonEmpties[0]).toLowerCase().trim());
+    if (SUMMARY_KEYWORDS.some((kw) => firstVal === kw || firstVal.startsWith(kw + " ") || firstVal.endsWith(" " + kw))) {
+      // Une ligne de total contient très souvent des cellules vides là où se trouvent les libellés détaillés
+      const emptyCount = rowOrArray.length - nonEmpties.length;
+      if (emptyCount >= Math.max(1, Math.floor(rowOrArray.length * 0.2))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Cas 2 : Objet mappé
+  if (typeof rowOrArray === "object") {
+    // 1. Vérifier les champs identifiants majeurs (order_id, id, transaction_id, etc.)
+    const idFields = ["order_id", "id", "transaction_id", "invoice_id", "campaign_id", "customer_id", "product_id", "employee_id", "supplier_id"];
+    for (const f of idFields) {
+      if (rowOrArray[f]) {
+        const str = stripAccents(String(rowOrArray[f]).toLowerCase().trim());
+        if (SUMMARY_KEYWORDS.some((kw) => str === kw || str.startsWith(kw + " ") || str.endsWith(" " + kw))) {
+          return true;
+        }
+      }
+    }
+
+    // 2. Vérifier si un champ textuel vaut "TOTAL" / "Sous-total" alors que date ou nom est vide
+    const hasTotalWord = Object.values(rowOrArray).some((v) => {
+      if (typeof v !== "string") return false;
+      const s = stripAccents(v.toLowerCase().trim());
+      return SUMMARY_KEYWORDS.includes(s);
+    });
+
+    if (hasTotalWord) {
+      if (!rowOrArray.date || String(rowOrArray.date).trim() === "" ||
+          !rowOrArray.customer_id || String(rowOrArray.customer_id).trim() === "") {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 // Normalize enum fields based on the entity schema properties
@@ -1703,17 +1843,16 @@ export type EnumIssue = { field: string; value: string; allowed: string[] };
 export function normalizeRow(
   entityName: string,
   row: Record<string, any>,
-  importId: string,
-  properties: Record<string, any> | null,
+  importId: string = "default",
+  properties: Record<string, any> | null = null,
   sourceType?: string,
-  // Optional sink for diagnostics. A rejected enum value used to be dropped in
-  // silence, and the row was then reported as "champ obligatoire manquant" —
-  // pointing at a field the user could plainly see in their file. Collecting
-  // the refused values lets the import tell the truth: the field is there, its
-  // value is not one of the accepted ones.
   enumIssues?: EnumIssue[],
 ): Record<string, any> {
-  const r = normalizeKeys(row, properties);
+  const schemaProps = properties || ENTITY_SCHEMAS[entityName]?.properties || null;
+
+  if (isSummaryOrTotalRow(row)) return {};
+  const r = normalizeKeys(row, schemaProps);
+  if (isSummaryOrTotalRow(r)) return {};
 
   // Preserve explicit Transaction headers before aliases or legacy plans can
   // reinterpret them. This is intentionally based on the raw row: a previous
@@ -1728,7 +1867,7 @@ export function normalizeRow(
 
   // A single "name"/"nom" column on an entity that stores first + last name would
   // otherwise be dropped entirely, leaving nameless records.
-  if (properties?.first_name && r.name && !r.first_name) {
+  if (schemaProps?.first_name && r.name && !r.first_name) {
     const parts = String(r.name).trim().split(/\s+/);
     r.first_name = parts[0];
     if (parts.length > 1) r.last_name = parts.slice(1).join(" ");
@@ -1825,18 +1964,116 @@ export function normalizeRow(
     }
   }
 
+  // --- ORDER RESCUE HOOKS ---
+  if (entityName === "Order") {
+    if (!r.order_id) {
+      r.order_id = r.transaction_id || r.id_transaction || r.num_cde || r.no_cde || r.num_commande || r.numero_commande || r.order_number || r.cde_no || r.cde_id || r.ref_commande || r.code_commande || r.id;
+      if (!r.order_id && (r.location_id || r.succursale || r.store || r.location)) {
+        const loc = String(r.location_id || r.succursale || r.store || r.location).trim();
+        r.order_id = `ORD-${stripAccents(loc).toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
+      }
+    }
+    if (!r.date) {
+      r.date = new Date().toISOString().slice(0, 10);
+    }
+    const qty = parseNumber(r.quantity) || 1;
+    const price = parseNumber(r.unit_price) || 0;
+    const cost = parseNumber(r.unit_cost) || 0;
+    if (r.total_revenue == null || r.total_revenue === "") {
+      if (price > 0) r.total_revenue = Math.round(qty * price * 100) / 100;
+    }
+    if (r.total_cost == null || r.total_cost === "") {
+      if (cost > 0) r.total_cost = Math.round(qty * cost * 100) / 100;
+    }
+    if (r.gross_profit == null || r.gross_profit === "") {
+      const totRev = parseNumber(r.total_revenue);
+      const totCost = parseNumber(r.total_cost);
+      if (totRev != null && totCost != null) r.gross_profit = Math.round((totRev - totCost) * 100) / 100;
+    }
+    if (r.gross_margin == null || r.gross_margin === "") {
+      const totRev = parseNumber(r.total_revenue);
+      const profit = parseNumber(r.gross_profit);
+      if (totRev && profit != null) r.gross_margin = Math.round((profit / totRev) * 10000) / 100;
+    }
+  }
+
+  // --- EXECUTIVE SUMMARY RESCUE HOOKS ---
+  if (entityName === "ExecutiveSummary") {
+    if (!r.location_id) {
+      r.location_id = r.succursale || r.store || r.location || r.ville || r.site || r.id;
+    }
+    if (!r.summary_id && r.location_id) {
+      r.summary_id = `SUM-${stripAccents(String(r.location_id)).toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
+    }
+    const rev = parseNumber(r.total_revenue);
+    const cost = parseNumber(r.total_cost);
+    if (r.gross_profit == null || r.gross_profit === "") {
+      if (rev != null && cost != null) r.gross_profit = Math.round((rev - cost) * 100) / 100;
+    }
+    if (r.gross_margin == null || r.gross_margin === "") {
+      const profit = parseNumber(r.gross_profit);
+      if (rev && profit != null) r.gross_margin = Math.round((profit / rev) * 10000) / 100;
+    }
+  }
+
+  // --- EMPLOYEE RESCUE HOOKS ---
+  if (entityName === "Employee") {
+    const deptRaw = String(r.department || "").trim();
+    const allowedDepts = ["direction", "ventes", "marketing", "logistique", "administration", "service_client", "atelier"];
+    const deptNorm = stripAccents(deptRaw.toLowerCase());
+    if (deptRaw && !allowedDepts.includes(deptNorm)) {
+      if (!r.location) r.location = deptRaw;
+      const roleStr = stripAccents(String(r.role || "").toLowerCase());
+      if (roleStr.includes("vente") || roleStr.includes("rep") || roleStr.includes("vendeur") || roleStr.includes("gerant") || roleStr.includes("magasin")) {
+        r.department = "ventes";
+      } else if (roleStr.includes("commerce") || roleStr.includes("web") || roleStr.includes("marketing")) {
+        r.department = "marketing";
+      } else if (roleStr.includes("logistique") || roleStr.includes("entrepot") || roleStr.includes("stock") || roleStr.includes("livr")) {
+        r.department = "logistique";
+      } else if (roleStr.includes("direct") || roleStr.includes("dg") || roleStr.includes("admin")) {
+        r.department = "direction";
+      } else if (roleStr.includes("client") || roleStr.includes("support")) {
+        r.department = "service_client";
+      } else if (roleStr.includes("atelier") || roleStr.includes("technicien")) {
+        r.department = "atelier";
+      } else {
+        r.department = "autre";
+      }
+    }
+  }
+
+  // --- PRODUCT RESCUE HOOKS ---
+  if (entityName === "Product") {
+    if (!r.product_id) {
+      r.product_id = r.sku || r.ugs || r.code_produit || r.id;
+    }
+    if (r.inventory_level == null && r.closing_stock != null) {
+      r.inventory_level = r.closing_stock;
+    }
+    if (r.selling_price == null && r.price != null) {
+      r.selling_price = r.price;
+    }
+    if (r.purchase_cost == null && r.unit_cost != null) {
+      r.purchase_cost = r.unit_cost;
+    }
+  }
+
   // For other entities: normalize enums, coerce types, keep only schema fields, strip empty values
-  const withEnums = normalizeEnums(r, properties || {});
+  const withEnums = normalizeEnums(r, schemaProps || {});
   const cleaned: Record<string, any> = {};
   for (const [k, v] of Object.entries(withEnums)) {
     if (BUILTIN_FIELDS.includes(k)) continue;
     if (v === null || v === undefined || v === "") continue;
-    const prop = properties?.[k];
+    const prop = schemaProps?.[k];
     if (prop) {
       // Field is in schema: validate enum, coerce type
       if (prop.enum) {
         const coerced = coerceEnum(v, prop.enum);
         if (!prop.enum.includes(coerced)) {
+          if (prop.enum.includes("autre")) {
+            cleaned[k] = "autre";
+            continue;
+          }
           // Skip the invalid value rather than failing the whole row, but record
           // it so the import can explain what was refused and why.
           if (enumIssues) enumIssues.push({ field: k, value: String(v), allowed: prop.enum });
@@ -1846,13 +2083,13 @@ export function normalizeRow(
       } else {
         cleaned[k] = coerceType(v, prop);
       }
-    } else if (!properties) {
+    } else if (!schemaProps) {
       // No schema available: keep value as-is
       cleaned[k] = v;
     }
     // else: field not in schema, skip
   }
   if (importId) cleaned["import_id"] = importId;
-  if (properties && properties.original_data) cleaned["original_data"] = JSON.stringify(row);
+  if (schemaProps && schemaProps.original_data) cleaned["original_data"] = JSON.stringify(row);
   return cleaned;
 }

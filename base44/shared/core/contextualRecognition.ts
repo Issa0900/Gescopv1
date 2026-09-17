@@ -1,5 +1,6 @@
 import { stripAccents, FIELD_ALIASES, cleCanonique, ALIAS_CANONIQUES } from '../importUtils.ts';
 import { ENTITY_SCHEMAS } from '../entitySchemas.ts';
+import { analyzeColumn } from './recognition/mappingDecisionEngine.ts';
 
 // Local Semantic Types & Economic Roles
 const ECONOMIC_ROLES = {
@@ -40,6 +41,7 @@ export interface ColumnRecognition {
   justification: string[];     // Array of reasons explaining the recognition
   alternatives: Array<{ canonicalKey: string; semanticType: string; confidence: number }>;
   requiresValidation: boolean; // true if confidence < 0.60
+  targetField?: string | null; // Base44 entity field if known
 }
 
 export interface SheetRecognitionParams {
@@ -289,6 +291,37 @@ function analyzeMemory(
 
 export function recognizeColumn(params: ColumnRecognitionParams): ColumnRecognition {
   const { columnName, sheetName, sampleValues, siblingColumns, entityHint, mappingMemory } = params;
+
+  // 1. Délégation prioritaire à l'Ontologie Commerciale Universelle (UCO)
+  try {
+    const uco = analyzeColumn({
+      columnName,
+      sheetName,
+      sampleValues,
+      siblingColumns,
+      entityHint,
+      mappingMemory: mappingMemory as any,
+    });
+
+    if (uco.selectedConcept && uco.confidence >= 0.5) {
+      return {
+        canonicalKey: uco.canonicalName || uco.selectedConcept,
+        semanticType: uco.nature,
+        economicRole: uco.role,
+        confidence: uco.confidence,
+        justification: uco.evidence,
+        alternatives: uco.candidates.map((c) => ({
+          canonicalKey: c.canonicalName,
+          semanticType: c.conceptId,
+          confidence: c.confidence,
+        })),
+        requiresValidation: uco.requiresValidation,
+        targetField: uco.targetField,
+      };
+    }
+  } catch (e) {
+    console.warn("UCO recognition fallback to heuristics", e);
+  }
 
   let totalConfidence = 0;
   const justifications: string[] = [];

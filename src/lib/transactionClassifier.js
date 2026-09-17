@@ -117,22 +117,30 @@ export function classifyType(typeStr) {
   return null;
 }
 
-export function classifyTransaction(t) {
+export function amountForClassification(t) {
   if (!t) return null;
-  const byType = classifyType(t.type);
-  if (byType) return byType;
-  
-  const amount = [t.amount, t.revenue_amount, t.expense_amount]
-    .map(Number)
-    .find(Number.isFinite);
-  return amount === undefined || amount >= 0 ? "income" : "expense";
+  for (const value of [t.amount, t.revenue_amount, t.expense_amount]) {
+    const amount = Number(value);
+    if (Number.isFinite(amount)) return amount;
+  }
+  return null;
 }
 
+export function classifyTransaction(t) {
+  if (!t) return null;
+  const explicit = classifyType(t.type);
+  if (explicit) return explicit;
+
+  const amount = amountForClassification(t);
+  return amount === null || amount >= 0 ? "income" : "expense";
+}
+
+/** Returns `true` when the transaction should count as revenue. */
 export function isIncome(t) {
-  // Doit être un revenu ET être compensé/valide analytiquement
   return classifyTransaction(t) === "income" && isClearedTransaction(t);
 }
 
+/** Returns `true` when the transaction should count as an expense. */
 export function isExpense(t) {
   return classifyTransaction(t) === "expense" && isClearedTransaction(t);
 }

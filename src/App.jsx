@@ -88,6 +88,7 @@ const AuthenticatedApp = () => {
           <Route path="/decisions" element={<Decisions />} />
           <Route path="/historique" element={<Historique />} />
           <Route path="/importer" element={<ImportPage />} />
+          <Route path="/import" element={<ImportPage />} />
           <Route path="/audit" element={<Audit />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/produits" element={<Produits />} />

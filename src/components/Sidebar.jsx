@@ -62,7 +62,7 @@ const navGroups = [
     label: "Outils",
     icon: Upload,
     items: [
-      { to: "/importer", label: "Sources", icon: Upload },
+      { to: "/importer", label: "Importer des données", icon: Upload },
       { to: "/audit", label: "Audit des calculs", icon: ShieldCheck },
       { to: "/manuel", label: "Manuel", icon: Book },
     ],
