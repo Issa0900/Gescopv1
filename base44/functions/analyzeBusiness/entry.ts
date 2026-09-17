@@ -29,7 +29,7 @@ export default async function(req: any) {
     const ctx = await buildBusinessContext(base44);
     const { company, transactions, context, totals } = ctx;
 
-    const recentObs = await base44.entities.Observation.findMany({ limit: 500, orderBy: { date: 'desc' } });
+    const recentObs = await base44.entities.Observation.filter({}, "-date", 500);
     const qualSignals = analyzeQualitativeObservations(recentObs);
     const contextGraph = buildContextGraph(totals, qualSignals, recentObs);
 
