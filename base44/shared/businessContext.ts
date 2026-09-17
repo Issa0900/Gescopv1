@@ -306,7 +306,15 @@ Clientèle: ${company.clientele || "non précisée"}
 Objectifs: ${(company.objectives || []).join(", ") || "non précisés"}`
     : "Aucune entreprise configurée.";
 
-  const financeSection = `Total transactions: ${transactions.length}
+  // transactions.length === 0 makes totalIncome/totalExpenses/grossMargin all
+  // 0 by construction (sum of nothing), not a measured "0% margin" — without
+  // this marker the headline read "Marge nette cumulée: 0 $ (0%)" right next
+  // to "Total transactions: 0", and the model could present a genuine absence
+  // of data as a fact about the business (sec16 of the audit: never let a
+  // conclusion rest on an absent figure).
+  const financeSection = transactions.length === 0
+    ? "Total transactions: 0\nAucune transaction importée — revenus, dépenses et marge non mesurables (pas \"nuls\", non disponibles)."
+    : `Total transactions: ${transactions.length}
 Revenus totaux: ${round(totalIncome)} $
 Dépenses totales: ${round(totalExpenses)} $
 Marge nette cumulée sur tout l'historique importé: ${round(grossMargin)} $ (${marginPct}%) — les écrans affichent la marge agrégée des 3 derniers mois complets, qui peut légitimement différer de ce cumul
@@ -315,7 +323,11 @@ ${txnMonthlyStr || "insuffisant"}
 Top catégories de dépenses:
 ${topExpCats || "insuffisant"}`;
 
-  const salesSection = `Commandes: ${orderCount}
+  // Same principle as financeSection: 0 commandes ne veut pas dire panier
+  // moyen de 0 $, ça veut dire panier moyen non mesurable.
+  const salesSection = orderCount === 0
+    ? "Commandes: 0\nAucune commande importée — revenu commandes, panier moyen et taux de retour non mesurables (pas \"nuls\", non disponibles)."
+    : `Commandes: ${orderCount}
 Revenu commandes: ${round(orderRevenue)} $
 Panier moyen: ${aov} $
 Taux de retour: ${returnRate}%

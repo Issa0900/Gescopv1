@@ -36,11 +36,20 @@ Convention : chaque ligne = un cas de test réel, exécuté contre le vrai code
 - **`base44/functions/semanticIngest/entry.ts` simule une sauvegarde.** `savedCount += batch.length` sans jamais appeler `base44.entities.Observation.bulkCreate` (commenté dans le code, "Pour l'instant on simule le success") — la fonction renvoie `status: "success"` et un compte de lignes "sauvegardées" qui n'ont jamais été écrites. Vérifié : rien dans `base44/` ni `src/` n'appelle cette fonction — code mort, pas un bug actif. Si un jour elle est branchée à une route, il faudra retirer la simulation avant.
 - **`User.jsonc` n'a pas de bloc `rls` explicite**, contrairement aux 31 autres entités. À confirmer avec le porteur du projet : Base44 gère peut-être nativement l'isolation de l'entité `User` intégrée (chaque utilisateur ne voit que son propre profil par défaut) sans qu'un bloc RLS explicite soit nécessaire — je n'ai pas de moyen de le vérifier sans accès à la plateforme Base44 elle-même. Ne pas ajouter de bloc RLS ici sans confirmer le comportement par défaut, au risque de casser l'auth.
 
+## Trouvé, limite de l'environnement de test (pas un verdict sur le bug)
+
+- **Impossible de tester les pages Dashboard/Kpis/Finance/Tresorerie avec de vraies données dans ce sandbox.** `base44 dev` (backend local) exige `base44 login` + `base44 link`, indisponibles ici. `npm run build` + `vite preview` démarrent bien (0 erreur de compilation) et `/` et `/login` ne crashent pas (0 erreur React, aucun NaN/undefined/Infinity visible), mais toutes les routes derrière l'authentification restent inaccessibles sans un backend Base44 réel — donc pas de vérification possible de la cohérence d'affichage des KPI en conditions réelles depuis cette session. Reste à faire par quelqu'un avec un accès `base44 dev` ou des identifiants de test.
+- **`point-entree.ts` teste un contrat qui n'existe plus.** Le test attend que `entry.ts` lise un client injecté via `globalThis.__BASE44_STUB`, mais `entry.ts` appelle toujours `createFixedClientFromRequest(req)` (ligne 320) qui construit un vrai client SDK depuis les en-têtes de la requête — sans lire ce stub. Ce n'est pas un bug de production (les vrais appels ont toujours l'en-tête `Base44-App-Id`, fourni par la plateforme), c'est de la dette de test : `entry.ts` n'est plus testable en isolation. Volontairement PAS corrigé : ajouter un contournement dans `client.ts` (frontière d'authentification) juste pour qu'un test passe serait exactement le genre de raccourci que l'audit interdit (§19 "ne désactive pas une validation simplement parce qu'elle bloque"). Nécessite une décision de conception (ex: injection de dépendance explicite du client dans le handler) plutôt qu'un correctif local.
+
+## Trouvé, nécessite une décision produit (pas de fix appliqué)
+
+- **`Finance.jsx` et `Marketing.jsx` ne passent pas par `kpiRegistry.js`** pour marge/ROAS — ils recalculent leurs propres formules inline (`Finance.jsx:42`, `Marketing.jsx:68,113,135,234`). Ça n'a pas causé de bug observable (les deux ont déjà leurs propres gardes `|| 0` / `> 0 ? ... : "-"`), mais ça viole directement le principe "une métrique = une formule, un seul moteur" du §9. Perimètre trop large pour un correctif ponctuel sans tests UI en conditions réelles (cf. point ci-dessus) — à traiter comme un chantier dédié.
+
+| 11 | Assistant IA (`chatAssistant` → `businessContext.ts`) : entreprise sans transaction/commande recevait quand même "Marge nette cumulée: 0 $ (0%)" / "Panier moyen: 0 $" en tête de contexte — donnée absente présentée sous la même forme qu'une donnée mesurée à zéro | `tests/recette/DS10-assistant-ia-donnee-absente.ts` | 4/6 échecs | 6/6 | ✅ corrigé (financeSection + salesSection) |
+
 ## À faire (ordre de priorité, cf. plan §1-19 du cahier des charges)
 
-- [ ] 11. Autres fonctionnalités de l'app (au-delà de l'import/KPI) : pages Dashboard/Kpis/Finance/Tresorerie — cohérence d'affichage, assistant IA §16
 - [ ] 12. Score de santé LLM (voir "Trouvé mais PAS corrigé" plus haut) — nécessite une décision produit avant de toucher au prompt/schema
-- [ ] 13. `point-entree.ts` : bootstrap SDK (`Base44-App-Id header is required`) jamais creusé
 
 ## Notes d'architecture à ne pas redécouvrir
 
