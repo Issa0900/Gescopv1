@@ -5,6 +5,36 @@ import { createFixedClientFromRequest as createClientFromRequest } from "../../s
 // Version 1.0 — Septembre 2026 (Référentiel des Domaines du Radar)
 // ─────────────────────────────────────────────────────────────────────────────
 
+const VALID_FAMILIES = ["market", "competitors", "commercial", "tech", "economy", "legal", "territory_resources", "ecosystem"];
+const VALID_IMPACTS = ["positif", "neutre", "negatif"];
+
+export function filterSignals(raw, company, today) {
+  return raw.filter((s) =>
+    s && s.title && typeof s.url === "string" && /^https?:\/\/\S+$/i.test(s.url.trim())
+    && (Number(s.relevance_score) || 60) >= 50
+  ).map((s) => ({
+    title: String(s.title).slice(0, 300),
+    description: s.description || s.fact || "",
+    family: VALID_FAMILIES.includes(s.family) ? s.family : "market",
+    domain: s.domain || "concurrence",
+    event: s.event || "SIGNAL_OBSERVED",
+    location: s.location || company.location || "Québec",
+    fact: s.fact || s.title,
+    inference: s.inference || s.relevance_reason || "",
+    monitoring_tip: s.monitoring_tip || "Surveiller les volumes et l'évolution des prix sur les 30 prochains jours.",
+    affected_kpis: s.affected_kpis || "Chiffre d'affaires, Marge brute",
+    relevance_score: Math.min(100, Math.round(Number(s.relevance_score) || 75)),
+    confidence: Math.min(100, Math.round(Number(s.confidence) || 85)),
+    impact: VALID_IMPACTS.includes(s.impact) ? s.impact : "neutre",
+    source: s.source || "",
+    url: s.url.trim(),
+    date: /^\d{4}-\d{2}-\d{2}$/.test(s.date || "") ? s.date : today,
+    relevance_reason: s.relevance_reason || s.inference || "",
+    recommended_action: s.recommended_action || "",
+    status: "nouveau",
+  }));
+}
+
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -116,35 +146,26 @@ Rédige tout en français et réponds en JSON respectant le schéma.`;
       }, { status: 502 });
     }
 
-    const validFamilies = ["market", "competitors", "commercial", "tech", "economy", "legal", "territory_resources", "ecosystem"];
-    const validImpacts = ["positif", "neutre", "negatif"];
-
-    const kept = raw.filter((s) =>
-      s && s.title && typeof s.url === "string" && /^https?:\/\/\S+$/i.test(s.url.trim())
-      && (Number(s.relevance_score) || 60) >= 50
-    ).map((s) => ({
-      title: String(s.title).slice(0, 300),
-      description: s.description || s.fact || "",
-      family: validFamilies.includes(s.family) ? s.family : "market",
-      domain: s.domain || "concurrence",
-      event: s.event || "SIGNAL_OBSERVED",
-      location: s.location || company.location || "Québec",
-      fact: s.fact || s.title,
-      inference: s.inference || s.relevance_reason || "",
-      monitoring_tip: s.monitoring_tip || "Surveiller les volumes et l'évolution des prix sur les 30 prochains jours.",
-      affected_kpis: s.affected_kpis || "Chiffre d'affaires, Marge brute",
-      relevance_score: Math.min(100, Math.round(Number(s.relevance_score) || 75)),
-      confidence: Math.min(100, Math.round(Number(s.confidence) || 85)),
-      impact: validImpacts.includes(s.impact) ? s.impact : "neutre",
-      source: s.source || "",
-      url: s.url.trim(),
-      date: /^\d{4}-\d{2}-\d{2}$/.test(s.date || "") ? s.date : today,
-      relevance_reason: s.relevance_reason || s.inference || "",
-      recommended_action: s.recommended_action || "",
-      status: "nouveau",
-    }));
+    const kept = filterSignals(raw, company, today);
 
     // On remplace les signaux pour n'afficher que des signaux frais et vérifiés
+    // -- mais seulement si ce scan en a effectivement trouvé au moins un.
+    // Sans ce garde-fou, un scan qui ne renvoie aucun signal exploitable (URL
+    // invalide, score sous le seuil, panne LLM partielle...) effaçait quand
+    // meme tout l'historique avant de ne rien recreer : l'utilisateur se
+    // retrouvait avec un radar vide alors que les signaux precedents restaient
+    // parfaitement valides. Meme principe que le message a la ligne "Vos
+    // donnees actuelles sont conservees" plus haut, applique de facon
+    // coherente a ce cas-la aussi (sec8 de l'audit : aucune donnee ne doit
+    // disparaitre silencieusement).
+    if (kept.length === 0) {
+      return Response.json({
+        created: 0,
+        rejected: raw.length,
+        message: "Aucun signal exploitable dans ce scan — les signaux précédents sont conservés.",
+      });
+    }
+
     await base44.entities.ExternalSignal.deleteMany({});
     for (let i = 0; i < kept.length; i += 100) {
       await base44.entities.ExternalSignal.bulkCreate(kept.slice(i, i + 100));
