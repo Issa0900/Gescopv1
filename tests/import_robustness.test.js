@@ -120,3 +120,4 @@ test("Robustesse Import - Détection et Élimination des Lignes de TOTAL Excel",
   assert.equal(normOrder.order_id, "CMD-2026-001");
   assert.equal(normOrder.quantity, 2);
 });
+
