@@ -435,6 +435,7 @@ export function planParRegles(
       }
       
       // 1. Semantic contextual recognition
+      // 1. Semantic contextual recognition (Ontologie Commerciale Universelle)
       if (!champ && rec && rec.confidence >= 0.5 && rec.canonicalKey !== 'unknown') {
          const k = rec.canonicalKey;
          if (k === 'revenue_amount' && entite === 'Order') champ = 'total';
@@ -446,6 +447,20 @@ export function planParRegles(
          else if (k === 'identifier' && entite === 'Product') champ = 'product_id';
          else if (k === 'identifier' && entite === 'Employee') champ = 'employee_id';
          else champ = k;
+         if (rec.targetField) {
+            champ = rec.targetField;
+         } else {
+            const k = rec.canonicalKey;
+            if (k === 'revenue_amount' && entite === 'Order') champ = 'total';
+            else if (k === 'revenue_amount' && entite === 'Campaign') champ = 'revenue';
+            else if (k === 'expense_amount' && entite === 'Expense') champ = 'amount';
+            else if (k === 'cash_balance' && entite === 'Cashflow') champ = 'closing_cash';
+            else if (k === 'employee_identifier' && entite === 'Employee') champ = 'employee_id';
+            else if (k === 'product_identifier' && entite === 'Product') champ = 'product_id';
+            else if (k === 'identifier' && entite === 'Product') champ = 'product_id';
+            else if (k === 'identifier' && entite === 'Employee') champ = 'employee_id';
+            else champ = k;
+         }
       }
       
       // 2. Fallback to schema fields so the UI doesn't show 'Ignorer' for valid columns
