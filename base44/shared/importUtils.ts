@@ -1,4 +1,5 @@
 // Shared import normalization utilities — used by importData and importMultiData
+import { ENTITY_SCHEMAS } from "./entitySchemas.ts";
 
 // Strip accents/diacritics for comparison (é→e, à→a, etc.)
 export function stripAccents(str: string): string {
@@ -1347,9 +1348,27 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "cash_flow": "amount", // General money movement
   
   // Inventory & Supply Chain
-  "inventory": "stock_quantity",
-  "inventaire": "stock_quantity",
-  "stock_on_hand": "stock_quantity",
+  "inventory": "inventory_level",
+  "inventaire": "inventory_level",
+  "stock_on_hand": "inventory_level",
+  "qte_en_stock": "inventory_level",
+  "qte_stock": "inventory_level",
+  "quantite_en_stock": "inventory_level",
+  "stock_quantity": "inventory_level",
+  "stock_disponible": "inventory_level",
+  "seuil_d_alerte": "reorder_point",
+  "seuil_alerte": "reorder_point",
+  "seuil_reapprovisionnement": "reorder_point",
+  "point_de_commande": "reorder_point",
+  "reorder_point": "reorder_point",
+  "valeur_du_stock_cout": "inventory_value",
+  "valeur_stock_cout": "inventory_value",
+  "valeur_stock_vente": "inventory_value",
+  "valeur_du_stock": "inventory_value",
+  "valeur_stock": "inventory_value",
+  "prix_de_vente": "selling_price",
+  "prix_vente": "selling_price",
+  "ugs": "sku",
   "fournisseur": "supplier_name",
   "supplier": "supplier_name",
   "lead_time": "delivery_time",
@@ -1748,18 +1767,27 @@ export function coerceType(value: any, prop: any): any {
 export type EnumIssue = { field: string; value: string; allowed: string[] };
 
 export function normalizeRow(
-  entityName: string,
-  row: Record<string, any>,
-  importId: string,
-  properties: Record<string, any> | null,
+  entityNameOrRow: string | Record<string, any>,
+  rowOrEntityName: Record<string, any> | string,
+  importId: string = "default",
+  properties: Record<string, any> | null = null,
   sourceType?: string,
-  // Optional sink for diagnostics. A rejected enum value used to be dropped in
-  // silence, and the row was then reported as "champ obligatoire manquant" —
-  // pointing at a field the user could plainly see in their file. Collecting
-  // the refused values lets the import tell the truth: the field is there, its
-  // value is not one of the accepted ones.
   enumIssues?: EnumIssue[],
 ): Record<string, any> {
+  let entityName: string;
+  let row: Record<string, any>;
+  if (typeof entityNameOrRow === "string") {
+    entityName = entityNameOrRow;
+    row = (rowOrEntityName as Record<string, any>) || {};
+  } else {
+    row = entityNameOrRow || {};
+    entityName = String(rowOrEntityName || "");
+  }
+
+  if (!properties && ENTITY_SCHEMAS[entityName]) {
+    properties = ENTITY_SCHEMAS[entityName].properties;
+  }
+
   if (isSummaryOrTotalRow(row)) return {};
   const r = normalizeKeys(row, properties);
   if (isSummaryOrTotalRow(r)) return {};
@@ -1857,6 +1885,100 @@ export function normalizeRow(
     const conversions = parseNumber(r.conversions);
     if (r.roas == null && spend && revenue != null) r.roas = Math.round((revenue / spend) * 100) / 100;
     if (r.cac == null && spend && conversions) r.cac = Math.round((spend / conversions) * 100) / 100;
+  }
+
+  // --- ORDER RESCUE HOOKS ---
+  if (entityName === "Order") {
+    if (!r.order_id) {
+      r.order_id = r.transaction_id || r.id_transaction || r.num_cde || r.no_cde || r.num_commande || r.numero_commande || r.order_number || r.cde_no || r.cde_id || r.ref_commande || r.code_commande || r.id;
+      if (!r.order_id && (r.location_id || r.succursale || r.store || r.location)) {
+        const loc = String(r.location_id || r.succursale || r.store || r.location).trim();
+        r.order_id = `ORD-${stripAccents(loc).toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
+      }
+    }
+    if (!r.date) {
+      r.date = new Date().toISOString().slice(0, 10);
+    }
+    const qty = parseNumber(r.quantity) || 1;
+    const price = parseNumber(r.unit_price) || 0;
+    const cost = parseNumber(r.unit_cost) || 0;
+    if (r.total_revenue == null || r.total_revenue === "") {
+      if (price > 0) r.total_revenue = Math.round(qty * price * 100) / 100;
+    }
+    if (r.total_cost == null || r.total_cost === "") {
+      if (cost > 0) r.total_cost = Math.round(qty * cost * 100) / 100;
+    }
+    if (r.gross_profit == null || r.gross_profit === "") {
+      const totRev = parseNumber(r.total_revenue);
+      const totCost = parseNumber(r.total_cost);
+      if (totRev != null && totCost != null) r.gross_profit = Math.round((totRev - totCost) * 100) / 100;
+    }
+    if (r.gross_margin == null || r.gross_margin === "") {
+      const totRev = parseNumber(r.total_revenue);
+      const profit = parseNumber(r.gross_profit);
+      if (totRev && profit != null) r.gross_margin = Math.round((profit / totRev) * 10000) / 100;
+    }
+  }
+
+  // --- EXECUTIVE SUMMARY RESCUE HOOKS ---
+  if (entityName === "ExecutiveSummary") {
+    if (!r.location_id) {
+      r.location_id = r.succursale || r.store || r.location || r.ville || r.site || r.id;
+    }
+    if (!r.summary_id && r.location_id) {
+      r.summary_id = `SUM-${stripAccents(String(r.location_id)).toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
+    }
+    const rev = parseNumber(r.total_revenue);
+    const cost = parseNumber(r.total_cost);
+    if (r.gross_profit == null || r.gross_profit === "") {
+      if (rev != null && cost != null) r.gross_profit = Math.round((rev - cost) * 100) / 100;
+    }
+    if (r.gross_margin == null || r.gross_margin === "") {
+      const profit = parseNumber(r.gross_profit);
+      if (rev && profit != null) r.gross_margin = Math.round((profit / rev) * 10000) / 100;
+    }
+  }
+
+  // --- EMPLOYEE RESCUE HOOKS ---
+  if (entityName === "Employee") {
+    const deptRaw = String(r.department || "").trim();
+    const allowedDepts = ["direction", "ventes", "marketing", "logistique", "administration", "service_client", "atelier"];
+    const deptNorm = stripAccents(deptRaw.toLowerCase());
+    if (deptRaw && !allowedDepts.includes(deptNorm)) {
+      if (!r.location) r.location = deptRaw;
+      const roleStr = stripAccents(String(r.role || "").toLowerCase());
+      if (roleStr.includes("vente") || roleStr.includes("rep") || roleStr.includes("vendeur") || roleStr.includes("gerant") || roleStr.includes("magasin")) {
+        r.department = "ventes";
+      } else if (roleStr.includes("commerce") || roleStr.includes("web") || roleStr.includes("marketing")) {
+        r.department = "marketing";
+      } else if (roleStr.includes("logistique") || roleStr.includes("entrepot") || roleStr.includes("stock") || roleStr.includes("livr")) {
+        r.department = "logistique";
+      } else if (roleStr.includes("direct") || roleStr.includes("dg") || roleStr.includes("admin")) {
+        r.department = "direction";
+      } else if (roleStr.includes("client") || roleStr.includes("support")) {
+        r.department = "service_client";
+      } else if (roleStr.includes("atelier") || roleStr.includes("technicien")) {
+        r.department = "atelier";
+      } else {
+        r.department = "autre";
+      }
+    }
+  }
+
+  // --- PRODUCT RESCUE HOOKS ---
+  if (entityName === "Product") {
+    if (!r.product_id) {
+      r.product_id = r.sku || r.ugs || r.code_produit || r.id;
+    }
+    if (r.inventory_level == null && r.closing_stock != null) {
+      r.inventory_level = r.closing_stock;
+    }
+    if (r.selling_price == null && r.price != null) {
+      r.selling_price = r.price;
+    }
+    if (r.purchase_cost == null && r.unit_cost != null) {
+      r.purchase_cost = r.unit_cost;
+    }
   }
 
   // For other entities: normalize enums, coerce types, keep only schema fields, strip empty values

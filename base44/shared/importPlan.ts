@@ -22,6 +22,10 @@ import { getSchema } from "./entitySchemas.ts";
 import { parseDate, stripAccents, FIELD_ALIASES, cleCanonique, ALIAS_CANONIQUES, isSummaryOrTotalRow, type ConventionDate } from "./importUtils.ts";
 import { trouverLigneEntetes, detectEntityByHeaders, detectEntityByFieldOverlap } from "./sheetDetect.ts";
 import { recognizeAllColumns } from "./core/contextualRecognition.ts";
+import { classifyDocumentSheet, type SheetClassificationResult } from "./core/documentClassifier.ts";
+import { calculateQualityProfile, type QualityProfile } from "./core/qualityEngine.ts";
+import { evaluateDecision, type DecisionVerdict } from "./core/decisionMatrix.ts";
+import { DOCUMENT_ARCHETYPES, type DocumentArchetype, type GrainLevel } from "./core/ontology/types.ts";
 
 export type Confiance = "haute" | "moyenne" | "faible";
 export type OriginePlan = "ia" | "ia+preuves" | "regles" | "memoire";
@@ -50,6 +54,13 @@ export interface PlanImport {
   origine: OriginePlan;
   /** Ce que les preuves du fichier ont corrige dans la proposition de l'IA. */
   corrections: string[];
+
+  /** Nouveaux enrichissements universels V3.0 (Spec Section 9, 14, 22, 26) */
+  archetype?: DocumentArchetype;
+  grain?: GrainLevel;
+  isAggregatedSummary?: boolean;
+  qualityProfile?: QualityProfile;
+  decision?: DecisionVerdict;
 }
 
 /** Nombre de lignes soumises a l'IA. Assez pour voir la structure ET des cas limites. */
@@ -381,114 +392,167 @@ export function planParRegles(
 ): PlanImport {
   const ligne = matrix.length > 0 ? trouverLigneEntetes(matrix) : 0;
   const entetes = (matrix[ligne] || []).map((h: any) => String(h ?? "").trim()).filter((h: string) => h !== "");
-  const entite = entiteConnue || detectEntityByHeaders(entetes) || detectEntityByFieldOverlap(entetes) || null;
   
-  // Use Contextual Recognition (Sprint 2)
-  
-  // Create sample rows for recognition
+  // Create sample rows for recognition and profiling
   const sampleRows: Record<string, any>[] = [];
-  for(let i = ligne + 1; i < Math.min(matrix.length, ligne + 20); i++) {
+  const lignes_ignorees: number[] = [];
+  for(let i = ligne + 1; i < matrix.length; i++) {
     const rowObj: Record<string, any> = {};
     const row = matrix[i] || [];
     entetes.forEach((h: string, idx: number) => {
       rowObj[h] = row[idx];
     });
-    sampleRows.push(rowObj);
+    // Detection automatique des lignes de total/synthese a ecarter
+    if (isSummaryOrTotalRow(rowObj)) {
+      lignes_ignorees.push(i);
+    } else {
+      if (sampleRows.length < 50) {
+        sampleRows.push(rowObj);
+      }
+    }
   }
 
-  // Assuming recognizeAllColumns is imported at the top
+  // 1. Classification universelle de la feuille (Spec Section 9 & 14)
+  const classification = classifyDocumentSheet({
+    sheetName: nomFichier,
+    headers: entetes,
+    rows: sampleRows,
+    matrix,
+  });
+
+  // 2. Détection de l'entité
+  let entite = entiteConnue || detectEntityByHeaders(entetes) || detectEntityByFieldOverlap(entetes) || null;
+  if (!entite && classification.isAggregatedSummary) {
+    entite = "ExecutiveSummary";
+  }
+  
+  // Use Contextual Recognition (Sprint 2)
   let recognizedCols = new Map();
   try {
-    // Only attempt if we can import it
     recognizedCols = recognizeAllColumns({
       sheetName: nomFichier,
       headers: entetes,
       sampleRows,
-      entityHint: entite,
+      entityHint: entite || undefined,
       mappingMemory
     });
   } catch (e) {
     console.warn("Contextual recognition failed, falling back to basic mapping", e);
   }
 
+  const colonnes = entetes.map((c: string) => {
+    const rec = recognizedCols.get(c);
+    let champ = null;
+
+    // Exact schema fields always win over semantic guesses
+    if (entite) {
+      const schema = getSchema(entite);
+      if (schema) {
+        const cleanC = c.toLowerCase().trim();
+        const noAccentC = cleanC.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_");
+        const fields = Object.keys(schema.properties);
+        if (fields.includes(c)) champ = c;
+        else if (fields.includes(cleanC)) champ = cleanC;
+        else if (fields.includes(noAccentC)) champ = noAccentC;
+      }
+    }
+    
+    // 1. Semantic contextual recognition (Ontologie Commerciale Universelle)
+    if (!champ && rec && rec.confidence >= 0.5 && rec.canonicalKey !== 'unknown') {
+       const k = rec.canonicalKey;
+       if (k === 'revenue_amount' && entite === 'Order') champ = 'total';
+       else if (k === 'revenue_amount' && entite === 'Campaign') champ = 'revenue';
+       else if (k === 'expense_amount' && entite === 'Expense') champ = 'amount';
+       else if (k === 'cash_balance' && entite === 'Cashflow') champ = 'closing_cash';
+       else if (k === 'employee_identifier' && entite === 'Employee') champ = 'employee_id';
+       else if (k === 'product_identifier' && entite === 'Product') champ = 'product_id';
+       else if (k === 'identifier' && entite === 'Product') champ = 'product_id';
+       else if (k === 'identifier' && entite === 'Employee') champ = 'employee_id';
+       else champ = k;
+       if (rec.targetField) {
+          champ = rec.targetField;
+       }
+    }
+    
+    // 2. Fallback to schema fields so the UI doesn't show 'Ignorer' for valid columns
+    if (!champ && entite) {
+        const schema = getSchema(entite);
+        if (schema) {
+            const cleanC = c.toLowerCase().trim();
+            const noAccentC = cleanC.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_");
+            const fields = Object.keys(schema.properties);
+            
+            if (fields.includes(c)) champ = c;
+            else if (fields.includes(cleanC)) champ = cleanC;
+            else if (fields.includes(noAccentC)) champ = noAccentC;
+            else {
+                const canon = cleCanonique(c);
+                const alias = FIELD_ALIASES[cleanC] || FIELD_ALIASES[cleanC.replace(/[\s-]/g, "_")] || FIELD_ALIASES[noAccentC] || ALIAS_CANONIQUES[canon];
+                if (alias && fields.includes(alias)) champ = alias;
+            }
+        }
+    }
+
+    // 3. Adaptations ciblées par entité (Order, Product, Employee, ExecutiveSummary)
+    if (entite === 'Order') {
+      if (champ === 'transaction_id') champ = 'order_id';
+      if (champ === 'succursale' || champ === 'store') champ = 'location_id';
+    }
+    if (entite === 'Product') {
+      if (champ === 'closing_stock' || champ === 'stock_quantity') champ = 'inventory_level';
+      if (champ === 'unit_cost') champ = 'purchase_cost';
+    }
+    if (entite === 'Employee' && (champ === 'store' || champ === 'location_id' || champ === 'succursale')) {
+      champ = 'location';
+    }
+    if (entite === 'ExecutiveSummary') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      if (normC.includes("succursale") || normC.includes("store") || normC.includes("location") || normC.includes("ville")) champ = 'location_id';
+      else if (normC.includes("cout") || normC.includes("cost") || normC.includes("charge")) champ = 'total_cost';
+      else if (normC.includes("profit") || normC.includes("benefice")) champ = 'gross_profit';
+      else if (normC.includes("marge") || normC.includes("margin") || normC.includes("pct")) champ = 'gross_margin';
+      else if (normC.includes("vente") || normC.includes("revenue") || normC.includes("ca")) champ = 'total_revenue';
+    }
+
+    return { colonne: c, champ };
+  });
+
+  // 4. Calcul du profil de qualité et décision
+  const avgConfidence = recognizedCols.size > 0
+    ? Array.from(recognizedCols.values()).reduce((s: number, r: any) => s + (r.confidence || 0.8), 0) / recognizedCols.size
+    : 0.85;
+
+  const qualityProfile = calculateQualityProfile({
+    headers: entetes,
+    rows: sampleRows,
+    mappedColumnsCount: colonnes.filter((c) => c.champ).length,
+    totalColumnsCount: entetes.length,
+    averageSemanticConfidence: avgConfidence,
+    isAggregatedSummary: classification.isAggregatedSummary,
+  });
+
+  const decision = evaluateDecision(qualityProfile, avgConfidence);
+
+  const explication = classification.isAggregatedSummary
+    ? classification.explanation
+    : (entite
+        ? `Lecture sémantique de ${nomFichier} : reconnaissance de ${colonnes.filter((c) => c.champ).length}/${entetes.length} colonnes pour l'entité ${entite}.`
+        : `Lecture automatique de ${nomFichier} : ${classification.explanation}`);
+
   return {
     entite,
     ligne_entetes: ligne,
-    lignes_ignorees: [],
-    colonnes: entetes.map((c: string) => {
-      const rec = recognizedCols.get(c);
-      let champ = null;
-
-      // Exact schema fields always win over semantic guesses. This prevents
-      // ambiguous headers such as category, revenue, status, or type from
-      // being redirected to another valid field by the recognizer.
-      if (entite) {
-        const schema = getSchema(entite);
-        if (schema) {
-          const cleanC = c.toLowerCase().trim();
-          const noAccentC = cleanC.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_");
-          const fields = Object.keys(schema.properties);
-          if (fields.includes(c)) champ = c;
-          else if (fields.includes(cleanC)) champ = cleanC;
-          else if (fields.includes(noAccentC)) champ = noAccentC;
-        }
-      }
-      
-      // 1. Semantic contextual recognition
-      // 1. Semantic contextual recognition (Ontologie Commerciale Universelle)
-      if (!champ && rec && rec.confidence >= 0.5 && rec.canonicalKey !== 'unknown') {
-         const k = rec.canonicalKey;
-         if (k === 'revenue_amount' && entite === 'Order') champ = 'total';
-         else if (k === 'revenue_amount' && entite === 'Campaign') champ = 'revenue';
-         else if (k === 'expense_amount' && entite === 'Expense') champ = 'amount';
-         else if (k === 'cash_balance' && entite === 'Cashflow') champ = 'closing_cash';
-         else if (k === 'employee_identifier' && entite === 'Employee') champ = 'employee_id';
-         else if (k === 'product_identifier' && entite === 'Product') champ = 'product_id';
-         else if (k === 'identifier' && entite === 'Product') champ = 'product_id';
-         else if (k === 'identifier' && entite === 'Employee') champ = 'employee_id';
-         else champ = k;
-         if (rec.targetField) {
-            champ = rec.targetField;
-         } else {
-            const k = rec.canonicalKey;
-            if (k === 'revenue_amount' && entite === 'Order') champ = 'total';
-            else if (k === 'revenue_amount' && entite === 'Campaign') champ = 'revenue';
-            else if (k === 'expense_amount' && entite === 'Expense') champ = 'amount';
-            else if (k === 'cash_balance' && entite === 'Cashflow') champ = 'closing_cash';
-            else if (k === 'employee_identifier' && entite === 'Employee') champ = 'employee_id';
-            else if (k === 'product_identifier' && entite === 'Product') champ = 'product_id';
-            else if (k === 'identifier' && entite === 'Product') champ = 'product_id';
-            else if (k === 'identifier' && entite === 'Employee') champ = 'employee_id';
-            else champ = k;
-         }
-      }
-      
-      // 2. Fallback to schema fields so the UI doesn't show 'Ignorer' for valid columns
-      if (!champ && entite) {
-          const schema = getSchema(entite);
-          if (schema) {
-              const cleanC = c.toLowerCase().trim();
-              const noAccentC = cleanC.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_");
-              const fields = Object.keys(schema.properties);
-              
-              if (fields.includes(c)) champ = c;
-              else if (fields.includes(cleanC)) champ = cleanC;
-              else if (fields.includes(noAccentC)) champ = noAccentC;
-              else {
-                  const canon = cleCanonique(c);
-                  const alias = FIELD_ALIASES[cleanC] || FIELD_ALIASES[cleanC.replace(/[\s-]/g, "_")] || FIELD_ALIASES[noAccentC] || ALIAS_CANONIQUES[canon];
-                  if (alias && fields.includes(alias)) champ = alias;
-              }
-          }
-      }
-      return { colonne: c, champ };
-    }),
-    confiance: "moyenne",
-    explication: entite
-      ? `Lecture sémantique de ${nomFichier} : reconnaissance de ${entetes.length} colonnes pour l'entité ${entite}.`
-      : `Lecture automatique de ${nomFichier} : le type de données n'a pas pu être déterminé.`,
+    lignes_ignorees,
+    colonnes,
+    confiance: decision.confidenceScore >= 90 ? "haute" : decision.confidenceScore >= 70 ? "moyenne" : "faible",
+    explication,
     origine: "regles",
     corrections: [],
+    archetype: classification.archetype,
+    grain: classification.grain.primaryGrain,
+    isAggregatedSummary: classification.isAggregatedSummary,
+    qualityProfile,
+    decision,
   };
 }
 

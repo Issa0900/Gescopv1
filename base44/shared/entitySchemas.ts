@@ -21,7 +21,7 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
       channel: E("shopify", "boutique", "b2b", "instagram", "web", "en_ligne", "magasin", "autre"),
       product_id: S, product_name: S, quantity: N, unit_price: N, unit_cost: N, category: S, subtotal: N, discount: N, tax: N,
       shipping: N, total: N, cost: N, total_revenue: N, total_cost: N, gross_margin: N, gross_profit: N, employee_id: S,
-      department: S, payment_method: S,
+      department: S, payment_method: S, location_id: S, succursale: S, store: S,
       payment_status: E("paye", "en_attente", "echoue", "rembourse"),
       fulfillment_status: E("expedie", "en_preparation", "livre", "annule", "retourne"),
       return_status: E("aucun", "demande", "approuve", "refuse"),
@@ -85,8 +85,8 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
   },
   Employee: {
     properties: {
-      employee_id: S,
-      department: E("direction", "ventes", "marketing", "logistique", "administration", "service_client", "atelier"),
+      employee_id: S, name: S, first_name: S, last_name: S, location: S,
+      department: E("direction", "ventes", "marketing", "logistique", "administration", "service_client", "atelier", "autre"),
       role: S, hire_date: D,
       employment_type: E("temps_plein", "temps_partiel", "contractuel", "stagiaire"),
       hourly_rate: N, weekly_hours: N,
@@ -192,6 +192,14 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
       currency: S, client: S, product: S, import_id: S, fingerprint: S, original_data: S,
     },
     required: ["date", "amount"],
+  },
+  ExecutiveSummary: {
+    properties: {
+      summary_id: S, location_id: S, succursale: S, store: S, period: S, date: D,
+      total_revenue: N, total_cost: N, gross_profit: N, gross_margin: N, total_orders: N,
+      notes: S, import_id: S, fingerprint: S, original_data: S,
+    },
+    required: ["location_id"],
   },
 };
 

@@ -1,0 +1,57 @@
+{
+  "name": "ExecutiveSummary",
+  "type": "object",
+  "properties": {
+    "summary_id": {
+      "type": "string"
+    },
+    "location_id": {
+      "type": "string"
+    },
+    "succursale": {
+      "type": "string"
+    },
+    "store": {
+      "type": "string"
+    },
+    "period": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "total_revenue": {
+      "type": "number"
+    },
+    "total_cost": {
+      "type": "number"
+    },
+    "gross_profit": {
+      "type": "number"
+    },
+    "gross_margin": {
+      "type": "number"
+    },
+    "total_orders": {
+      "type": "number"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "location_id"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

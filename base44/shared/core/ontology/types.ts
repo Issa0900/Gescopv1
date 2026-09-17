@@ -103,10 +103,40 @@ export const GRAIN_LEVELS = {
   SUPPLIER: "supplier",
   CAMPAIGN: "campaign",
   STORE: "store",
+  LOCATION: "location",
+  SUMMARY: "summary",
   STATIC: "static",
 } as const;
 
 export type GrainLevel = (typeof GRAIN_LEVELS)[keyof typeof GRAIN_LEVELS];
+
+/**
+ * Archetypes structuraux de document / feuille (Spec Section 9 & 14)
+ */
+export const DOCUMENT_ARCHETYPES = {
+  TRANSACTION_DATA: "TRANSACTION_DATA",
+  MASTER_DATA: "MASTER_DATA",
+  AGGREGATED_SUMMARY: "AGGREGATED_SUMMARY",
+  PERIODIC_REPORT: "PERIODIC_REPORT",
+  REFERENCE_DATA: "REFERENCE_DATA",
+  UNKNOWN: "UNKNOWN",
+} as const;
+
+export type DocumentArchetype = (typeof DOCUMENT_ARCHETYPES)[keyof typeof DOCUMENT_ARCHETYPES];
+
+/**
+ * Catégories sémantiques reconnues dans les valeurs (Spec Section 14 & 15)
+ */
+export const VALUE_SEMANTIC_CATEGORIES = {
+  GEOGRAPHIC_LOCATION: "GEOGRAPHIC_LOCATION",
+  ORGANIZATIONAL_DEPARTMENT: "ORGANIZATIONAL_DEPARTMENT",
+  MARKETING_CHANNEL: "MARKETING_CHANNEL",
+  PAYMENT_METHOD: "PAYMENT_METHOD",
+  STATUS_LIFECYCLE: "STATUS_LIFECYCLE",
+  GENERAL_TEXT: "GENERAL_TEXT",
+} as const;
+
+export type ValueSemanticCategory = (typeof VALUE_SEMANTIC_CATEGORIES)[keyof typeof VALUE_SEMANTIC_CATEGORIES];
 
 /**
  * 6. Méthodes d'agrégation autorisées

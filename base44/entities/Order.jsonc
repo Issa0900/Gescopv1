@@ -116,6 +116,15 @@
     "region": {
       "type": "string"
     },
+    "location_id": {
+      "type": "string"
+    },
+    "succursale": {
+      "type": "string"
+    },
+    "store": {
+      "type": "string"
+    },
     "status": {
       "type": "string"
     },
