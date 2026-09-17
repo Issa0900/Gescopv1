@@ -33,12 +33,12 @@ export default function Tresorerie() {
   const isLoading = lcf || lex || lp;
   
   if (isLoading) return <p className="text-sm text-muted-foreground">Chargement...</p>;
-  if (!cashflow || cashflow.length === 0) {
+  if (!cashflow?.length && !expenses?.length && !payroll?.length) {
     return (
       <EmptyState
         icon={Wallet}
         title="Aucune donnée de trésorerie"
-        description="Importez vos données de flux de trésorerie pour suivre votre position et vos tendances."
+        description="Importez vos données de flux de trésorerie, dépenses ou paie pour suivre votre position et vos tendances."
       />
     );
   }

@@ -31,12 +31,12 @@ export default function Finance() {
   
   if (ltx) return <p className="text-sm text-muted-foreground">Chargement...</p>;
   if (isError) return <DataErrorState onRetry={refetch} />;
-  if (!transactions || transactions.length === 0) {
+  if (!transactions?.length && !expenses?.length) {
     return (
       <EmptyState
         icon={DollarSign}
         title="Aucune donnée financière"
-        description="Importez vos transactions pour analyser votre santé financière."
+        description="Importez vos transactions ou vos dépenses pour analyser votre santé financière."
       />
     );
   }

@@ -128,20 +128,18 @@ export const GRAIN_TYPES = Object.freeze({
  * KPI status - the reliability state of a computed indicator.
  */
 export const KPI_STATUS = Object.freeze({
-  /** All dependencies present, quality sufficient, calculation valid */
-  AVAILABLE: "AVAILABLE",
-  /** Some optional data missing - result is valid but incomplete */
-  CONDITIONAL: "CONDITIONAL",
-  /** Using proxy data or extrapolation - value is an estimate */
-  ESTIMATED: "ESTIMATED",
-  /** Critical dependencies missing - cannot compute */
-  UNAVAILABLE: "UNAVAILABLE",
+  /** All dependencies present, calculation valid and non-zero */
+  MEASURED: "MEASURED",
+  /** Explicitly measured as zero (differentiates from missing data) */
+  VALID_ZERO: "VALID_ZERO",
+  /** Required data is missing or not tracked */
+  NOT_MEASURED: "NOT_MEASURED",
+  /** Undetermined state (e.g. conflicting sources) */
+  UNKNOWN: "UNKNOWN",
   /** Calculation produced an invalid result (NaN, division by zero) */
   INVALID: "INVALID",
-  /** Requires manual review before trusting */
-  REVIEW: "REVIEW",
-  /** Manually verified by user */
-  VERIFIED: "VERIFIED",
+  /** Not applicable in current business context */
+  NOT_APPLICABLE: "NOT_APPLICABLE",
 });
 
 /**

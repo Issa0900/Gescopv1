@@ -35,7 +35,7 @@ export function computeKpi({ kpiId, records, fieldSemantics, context = {} }) {
   const resolvedDeps = { ...context };
   const lineageSources = [];
   let lowestQuality = 100;
-  let status = KPI_STATUS.AVAILABLE;
+  let status = KPI_STATUS.MEASURED;
 
   let unavailableDeps = 0;
   for (const depId of kpiDef.dependencies) {
@@ -50,14 +50,14 @@ export function computeKpi({ kpiId, records, fieldSemantics, context = {} }) {
       lowestQuality = Math.min(lowestQuality, depResult.qualityScore);
 
       // Propagate status
-      if (depResult.status === KPI_STATUS.UNAVAILABLE) {
+      if (depResult.status === KPI_STATUS.NOT_MEASURED) {
         unavailableDeps += 1;
-      } else if (depResult.status === KPI_STATUS.CONDITIONAL && status === KPI_STATUS.AVAILABLE) {
-        status = KPI_STATUS.CONDITIONAL;
+      } else if (depResult.status === KPI_STATUS.UNKNOWN && status === KPI_STATUS.MEASURED) {
+        status = KPI_STATUS.UNKNOWN;
       }
     }
   }
-  // A KPI is only UNAVAILABLE when EVERY dependency is. Many KPIs list several
+  // A KPI is only NOT_MEASURED when EVERY dependency is. Many KPIs list several
   // alternative sources for the same figure (e.g. total_revenue accepts
   // income_amount OR transaction_amount) and their calculate() fn already
   // handles a missing one via `deps.x || 0` - blocking calculate() the moment
@@ -65,9 +65,9 @@ export function computeKpi({ kpiId, records, fieldSemantics, context = {} }) {
   // silently produced a fake 0 (e.g. Finance page showing "0 $" of revenue
   // while transaction_amount had the real, available total).
   if (kpiDef.dependencies.length > 0 && unavailableDeps === kpiDef.dependencies.length) {
-    status = KPI_STATUS.UNAVAILABLE;
-  } else if (unavailableDeps > 0 && status === KPI_STATUS.AVAILABLE) {
-    status = KPI_STATUS.CONDITIONAL;
+    status = KPI_STATUS.NOT_MEASURED;
+  } else if (unavailableDeps > 0 && status === KPI_STATUS.MEASURED) {
+    status = KPI_STATUS.UNKNOWN;
   }
 
   // Deduplicate sources
@@ -83,12 +83,14 @@ export function computeKpi({ kpiId, records, fieldSemantics, context = {} }) {
 
   // 2. Execute calculation
   let value = null;
-  if (status !== KPI_STATUS.UNAVAILABLE) {
+  if (status !== KPI_STATUS.NOT_MEASURED) {
     try {
       value = kpiDef.calculate(resolvedDeps);
       if (!Number.isFinite(value) && value !== null) {
         status = KPI_STATUS.INVALID;
         value = null;
+      } else if (value === 0 && status === KPI_STATUS.MEASURED) {
+        status = KPI_STATUS.VALID_ZERO;
       }
     } catch (e) {
       status = KPI_STATUS.INVALID;
@@ -215,7 +217,7 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
         unit: matchingObs[0].unit || null,
         formula: "Agrégation d'Observations Sémantiques",
         sources: [{ entity: "Observation", field: "value", canonicalKey, records: matchingObs.length, qualityScore: matchingObs[0].confidence ? matchingObs[0].confidence * 100 : 100 }],
-        status: 1 // KPI_STATUS.AVAILABLE
+        status: sum === 0 ? KPI_STATUS.VALID_ZERO : KPI_STATUS.MEASURED
       });
     }
   }
@@ -244,7 +246,7 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
       unit: null,
       formula: "Source manquante",
       sources: [],
-      status: KPI_STATUS.UNAVAILABLE
+      status: KPI_STATUS.NOT_MEASURED
     });
   }
 
@@ -279,7 +281,7 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
       unit: targetSemantic.dataType,
       formula: `Agrégation de ${targetField}`,
       sources: [source],
-      status: KPI_STATUS.UNAVAILABLE
+      status: KPI_STATUS.NOT_MEASURED
     });
   }
 
@@ -364,7 +366,7 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
     unit: targetSemantic.dataType,
     formula: `Agrégation (${method}) de ${targetField}`,
     sources: [source],
-    status: KPI_STATUS.AVAILABLE
+    status: value === 0 ? KPI_STATUS.VALID_ZERO : KPI_STATUS.MEASURED
   });
 }
 

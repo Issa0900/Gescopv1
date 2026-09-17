@@ -227,8 +227,8 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RESULT, // It's a calculated result, not a raw flow
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: true, // Margin amounts can be summed across periods
-    dependencies: ["total_revenue", "cogs"],
-    calculate: (deps) => (deps.total_revenue || 0) - (deps.cogs || 0),
+    dependencies: ["total_revenue", "cost", "purchase_cost"],
+    calculate: (deps) => (deps.total_revenue || 0) - ((deps.cost || 0) + (deps.purchase_cost || 0)),
   },
 
   gross_margin_pct: {
@@ -287,8 +287,8 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: true,
     // Simple version: Net Income + Interest + Taxes + D&A. 
     // If we only have Revenue and Operating Expenses, it's roughly Rev - OpEx.
-    dependencies: ["total_revenue", "operating_expense"],
-    calculate: (deps) => (deps.total_revenue || 0) - (deps.operating_expense || 0),
+    dependencies: ["total_revenue", "total_expense"], // Changed from operating_expense to total_expense for simplicity, or we keep operating_expense if it exists. But operating_expense isn't in semanticTypes. let's use total_expense
+    calculate: (deps) => (deps.total_revenue || 0) - (deps.total_expense || 0),
   },
 
   // ── TREASURY & BFR (LEVEL 2/3) ──────────────────────────────────────────
@@ -302,16 +302,16 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RESULT,
     dataType: DATA_TYPES.NUMBER,
     isAdditive: false,
-    dependencies: ["cash_closing", "net_burn_rate"],
+    dependencies: ["cash_balance", "net_burn_rate"],
     calculate: (deps) => {
-      if (!deps.cash_closing) return 0;
+      if (!deps.cash_balance) return 0;
       if (deps.net_burn_rate >= 0) return Infinity; // Profitable, infinite runway
       
       const periodDays = deps.period_days || 30;
       const dailyBurnRate = Math.abs(deps.net_burn_rate) / periodDays;
       const monthlyBurnRate = dailyBurnRate * 30.416; // Average days in a month
       
-      return deps.cash_closing / monthlyBurnRate;
+      return deps.cash_balance / monthlyBurnRate;
     },
   },
 
@@ -340,8 +340,8 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RESULT,
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: false, // It's a STOCK-derived metric (AR + Inv - AP)
-    dependencies: ["accounts_receivable", "inventory_value", "accounts_payable"],
-    calculate: (deps) => (deps.accounts_receivable || 0) + (deps.inventory_value || 0) - (deps.accounts_payable || 0),
+    dependencies: ["receivable", "inventory_value", "payable"],
+    calculate: (deps) => (deps.receivable || 0) + (deps.inventory_value || 0) - (deps.payable || 0),
   },
   
   bfr_days: {
@@ -374,11 +374,11 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: false,
     // Standard finance KPI: how many days of revenue sit uncollected in
     // accounts receivable. Lower is better (customers pay faster).
-    dependencies: ["accounts_receivable", "total_revenue"],
+    dependencies: ["receivable", "total_revenue"],
     calculate: (deps) => {
       if (!deps.total_revenue || deps.total_revenue === 0) return null;
       const periodDays = deps.period_days || 365;
-      return ((deps.accounts_receivable || 0) / deps.total_revenue) * periodDays;
+      return ((deps.receivable || 0) / deps.total_revenue) * periodDays;
     },
   },
 
@@ -394,11 +394,11 @@ export const KPI_REGISTRY = Object.freeze({
     // Pairs with DSO: how many days of expenses sit unpaid in accounts
     // payable. Higher can mean better cash management, or slow-paying
     // suppliers strain - read it alongside DSO, not alone.
-    dependencies: ["accounts_payable", "total_expense"],
+    dependencies: ["payable", "total_expense"],
     calculate: (deps) => {
       if (!deps.total_expense || deps.total_expense === 0) return null;
       const periodDays = deps.period_days || 365;
-      return ((deps.accounts_payable || 0) / deps.total_expense) * periodDays;
+      return ((deps.payable || 0) / deps.total_expense) * periodDays;
     },
   },
 
@@ -413,10 +413,10 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RATIO,
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: false,
-    dependencies: ["marketing_spend", "new_customers"],
+    dependencies: ["budget", "active_customers"], // 'new_customers' doesn't exist, we fallback to active_customers. 'budget' serves as marketing spend
     calculate: (deps) => {
-      if (!deps.new_customers || deps.new_customers === 0) return 0;
-      return (deps.marketing_spend || 0) / deps.new_customers;
+      if (!deps.active_customers || deps.active_customers === 0) return 0;
+      return (deps.budget || 0) / deps.active_customers;
     },
   },
   
@@ -429,10 +429,10 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RATIO,
     dataType: DATA_TYPES.NUMBER,
     isAdditive: false,
-    dependencies: ["campaign_revenue", "marketing_spend"],
+    dependencies: ["total_revenue", "budget"], // 'campaign_revenue' & 'marketing_spend' don't exist
     calculate: (deps) => {
-      if (!deps.marketing_spend || deps.marketing_spend === 0) return 0;
-      return (deps.campaign_revenue || 0) / deps.marketing_spend;
+      if (!deps.budget || deps.budget === 0) return 0;
+      return (deps.total_revenue || 0) / deps.budget;
     },
   },
 
@@ -445,10 +445,10 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RATIO,
     dataType: DATA_TYPES.PERCENTAGE,
     isAdditive: false,
-    dependencies: ["campaign_revenue", "marketing_spend"],
+    dependencies: ["total_revenue", "budget"],
     calculate: (deps) => {
-      if (!deps.marketing_spend || deps.marketing_spend === 0) return 0;
-      return ((deps.campaign_revenue - deps.marketing_spend) / deps.marketing_spend) * 100;
+      if (!deps.budget || deps.budget === 0) return 0;
+      return ((deps.total_revenue - deps.budget) / deps.budget) * 100;
     },
   },
 
@@ -461,10 +461,10 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RATIO,
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: false,
-    dependencies: ["marketing_spend", "campaign_clicks"],
+    dependencies: ["budget", "clicks"],
     calculate: (deps) => {
-      if (!deps.campaign_clicks) return null;
-      return (deps.marketing_spend || 0) / deps.campaign_clicks;
+      if (!deps.clicks) return null;
+      return (deps.budget || 0) / deps.clicks;
     },
   },
 
@@ -477,10 +477,10 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RATIO,
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: false,
-    dependencies: ["marketing_spend", "campaign_impressions"],
+    dependencies: ["budget", "impressions"],
     calculate: (deps) => {
-      if (!deps.campaign_impressions) return null;
-      return ((deps.marketing_spend || 0) / deps.campaign_impressions) * 1000;
+      if (!deps.impressions) return null;
+      return ((deps.budget || 0) / deps.impressions) * 1000;
     },
   },
 
