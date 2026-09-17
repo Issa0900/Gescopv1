@@ -49,11 +49,18 @@ Convention : chaque ligne = un cas de test réel, exécuté contre le vrai code
 
 | 12 | `generateReport` : comparaison de périodes — un mois sans aucune transaction importée, comparé à un mois précédent réel, affichait "Marge %: -100%" (effondrement inventé) au lieu de "non mesurable" | `tests/recette/DS11-rapport-periode-vide.ts` | confirmé : -100% calculé | 5/5, "non-mesurable" explicite | ✅ corrigé |
 
+| 13 | `notifyCriticalEvent` était la seule fonction (9 autres OK) à ne jamais appeler `auth.me()` — combinée à `asServiceRole`, n'importe quel appelant non authentifié pouvait faire envoyer un vrai email et créer une Alerte pour un `user_id` arbitraire pris dans le corps de la requête | Vérifié par lecture de code + comparaison systématique des 10 fonctions (`grep auth.me()`) | 1/10 fonctions sans garde | 10/10 avec garde | ✅ corrigé — **pas de test automatisé** : même mur que `point-entree.ts`, `auth.me()` du SDK réel fait toujours un vrai appel réseau (`axios.get`), aucun moyen de le simuler sans backend Base44 vivant |
+| 14 | `inspectSheet` (backfill de champs vides) : ne modifie jamais un champ déjà rempli, pagine correctement | Lecture de code | — | — | ✅ déjà correct, aucune modification |
+
+## Trouvé, nécessite une décision produit (pas de fix appliqué) — suite
+
+- **`notifyCriticalEvent` accepte `user_id` sans vérifier que l'appelant a le droit de notifier CET utilisateur précis.** Le correctif appliqué (item 13) bloque les appels totalement non authentifiés, mais un utilisateur authentifié A pourrait toujours théoriquement déclencher une notification pour un `user_id` B différent du sien — je n'ai pas ajouté de vérification `user_id === caller.id` car je ne sais pas si cette fonction est censée être déclenchée uniquement par l'utilisateur concerné (auto-notification) ou par un processus interne (détection d'anomalie automatique) qui notifierait légitimement un autre utilisateur. Aucun appelant n'existe dans le code actuel (fonction non branchée) — à trancher si/quand elle est câblée à un déclencheur réel.
+
 ## À faire (ordre de priorité, cf. plan §1-19 du cahier des charges)
 
-- [ ] 13. Score de santé LLM (voir "Trouvé mais PAS corrigé" plus haut) — nécessite une décision produit avant de toucher au prompt/schema
-- [ ] 14. Fonctions non encore auditées : `notifyCriticalEvent`, `scanExternalRadar`, `enrichFromWebsite`, `inspectSheet`, `analyzeBusiness` (hors score LLM)
-- [ ] 15. Tableau de bilan final (§18 du cahier des charges)
+- [ ] 15. Score de santé LLM (voir "Trouvé mais PAS corrigé" plus haut) — nécessite une décision produit avant de toucher au prompt/schema
+- [ ] 16. Fonctions encore non auditées : `scanExternalRadar`, `enrichFromWebsite`, `analyzeBusiness` (hors score LLM)
+- [ ] 17. Tableau de bilan final (§18 du cahier des charges)
 
 ## Notes d'architecture à ne pas redécouvrir
 
