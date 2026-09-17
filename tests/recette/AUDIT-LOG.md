@@ -18,11 +18,16 @@ Convention : chaque ligne = un cas de test réel, exécuté contre le vrai code
 | 4 | NULL vs zéro sur `amount` (Transaction) : vide/N/A/tiret → doit rester non mesuré, `0` réel doit rester `0` | `tests/recette/DS04-null-vs-zero.ts` | déjà correct (7/7) | 7/7 | ✅ pas de bug — confirmé, pas retesté sans raison |
 | 5a | `currency` toujours forcé à `"CAD"` en dur, ignorant une colonne Devise/Currency explicite | `tests/recette/DS05-devises-et-dates.ts` | 2/8 échecs | 8/8 | ✅ corrigé |
 | 5b | `parseDate` ne reconnaissait pas l'ordinal français ("1er janvier 2026") | `tests/recette/DS05-devises-et-dates.ts` | inclus ci-dessus | inclus ci-dessus | ✅ corrigé |
-| 6 | Score de santé (`analyzeBusiness/entry.ts`) : un domaine non mesuré compte-t-il comme bon/mauvais ? Divergence entre les 2 moteurs KPI (frontend `kpiEngine.js` vs backend `core/kpi/`) ? | délégué à un agent en arrière-plan, résultat en attente | — | — | 🔄 en cours |
+| 6 | `kpiRegistry.js` (moteur KPI réellement utilisé par Dashboard/Finance/Tresorerie) : COGS/CAC/AOV non mesurés traités comme `0` → marge brute à 100% inventée, CAC "gratuit" inventé, au lieu de "non mesurable" | `tests/recette/DS06-kpi-donnee-absente.ts` (diagnostic initial par agent délégué, transformé en test de régression) | 6 divergences vs le moteur backend `kpiCatalog.ts` | 0/8 échecs | ✅ corrigé (gross_margin, cac, roas, marketing_roi, aov) |
+
+## Trouvé mais PAS corrigé (décision humaine ou chantier plus large requis)
+
+- **Score de santé LLM (`base44/functions/analyzeBusiness/entry.ts`)** : le score global et les 9 scores de dimension sont générés par un appel LLM (`InvokeLLM`, gemini_3_1_pro) dont le JSON schema force `score: number` sans champ `measured`/nullable — un domaine sans données reçoit quand même un score 0-100 inventé, stocké dans `Company.health_score` et affiché tel quel par `src/pages/Historique.jsx`. `src/pages/Dashboard.jsx`, lui, utilise un moteur déterministe séparé (`src/lib/domainScores.js`) qui gère déjà correctement un flag `measured` — donc **deux mécanismes de score coexistent**, un correct et un défaillant. Correctif proposé (non appliqué, nécessite de valider le comportement du LLM en conditions réelles) : ajouter `measured: boolean` au schema JSON imposé au LLM, l'instruire explicitement dans le prompt, et calculer `health_score` côté serveur (moyenne des dimensions `measured=true` uniquement) plutôt que de le laisser inventer.
+- **`base44/shared/core/kpi/` (kpiCatalog.ts/metricEngine.ts) est du code mort en production** malgré une logique correcte : rien dans `base44/functions/` ni aucune page n'appelle `.calculate()` de ce module (seul `KpiManagementPanel.jsx` en lit les métadonnées). À clarifier avec le porteur du projet : le supprimer (dette), ou le brancher réellement en remplacement du calcul LLM ?
+- **Affichage UI du "non mesurable"** : les composants consomment déjà `kpi?.value || 0`, donc le `null` ne crashe rien, mais rien n'affiche encore "non mesurable" à la place de `0` dans Dashboard/Finance/Kpis — c'est un chantier UI, pas un bug de calcul.
 
 ## À faire (ordre de priorité, cf. plan §1-19 du cahier des charges)
 
-- [ ] 6. Score de santé + cohérence des 2 moteurs KPI (agent en cours, voir ligne 6 ci-dessus)
 - [ ] 7. Colonne inconnue / colonne supplémentaire non mappée : ne doit jamais disparaître sans trace
 - [ ] 8. Charge : 1000/10000 lignes — temps, pertes, doublons
 - [ ] 9. Sécurité RLS / isolation tenant (base44/entities) — lecture de code, pas de test live DB possible dans ce sandbox

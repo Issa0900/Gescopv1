@@ -184,7 +184,12 @@ export const KPI_REGISTRY = Object.freeze({
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: true, // Margin amounts can be summed across periods
     dependencies: ["total_revenue", "cogs"],
-    calculate: (deps) => (deps.total_revenue || 0) - (deps.cogs || 0),
+    // A COGS column that was never imported is not the same as a COGS of $0
+    // (a real, measured zero-cost sale). `|| 0` made an absent COGS silently
+    // read as zero cost, so gross margin came out at 100% for any revenue
+    // whose cost data simply hadn't arrived yet — an invented "excellent
+    // performance" from missing data, exactly what sec9-11 prohibits.
+    calculate: (deps) => (deps.total_revenue != null && deps.cogs != null) ? deps.total_revenue - deps.cogs : null,
   },
 
   gross_margin_pct: {
@@ -198,7 +203,7 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: false, // Rates can NEVER be summed
     dependencies: ["total_revenue", "gross_margin_amount"],
     calculate: (deps) => {
-      if (!deps.total_revenue || deps.total_revenue === 0) return 0;
+      if (!deps.total_revenue || deps.gross_margin_amount == null) return null;
       return (deps.gross_margin_amount / deps.total_revenue) * 100;
     },
   },
@@ -333,9 +338,12 @@ export const KPI_REGISTRY = Object.freeze({
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: false,
     dependencies: ["marketing_spend", "new_customers"],
+    // Zero new customers makes the ratio undefined (division by zero), and an
+    // unmeasured spend/count is not a spend/count of zero — both must read as
+    // "non mesurable" (null), not as a free $0 acquisition cost.
     calculate: (deps) => {
-      if (!deps.new_customers || deps.new_customers === 0) return 0;
-      return (deps.marketing_spend || 0) / deps.new_customers;
+      if (deps.marketing_spend == null || !deps.new_customers) return null;
+      return deps.marketing_spend / deps.new_customers;
     },
   },
   
@@ -350,8 +358,8 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: false,
     dependencies: ["campaign_revenue", "marketing_spend"],
     calculate: (deps) => {
-      if (!deps.marketing_spend || deps.marketing_spend === 0) return 0;
-      return (deps.campaign_revenue || 0) / deps.marketing_spend;
+      if (!deps.marketing_spend || deps.campaign_revenue == null) return null;
+      return deps.campaign_revenue / deps.marketing_spend;
     },
   },
 
@@ -366,7 +374,7 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: false,
     dependencies: ["campaign_revenue", "marketing_spend"],
     calculate: (deps) => {
-      if (!deps.marketing_spend || deps.marketing_spend === 0) return 0;
+      if (!deps.marketing_spend || deps.campaign_revenue == null) return null;
       return ((deps.campaign_revenue - deps.marketing_spend) / deps.marketing_spend) * 100;
     },
   },
@@ -385,8 +393,8 @@ export const KPI_REGISTRY = Object.freeze({
     calculate: (deps) => {
       const records = deps._records || [];
       const orderCount = records.filter(r => r.order_id && (!r.status || !["annul", "cancel", "void", "draft"].some(s => String(r.status).toLowerCase().includes(s)))).length;
-      if (orderCount === 0) return 0;
-      return (deps.total_revenue || 0) / orderCount;
+      if (orderCount === 0 || deps.total_revenue == null) return null;
+      return deps.total_revenue / orderCount;
     },
   },
 
