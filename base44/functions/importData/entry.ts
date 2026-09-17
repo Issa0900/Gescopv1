@@ -1,5 +1,5 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.44";
-import { normalizeRow } from "../../shared/importUtils.ts";
+import { normalizeRow, isSummaryOrTotalRow } from "../../shared/importUtils.ts";
 import { fetchDelimitedRows } from "../../shared/csvParse.ts";
 
 export default async function(req) {
@@ -66,6 +66,7 @@ export default async function(req) {
     const toCreate = [];
     let quarantined = 0;
     rows.forEach((r) => {
+      if (!r || isSummaryOrTotalRow(r)) return;
       const normalized = normalizeRow("Transaction", r, importRec.id, null, source_type);
       if (!normalized.date || isNaN(normalized.amount)) {
         quarantined++;

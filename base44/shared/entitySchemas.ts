@@ -18,7 +18,7 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
   Order: {
     properties: {
       order_id: S, customer_id: S, customer_name: S, date: D,
-      channel: E("shopify", "boutique", "b2b", "instagram"),
+      channel: E("shopify", "boutique", "b2b", "instagram", "web", "en_ligne", "magasin", "autre"),
       product_id: S, product_name: S, quantity: N, unit_price: N, unit_cost: N, category: S, subtotal: N, discount: N, tax: N,
       shipping: N, total: N, cost: N, total_revenue: N, total_cost: N, gross_margin: N, gross_profit: N, employee_id: S,
       department: S, payment_method: S,
@@ -98,7 +98,11 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
   Campaign: {
     properties: {
       campaign_id: S, campaign_name: S,
-      channel: E("google_ads", "meta_ads", "instagram", "email", "tiktok"),
+      channel: E(
+        "google_ads", "meta_ads", "instagram", "email", "tiktok",
+        "linkedin", "youtube", "display", "web", "partenariat",
+        "affiliation", "influenceurs", "sms", "print", "autre"
+      ),
       start_date: D, end_date: D, budget: N, spend: N, impressions: N, clicks: N,
       conversions: N, revenue: N, new_customers: N, cac: N, roas: N,
       status: E("active", "terminee", "pause", "planifiee"),

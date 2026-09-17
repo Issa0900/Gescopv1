@@ -1,5 +1,5 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.44";
-import { normalizeRow } from "../../shared/importUtils.ts";
+import { normalizeRow, isSummaryOrTotalRow } from "../../shared/importUtils.ts";
 import { detectEntityByName, detectEntityByHeaders, detectEntityByFieldOverlap, entiteCompatible, sheetRows, trouverLigneEntetes } from "../../shared/sheetDetect.ts";
 import { fetchDelimitedRows, fetchMatrice } from "../../shared/csvParse.ts";
 import {
@@ -176,10 +176,10 @@ async function importRows(
   const refusedValues: Record<string, Record<string, number>> = {};
   const allowedByField: Record<string, string[]> = {};
   rows.forEach((row) => {
-    if (!row || typeof row !== "object") { quarantined++; return; }
+    if (!row || typeof row !== "object" || isSummaryOrTotalRow(row)) return;
     const enumIssues: { field: string; value: string; allowed: string[] }[] = [];
     const normalized = normalizeRow(entityName, row, importRec.id, properties, sourceType, enumIssues);
-    if (Object.keys(normalized).filter((k) => k !== "import_id").length === 0) { quarantined++; return; }
+    if (Object.keys(normalized).filter((k) => k !== "import_id").length === 0) return;
     // Reject up front rather than letting one row fail its whole batch.
     const missing = missingRequired(normalized, required);
     if (missing.length > 0) {
@@ -333,20 +333,21 @@ export default async function (req: Request) {
               if (plan.entite && properties) {
                 for (let i = 0; i < lecture.rows.length; i++) {
                   const row = lecture.rows[i];
+                  if (!row || typeof row !== "object" || isSummaryOrTotalRow(row)) continue;
+                  
                   const enumIssues: { field: string; value: string; allowed: string[] }[] = [];
                   const normalized = normalizeRow(plan.entite, row, "tmp", properties, sourceType, enumIssues);
                   
+                  if (Object.keys(normalized).filter(k => k !== "import_id").length === 0) {
+                    continue; // Ligne vide ou total filtré : ne pas générer de faux positif en quarantaine
+                  }
+                  mappedCount++;
+
                   const errors: string[] = [];
                   const missing = missingRequired(normalized, required);
                   if (missing.length > 0) errors.push(`Champs obligatoires manquants: ${missing.join(", ")}`);
                   if (enumIssues.length > 0) {
                     enumIssues.forEach(e => errors.push(`Valeur refusée pour ${e.field}: "${e.value}" (acceptées: ${e.allowed.join(", ")})`));
-                  }
-                  
-                  if (Object.keys(normalized).filter(k => k !== "import_id").length === 0) {
-                    errors.push("Ligne vide ou aucune colonne mappée.");
-                  } else {
-                    mappedCount++;
                   }
 
                   if (errors.length > 0) {

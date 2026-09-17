@@ -19,7 +19,7 @@
 // la preuve gagne. Voir verifierAvecPreuves().
 
 import { getSchema } from "./entitySchemas.ts";
-import { parseDate, stripAccents, FIELD_ALIASES, cleCanonique, ALIAS_CANONIQUES, type ConventionDate } from "./importUtils.ts";
+import { parseDate, stripAccents, FIELD_ALIASES, cleCanonique, ALIAS_CANONIQUES, isSummaryOrTotalRow, type ConventionDate } from "./importUtils.ts";
 import { trouverLigneEntetes, detectEntityByHeaders, detectEntityByFieldOverlap } from "./sheetDetect.ts";
 import { recognizeAllColumns } from "./core/contextualRecognition.ts";
 
@@ -538,6 +538,7 @@ export function appliquerPlan(plan: PlanImport, matrix: any[][]): Record<string,
     if (ignorees.has(i)) continue;
     const brute = matrix[i] || [];
     if (brute.every((c: any) => String(c ?? "").trim() === "")) continue;
+    if (isSummaryOrTotalRow(brute)) continue;
 
     const obj: Record<string, any> = {};
     entetes.forEach((entete, idx) => {
@@ -559,6 +560,7 @@ export function appliquerPlan(plan: PlanImport, matrix: any[][]): Record<string,
       if (col && col.champ) obj[col.champ] = valeur;
       else if (rattacherParSynonymes) obj[entete] = valeur;
     });
+    if (isSummaryOrTotalRow(obj)) continue;
     if (Object.keys(obj).length > 0) rows.push(obj);
   }
   return rows;

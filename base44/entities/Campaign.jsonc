@@ -15,7 +15,17 @@
         "meta_ads",
         "instagram",
         "email",
-        "tiktok"
+        "tiktok",
+        "linkedin",
+        "youtube",
+        "display",
+        "web",
+        "partenariat",
+        "affiliation",
+        "influenceurs",
+        "sms",
+        "print",
+        "autre"
       ]
     },
     "start_date": {

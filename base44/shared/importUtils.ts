@@ -1363,8 +1363,27 @@ const ENUM_TRANSLATIONS: Record<string, string[]> = {
   "paid": ["paye"], "pending": ["en_attente", "en_cours"], "failed": ["echoue"], "refunded": ["rembourse"],
   "shipped": ["expedie"], "processing": ["en_preparation"], "completed": ["livre", "terminee"], "cancelled": ["annule"], "returned": ["retourne"],
   "none": ["aucun"], "requested": ["demande"], "approved": ["approuve"], "rejected": ["refuse"],
-  "web": ["shopify"],
-  "google ads": ["google_ads"], "meta ads": ["meta_ads"],
+  "web": ["web", "shopify", "display"],
+  "google ads": ["google_ads"], "google": ["google_ads"], "sea": ["google_ads"],
+  "meta ads": ["meta_ads"], "meta": ["meta_ads"], "facebook ads": ["meta_ads"],
+  "facebook": ["meta_ads"], "fb ads": ["meta_ads"], "fb": ["meta_ads"],
+  "instagram": ["instagram", "meta_ads"], "instagram ads": ["instagram", "meta_ads"],
+  "tiktok": ["tiktok"], "tiktok ads": ["tiktok"],
+  "email": ["email"], "courriel": ["email"], "courriels": ["email"],
+  "infolettre": ["email"], "infolettres": ["email"], "newsletter": ["email"], "newsletters": ["email"],
+  "mailing": ["email"], "mail": ["email"], "e-mail": ["email"],
+  "affichage / web": ["display", "web"], "affichage": ["display", "web"],
+  "web / affichage": ["display", "web"], "display": ["display", "web"],
+  "banniere": ["display", "web"], "banner": ["display", "web"],
+  "partenariat": ["partenariat", "affiliation"], "partenariats": ["partenariat"],
+  "sponsor": ["partenariat"], "sponsoring": ["partenariat"], "sepaq": ["partenariat"],
+  "affiliation": ["affiliation"], "affilie": ["affiliation"],
+  "influenceur": ["influenceurs", "instagram", "tiktok"], "influenceurs": ["influenceurs"],
+  "linkedin": ["linkedin"], "linkedin ads": ["linkedin"],
+  "youtube": ["youtube"], "youtube ads": ["youtube"],
+  "sms": ["sms"], "print": ["print"], "courrier": ["print"],
+  "autre": ["autre"], "other": ["autre"], "divers": ["autre"],
+  "terminee": ["terminee"], "termine": ["terminee"], "completed": ["livre", "terminee"],
   "paused": ["pause"], "planned": ["planifiee"], "active": ["active"],
   "dormant": ["dormant"],
   // French capitalized/common variants → canonical enum values
@@ -1436,7 +1455,74 @@ export function coerceEnum(value: any, enumOptions: string[]): any {
     const viaTranslation = (ENUM_TRANSLATIONS[w] || []).find((t) => enumOptions.includes(t));
     if (viaTranslation) return viaTranslation;
   }
+  // Si la valeur spécifique est inconnue mais que l'entité prévoit "autre",
+  // replier sur "autre" au lieu de rejeter la ligne de données.
+  if (enumOptions.includes("autre")) {
+    return "autre";
+  }
   return value;
+}
+
+/**
+ * Détecte si une ligne brute (tableau) ou un enregistrement (objet) représente une ligne
+ * de total, sous-total, synthèse ou moyenne Excel qui ne doit pas être traitée
+ * comme un enregistrement individuel de données (évite les fausses alertes de quarantaine
+ * et les doublons de chiffres d'affaires).
+ */
+export function isSummaryOrTotalRow(rowOrArray: any): boolean {
+  if (!rowOrArray) return false;
+
+  const SUMMARY_KEYWORDS = [
+    "total", "totaux", "sous-total", "sous total", "subtotal", "sub-total",
+    "total general", "total global", "grand total", "somme", "sum", "moyenne",
+    "average", "recapitulatif", "synthese", "totales", "totale"
+  ];
+
+  // Cas 1 : Matrice brute (tableau de cellules)
+  if (Array.isArray(rowOrArray)) {
+    const nonEmpties = rowOrArray.filter((c) => String(c ?? "").trim() !== "");
+    if (nonEmpties.length === 0) return false;
+
+    const firstVal = stripAccents(String(nonEmpties[0]).toLowerCase().trim());
+    if (SUMMARY_KEYWORDS.some((kw) => firstVal === kw || firstVal.startsWith(kw + " ") || firstVal.endsWith(" " + kw))) {
+      // Une ligne de total contient très souvent des cellules vides là où se trouvent les libellés détaillés
+      const emptyCount = rowOrArray.length - nonEmpties.length;
+      if (emptyCount >= Math.max(1, Math.floor(rowOrArray.length * 0.2))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Cas 2 : Objet mappé
+  if (typeof rowOrArray === "object") {
+    // 1. Vérifier les champs identifiants majeurs (order_id, id, transaction_id, etc.)
+    const idFields = ["order_id", "id", "transaction_id", "invoice_id", "campaign_id", "customer_id", "product_id", "employee_id", "supplier_id"];
+    for (const f of idFields) {
+      if (rowOrArray[f]) {
+        const str = stripAccents(String(rowOrArray[f]).toLowerCase().trim());
+        if (SUMMARY_KEYWORDS.some((kw) => str === kw || str.startsWith(kw + " ") || str.endsWith(" " + kw))) {
+          return true;
+        }
+      }
+    }
+
+    // 2. Vérifier si un champ textuel vaut "TOTAL" / "Sous-total" alors que date ou nom est vide
+    const hasTotalWord = Object.values(rowOrArray).some((v) => {
+      if (typeof v !== "string") return false;
+      const s = stripAccents(v.toLowerCase().trim());
+      return SUMMARY_KEYWORDS.includes(s);
+    });
+
+    if (hasTotalWord) {
+      if (!rowOrArray.date || String(rowOrArray.date).trim() === "" ||
+          !rowOrArray.customer_id || String(rowOrArray.customer_id).trim() === "") {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 // Normalize enum fields based on the entity schema properties
@@ -1639,7 +1725,9 @@ export function normalizeRow(
   // value is not one of the accepted ones.
   enumIssues?: EnumIssue[],
 ): Record<string, any> {
+  if (isSummaryOrTotalRow(row)) return {};
   const r = normalizeKeys(row, properties);
+  if (isSummaryOrTotalRow(r)) return {};
 
   // Preserve explicit Transaction headers before aliases or legacy plans can
   // reinterpret them. This is intentionally based on the raw row: a previous
@@ -1748,6 +1836,10 @@ export function normalizeRow(
       if (prop.enum) {
         const coerced = coerceEnum(v, prop.enum);
         if (!prop.enum.includes(coerced)) {
+          if (prop.enum.includes("autre")) {
+            cleaned[k] = "autre";
+            continue;
+          }
           // Skip the invalid value rather than failing the whole row, but record
           // it so the import can explain what was refused and why.
           if (enumIssues) enumIssues.push({ field: k, value: String(v), allowed: prop.enum });

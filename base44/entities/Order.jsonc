@@ -21,7 +21,11 @@
         "shopify",
         "boutique",
         "b2b",
-        "instagram"
+        "instagram",
+        "web",
+        "en_ligne",
+        "magasin",
+        "autre"
       ]
     },
     "product_id": {
