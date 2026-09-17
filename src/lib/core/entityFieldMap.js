@@ -38,6 +38,7 @@ export const ENTITY_FIELD_MAP = Object.freeze({
     subtotal:           { canonicalKey: "order_subtotal", semanticType: "revenue", grain: GRAIN_TYPES.ORDER },
     discount:           { canonicalKey: "order_discount", semanticType: "discount", grain: GRAIN_TYPES.ORDER },
     tax:                { canonicalKey: "order_tax", semanticType: "tax", grain: GRAIN_TYPES.ORDER },
+    shipping:           { canonicalKey: "order_shipping", semanticType: "cost", grain: GRAIN_TYPES.ORDER },
     total:              { canonicalKey: "revenue", semanticType: "revenue", grain: GRAIN_TYPES.ORDER },
     // importUtils.ts aliases headers like "Montant Total"/"Total Spent" to the
     // raw field total_revenue (a real, separate Order schema property, not a
