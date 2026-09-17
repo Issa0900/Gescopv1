@@ -1,6 +1,5 @@
 import type { CanonicalConcept } from "../types.ts";
 import {
-  CanonicalConcept,
   PHYSICAL_TYPES,
   LOGICAL_TYPES,
   BUSINESS_ROLES,
@@ -27,14 +26,12 @@ export const SALES_CONCEPTS: Record<string, CanonicalConcept> = {
       fr: [
         "chiffre d'affaires net", "chiffre affaires net", "ca net", "ca net ht", "revenu net",
         "ventes nettes", "chiffre d'affaires ht", "ca ht", "total net", "montant net des ventes",
-        "produits des ventes", "recettes nettes", "montant ht", "chiffre daffaires"
         "produits des ventes", "recettes nettes", "montant ht", "chiffre daffaires", "ca",
         "ca total", "total ca", "chiffre d'affaires", "chiffre affaires", "chiffre d affaires",
         "revenu", "revenus", "ventes", "total ventes", "montant des ventes"
       ],
       en: [
         "net revenue", "net sales", "net turnover", "sales net", "turnover net", "revenue net",
-        "net sales amount", "sales revenue net", "net billings", "net sales revenue"
         "net sales amount", "sales revenue net", "net billings", "net sales revenue",
         "revenue", "revenues", "sales", "turnover", "total sales", "sales total", "sales revenue"
       ],

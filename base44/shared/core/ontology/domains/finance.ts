@@ -1,6 +1,5 @@
 import type { CanonicalConcept } from "../types.ts";
 import {
-  CanonicalConcept,
   PHYSICAL_TYPES,
   LOGICAL_TYPES,
   BUSINESS_ROLES,

@@ -24,7 +24,6 @@ export default function RessourcesHumaines() {
         fetchAll(base44.entities.Transaction, "-date"),
         fetchAll(base44.entities.Order, "-date")
       ]);
-      
       const normalizedEmployees = (employees || []).map((employee) => ({
         ...employee,
         employee_id: employee.employee_id || employee.id || employee.employee_number || employee.matricule,
