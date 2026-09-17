@@ -478,18 +478,9 @@ export function planParRegles(
     if (!champ && entite) {
         const schema = getSchema(entite);
         if (schema) {
-            const cleanC = c.toLowerCase().trim();
-            const noAccentC = cleanC.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_");
-            const fields = Object.keys(schema.properties);
-            
-            if (fields.includes(c)) champ = c;
-            else if (fields.includes(cleanC)) champ = cleanC;
-            else if (fields.includes(noAccentC)) champ = noAccentC;
-            else {
-                const canon = cleCanonique(c);
-                const alias = FIELD_ALIASES[cleanC] || FIELD_ALIASES[cleanC.replace(/[\s-]/g, "_")] || FIELD_ALIASES[noAccentC] || ALIAS_CANONIQUES[canon];
-                if (alias && fields.includes(alias)) champ = alias;
-            }
+            const canon = cleCanonique(c);
+            const alias = FIELD_ALIASES[cleanC] || FIELD_ALIASES[cleanC.replace(/[\s-]/g, "_")] || FIELD_ALIASES[noAccentC] || ALIAS_CANONIQUES[canon];
+            if (alias && Object.keys(schema.properties).includes(alias)) champ = alias;
         }
     }
 

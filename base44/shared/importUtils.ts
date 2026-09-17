@@ -1767,29 +1767,17 @@ export function coerceType(value: any, prop: any): any {
 export type EnumIssue = { field: string; value: string; allowed: string[] };
 
 export function normalizeRow(
-  entityNameOrRow: string | Record<string, any>,
-  rowOrEntityName: Record<string, any> | string,
+  entityName: string,
+  row: Record<string, any>,
   importId: string = "default",
   properties: Record<string, any> | null = null,
   sourceType?: string,
   enumIssues?: EnumIssue[],
 ): Record<string, any> {
-  let entityName: string;
-  let row: Record<string, any>;
-  if (typeof entityNameOrRow === "string") {
-    entityName = entityNameOrRow;
-    row = (rowOrEntityName as Record<string, any>) || {};
-  } else {
-    row = entityNameOrRow || {};
-    entityName = String(rowOrEntityName || "");
-  }
-
-  if (!properties && ENTITY_SCHEMAS[entityName]) {
-    properties = ENTITY_SCHEMAS[entityName].properties;
-  }
+  const schemaProps = properties || ENTITY_SCHEMAS[entityName]?.properties || null;
 
   if (isSummaryOrTotalRow(row)) return {};
-  const r = normalizeKeys(row, properties);
+  const r = normalizeKeys(row, schemaProps);
   if (isSummaryOrTotalRow(r)) return {};
 
   // Preserve explicit Transaction headers before aliases or legacy plans can
@@ -1805,7 +1793,7 @@ export function normalizeRow(
 
   // A single "name"/"nom" column on an entity that stores first + last name would
   // otherwise be dropped entirely, leaving nameless records.
-  if (properties?.first_name && r.name && !r.first_name) {
+  if (schemaProps?.first_name && r.name && !r.first_name) {
     const parts = String(r.name).trim().split(/\s+/);
     r.first_name = parts[0];
     if (parts.length > 1) r.last_name = parts.slice(1).join(" ");
@@ -1982,12 +1970,12 @@ export function normalizeRow(
   }
 
   // For other entities: normalize enums, coerce types, keep only schema fields, strip empty values
-  const withEnums = normalizeEnums(r, properties || {});
+  const withEnums = normalizeEnums(r, schemaProps || {});
   const cleaned: Record<string, any> = {};
   for (const [k, v] of Object.entries(withEnums)) {
     if (BUILTIN_FIELDS.includes(k)) continue;
     if (v === null || v === undefined || v === "") continue;
-    const prop = properties?.[k];
+    const prop = schemaProps?.[k];
     if (prop) {
       // Field is in schema: validate enum, coerce type
       if (prop.enum) {
@@ -2006,13 +1994,13 @@ export function normalizeRow(
       } else {
         cleaned[k] = coerceType(v, prop);
       }
-    } else if (!properties) {
+    } else if (!schemaProps) {
       // No schema available: keep value as-is
       cleaned[k] = v;
     }
     // else: field not in schema, skip
   }
   if (importId) cleaned["import_id"] = importId;
-  if (properties && properties.original_data) cleaned["original_data"] = JSON.stringify(row);
+  if (schemaProps && schemaProps.original_data) cleaned["original_data"] = JSON.stringify(row);
   return cleaned;
 }

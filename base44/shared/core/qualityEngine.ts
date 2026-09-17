@@ -202,3 +202,4 @@ export function calculateQualityProfile(params: QualityEngineParams): QualityPro
     diagnostics,
   };
 }
+

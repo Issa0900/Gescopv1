@@ -192,7 +192,7 @@ test("Universal V3 — Normalisation et Sauvetage d'une Ligne de Synthèse Succu
     gross_margin: "", // Doit être déduit automatiquement
   };
 
-  const normalized = normalizeRow(rawSummaryRow, "ExecutiveSummary");
+  const normalized = normalizeRow("ExecutiveSummary", rawSummaryRow);
   assert.equal(normalized.location_id, "Lévis");
   assert.equal(normalized.summary_id, "SUM-LEVIS");
   assert.equal(normalized.total_revenue, 95000);
@@ -200,3 +200,4 @@ test("Universal V3 — Normalisation et Sauvetage d'une Ligne de Synthèse Succu
   assert.equal(normalized.gross_profit, 38000); // 95000 - 57000
   assert.equal(normalized.gross_margin, 40);    // (38000 / 95000) * 100
 });
+
