@@ -27,10 +27,10 @@ Convention : chaque ligne = un cas de test réel, exécuté contre le vrai code
 - **Affichage UI du "non mesurable"** : les composants consomment déjà `kpi?.value || 0`, donc le `null` ne crashe rien, mais rien n'affiche encore "non mesurable" à la place de `0` dans Dashboard/Finance/Kpis — c'est un chantier UI, pas un bug de calcul.
 
 | 7 | Colonne inconnue/supplémentaire : disparaissait sans trace visible (seule `original_data`, jamais lue par l'UI, la gardait) | `tests/recette/DS07-colonne-inconnue.ts` | aucune remontée | 5/5, message explicite ajouté au résultat d'import | ✅ corrigé |
+| 8 | Charge 1000/10000 lignes a révélé : `parseNumber("abc")` / tout texte purement alphabétique → `0` au lieu de rejeté (`Number("")===0` en JS après avoir tout retiré) | `tests/recette/DS08-charge-volume.ts` | 4/8 échecs (0 ligne rejetée au lieu de 1/7) | 8/8, ~50-100k lignes/s | ✅ corrigé |
 
 ## À faire (ordre de priorité, cf. plan §1-19 du cahier des charges)
 
-- [ ] 8. Charge : 1000/10000 lignes — temps, pertes, doublons
 - [ ] 9. Sécurité RLS / isolation tenant (base44/entities) — lecture de code, pas de test live DB possible dans ce sandbox
 - [ ] 10. Autres fonctionnalités de l'app (au-delà de l'import) : pages Dashboard/Kpis/Finance/Tresorerie — cohérence d'affichage, assistant IA §16
 

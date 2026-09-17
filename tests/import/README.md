@@ -62,6 +62,7 @@ Chaque suite se termine par `cas en echec : 0` quand tout va bien.
 | `../recette/DS05-devises-et-dates.ts` | Devise explicite (USD/EUR) respectée, calendrier (bissextile, mois >12, 31 avril), ordinal français ("1er janvier") |
 | `../recette/DS06-kpi-donnee-absente.ts` | Marge brute / CAC / panier moyen : une dépendance non mesurée doit rester `null`, jamais un `0` inventé |
 | `../recette/DS07-colonne-inconnue.ts` | Une colonne non reconnue est signalée dans le message d'import, pas silencieusement absorbée |
+| `../recette/DS08-charge-volume.ts` | 1000/10000 lignes : invariant lues=valides+rejetées, débit, et détection d'un montant purement illisible |
 
 ## Défauts que ces tests ont trouvés
 
@@ -106,7 +107,13 @@ Ils ne sont pas théoriques — chacun a été trouvé par ces tests et corrigé
     lit jamais ce champ : pour l'utilisateur, la colonne était perdue sans
     explication. Le résultat d'import liste désormais les colonnes
     ignorées par entité.
-14. **Réimporter le même fichier dupliquait toutes ses lignes.**
+14. **`parseNumber("abc")` (ou tout texte purement alphabétique) rendait
+    `0` au lieu d'être rejeté.** Après avoir retiré lettres/espaces/devise,
+    la chaîne restante était vide, et `Number("")` vaut `0` en JS — un
+    montant totalement illisible passait donc la validation comme un
+    montant réel de zéro, comptabilisé dans les volumes et invisible dans
+    les sommes. Trouvé en testant 10 000 lignes réalistes (sec12).
+15. **Réimporter le même fichier dupliquait toutes ses lignes.**
     `generateFingerprint` valait `JSON.stringify(row)`, et chaque ligne
     normalisée porte un `import_id` propre à SON import — donc deux imports
     du même fichier produisaient deux empreintes différentes. La

@@ -1712,6 +1712,12 @@ export function parseNumber(value: any): number | null {
   }
   // Strip currency, percent signs and every kind of space (incl. non-breaking).
   s = s.replace(/[$€£%]|[a-zA-Z]|\s|\u00A0|\u202F/g, "");
+  // A value that was ALL letters ("abc", "texte-invalide", a stray currency
+  // code with no amount attached) has nothing left after stripping -- no
+  // digit anywhere. Number("") is 0 in JS, so without this check unreadable
+  // text silently became a valid $0 instead of being rejected: it passed
+  // validation, was counted in volumes, and stayed invisible in every sum.
+  if (!/\d/.test(s)) return null;
   const lastComma = s.lastIndexOf(",");
   const lastDot = s.lastIndexOf(".");
   if (lastComma >= 0 && lastDot >= 0) {
