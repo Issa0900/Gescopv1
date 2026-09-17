@@ -67,3 +67,4 @@ export default async function semanticIngest(
     preview: allObservations.slice(0, 5) // Renvoie un aperu au frontend
   };
 }
+

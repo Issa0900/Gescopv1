@@ -75,3 +75,4 @@ export function matchConcept(profile: ColumnProfile): SemanticMatch | null {
 
   return bestMatch;
 }
+

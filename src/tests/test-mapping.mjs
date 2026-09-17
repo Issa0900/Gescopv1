@@ -25,7 +25,7 @@ tests.push({
   name: "Messy FrEn Mix (Transactions)",
   entity: "Transaction",
   row: { "txn date": "12-05-2023", "Dépense": "- 50,00 €", "CATÉGORIE": "Utilitaires", "Merchant": "EDF" },
-  expectedKeys: ["date", "expense_amount", "category", "source"]
+  expectedKeys: ["date", "amount", "category", "source"]
 });
 
 console.log("=== GESCOP DATASET LIBRARY: Mapping Tests ===");

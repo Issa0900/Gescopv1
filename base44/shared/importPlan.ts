@@ -541,8 +541,13 @@ export function appliquerPlan(plan: PlanImport, matrix: any[][]): Record<string,
         if (d !== null) valeur = d;
       }
 
-      if (col && col.champ) obj[col.champ] = valeur;
-      else if (rattacherParSynonymes) obj[entete] = valeur;
+      if (col && col.champ) {
+        obj[col.champ] = valeur;
+      } else {
+        // Toujours conserver l'entête d'origine : permet au dictionnaire d'alias
+        // et à la normalisation de rattraper les colonnes financières et métier
+        obj[entete] = valeur;
+      }
     });
     if (Object.keys(obj).length > 0) rows.push(obj);
   }

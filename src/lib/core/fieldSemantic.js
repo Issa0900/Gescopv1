@@ -20,7 +20,7 @@ import {
   ADDITIVE_COMPATIBILITY,
   COMPARISON_COMPATIBILITY,
   getSemanticType,
-} from "./semanticTypes";
+} from "./semanticTypes.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FIELD SEMANTIC CONSTRUCTOR

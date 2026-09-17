@@ -8,7 +8,6 @@ import {
 } from "../../shared/importPlan.ts";
 import { insertRows, missingRequired } from "../../shared/bulkInsert.ts";
 import { buildBusinessContext } from "../../shared/businessContext.ts";
-import { resolveFieldSemantics } from "../../shared/semanticEngine.ts";
 import { normalizeRow as normalizeRowForCore } from "../../shared/normalizationEngine.ts";
 import { profileData } from "../../shared/dataProfiler.ts";
 import { matchConcept } from "../../shared/semanticMatcher.ts";
@@ -364,6 +363,7 @@ export default async function (req: Request) {
               
               let validCount = 0;
               let mappedCount = 0;
+              let quarantinedCount = 0;
               const quarantine: any[] = [];
               const properties = getSchema(plan.entite)?.properties || null;
               const required = getSchema(plan.entite)?.required || [];
@@ -388,6 +388,7 @@ export default async function (req: Request) {
                   }
 
                   if (errors.length > 0) {
+                    quarantinedCount++;
                     if (quarantine.length < 50) {
                       quarantine.push({ rowIndex: i + plan.ligne_entetes + 1, original: row, mapped: normalized, errors });
                     }
@@ -404,17 +405,15 @@ export default async function (req: Request) {
               results.push({
                 file_name: label, sheet: nomFeuille, entity: plan.entite,
                 plan, signature: analyse.signature, refus: analyse.refus, analyse_erreur: analyse.erreur,
-                apercu: lignesSelonPlan(plan, matrix, file_name).rows.slice(0, 5),
                 apercu: lecture.rows.slice(0, 5),
                 echantillon: construireEchantillon(matrix, 8),
-                rows_read: Math.max(matrix.length - plan.ligne_entetes - 1, 0),
                 rows_read: totalRows,
                 status: "analyse",
                 quality: {
                   score: quality_score || 0,
                   valid_rows: validCount,
                   total_rows: totalRows,
-                  quarantined_rows: quarantine.length,
+                  quarantined_rows: quarantinedCount,
                   quarantine_samples: quarantine
                 }
               });

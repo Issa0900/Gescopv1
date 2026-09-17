@@ -39,6 +39,24 @@
     "weekly_hours": {
       "type": "number"
     },
+    "full_name": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "annual_salary": {
+      "type": "number"
+    },
+    "salary": {
+      "type": "number"
+    },
+    "branch": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string"
+    },
     "status": {
       "type": "string",
       "enum": [

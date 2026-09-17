@@ -139,7 +139,7 @@ export default function Tresorerie() {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+            <XAxis dataKey="mois" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 11 }} />
             <Tooltip formatter={(v) => `${v.toLocaleString()} $`} />
             <Area type="monotone" dataKey="solde" stroke="#3b82f6" strokeWidth={2} fill="url(#cashGrad)" name="Solde" />
@@ -153,7 +153,7 @@ export default function Tresorerie() {
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={chartData.slice(-8)} margin={{ left: 10, right: 10 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+              <XAxis dataKey="mois" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => `${v.toLocaleString()} $`} />
               <Legend wrapperStyle={{ fontSize: 12 }} />

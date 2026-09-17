@@ -330,6 +330,7 @@ export function runQualityChecks(d) {
     { name: "Trésorerie", rows: d.cashflow, date: "date", amount: "closing_cash", key: "date" },
     { name: "Dépenses", rows: d.expenses, date: "date", amount: "amount", key: "expense_id" },
     { name: "Inventaire", rows: d.inventory, date: "date", amount: null, key: null },
+    { name: "Campagnes", rows: d.campaigns, date: "start_date", amount: "spend", key: "campaign_id" },
     { name: "Campagnes (quotidien)", rows: d.campaignDaily, date: "date", amount: "spend", key: null },
     { name: "Paie", rows: d.payroll, date: "period", amount: "total_cost", key: "payroll_id" },
   ];

@@ -39,6 +39,7 @@ const statusStyles = {
   warning: "text-orange-600 bg-orange-50",
   critical: "text-red-600 bg-red-50",
   neutral: "text-blue-600 bg-blue-50",
+  unmeasured: "text-muted-foreground bg-muted",
 };
 
 export default function KpiCard({ label, value, change, changeDir, sparkline, status, statusLabel, onClick }) {

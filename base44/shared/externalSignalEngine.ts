@@ -44,3 +44,4 @@ export function processExternalSignal(signal: RawExternalSignal, source: Externa
     confidence: source.trust_level // La confiance hǸrite de la fiabilitǸ de la source
   };
 }
+

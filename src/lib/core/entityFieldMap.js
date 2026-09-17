@@ -14,8 +14,8 @@
 //    contextualRecognition, and all downstream modules.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { GRAIN_TYPES } from "./semanticTypes";
-import { createFieldSemantic } from "./fieldSemantic";
+import { GRAIN_TYPES } from "./semanticTypes.js";
+import { createFieldSemantic } from "./fieldSemantic.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RAW FIELD DEFINITIONS

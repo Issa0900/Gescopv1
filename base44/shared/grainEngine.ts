@@ -70,3 +70,4 @@ export function detectGrain(
   // Fallback
   return { type: 'transactional', confidence: 0.5 };
 }
+

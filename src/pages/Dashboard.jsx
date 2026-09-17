@@ -200,7 +200,7 @@ export default function Dashboard() {
     
     const aov = engineKpis.get("aov")?.value || 0;
     const activeCustomers = engineKpis.get("active_customers")?.value || 0;
-    const customerSentiment = engineKpis.get("customer_sentiment_score")?.value || 0;
+    const customerSentiment = engineKpis.get("customer_sentiment_score")?.value ?? null;
     const totalExpenseAmount = totalExpensesTxn;
 
     // Trésorerie : cashflow ne se filtre pas par période car c'est un stock continu
@@ -351,18 +351,43 @@ export default function Dashboard() {
 
   const rtHealthScore = useMemo(() => {
     const keys = ["finance", "ventes", "tresorerie", "clients", "operations", "marketing"];
-    // Un domaine sans donnee porte un score de repli de 50 : l'inclure reviendrait
-    // a moyenner une demi-sante inventee avec des mesures reelles.
-    const scores = keys
-      .filter((k) => rtScores[k]?.measured !== false)
+    const measuredKeys = keys.filter((k) => rtScores[k]?.measured !== false);
+    const scores = measuredKeys
       .map((k) => rtScores[k]?.score || 0)
       .filter((s) => s > 0);
-    return scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
-  }, [rtScores]);
+    
+    if (scores.length === 0) return 0;
+
+    let baseScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+
+    // Vérifier les anomalies critiques et la présence des piliers financiers
+    const criticalAnomalies = (anomalies || []).filter((a) => a.severity === "critique" || a.level === "critique");
+    const hasCoreFinance = rtScores.finance?.measured !== false || rtScores.ventes?.measured !== false || rtScores.tresorerie?.measured !== false;
+
+    // Si des anomalies critiques sont ouvertes, plafonner le score en zone de vigilance
+    if (criticalAnomalies.length > 0) {
+      baseScore = Math.min(baseScore, 48);
+    } else if (!hasCoreFinance && scores.length < 3) {
+      // Données financières fondamentales absentes : modérer le score global
+      baseScore = Math.min(baseScore, 55);
+    }
+
+    return baseScore;
+  }, [rtScores, anomalies]);
 
   // === SUMMARY ===
   const summary = useMemo(() => {
     const score = rtHealthScore;
+    const criticalAnomalies = (anomalies || []).filter((a) => a.severity === "critique" || a.level === "critique");
+    const hasCoreFinance = rtScores.finance?.measured !== false || rtScores.ventes?.measured !== false || rtScores.tresorerie?.measured !== false;
+
+    if (criticalAnomalies.length > 0) {
+      return `Attention : ${criticalAnomalies.length} anomalie(s) critique(s) détectée(s). Une intervention immédiate est requise.`;
+    }
+    if (!hasCoreFinance) {
+      return "Données financières partielles : importez vos ventes, transactions ou flux de trésorerie pour consolider le score de santé.";
+    }
+
     const scored = dimensions
       .filter((d) => d.measured !== false && (d.score || 0) > 0)
       .sort((a, b) => (a.score || 0) - (b.score || 0));
@@ -370,7 +395,7 @@ export default function Dashboard() {
     if (score >= 75) return "Votre entreprise est en bonne santé. Continuez à surveiller les indicateurs clés.";
     if (score >= 50) return `Votre entreprise progresse, mais ${lowest.join(" et ")} nécessitent une attention particulière.`;
     return `Votre entreprise rencontre des difficultés. Une intervention est recommandée sur ${lowest.join(" et ")}.`;
-  }, [rtHealthScore, dimensions]);
+  }, [rtHealthScore, dimensions, anomalies, rtScores]);
 
   // === TREND ===
   const healthTrend = useMemo(() => {
@@ -484,15 +509,30 @@ export default function Dashboard() {
           <div>
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Indicateurs clés</h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <KpiCard label="Trésorerie" value={`${Math.round(computed.latestCash).toLocaleString("fr-CA")} $`}
-                change={`${formatPct(Math.abs(computed.cashTrend))}`} changeDir={computed.cashTrend >= 0 ? "up" : "down"}
-                sparkline={computed.spark(computed.monthlyData.cash)} status={computed.latestCash > 0 ? "good" : "critical"} statusLabel={computed.latestCash > 0 ? "Bon" : "Critique"} onClick={() => navigate("/tresorerie")} />
-              <KpiCard label="Chiffre d'affaires" value={`${Math.round(computed.totalIncome).toLocaleString("fr-CA")} $`}
-                change={`${formatPct(Math.abs(computed.revTrend))}`} changeDir={computed.revTrend >= 0 ? "up" : "down"}
-                sparkline={computed.spark(computed.monthlyData.revenue)} status={computed.revTrend >= 0 ? "good" : "warning"} statusLabel={computed.revTrend >= 0 ? "Bon" : "Attention"} onClick={() => navigate("/kpis")} />
-              <KpiCard label="Marge nette" value={`${formatPct(computed.marginPct)}`}
-                change={`${formatPct(Math.abs(computed.marginTrend))}`} changeDir={computed.marginTrend >= 0 ? "up" : "down"}
-                sparkline={computed.spark(computed.monthlyData.margin)} status={computed.marginPct >= 30 && computed.marginTrend >= 0 ? "good" : computed.marginPct < 10 ? "critical" : "warning"} statusLabel={computed.marginPct >= 30 && computed.marginTrend >= 0 ? "Bon" : computed.marginPct < 10 ? "Critique" : "Attention"} onClick={() => navigate("/kpis")} />
+              <KpiCard label="Trésorerie"
+                value={(cashflow?.length || 0) > 0 ? `${Math.round(computed.latestCash).toLocaleString("fr-CA")} $` : "—"}
+                change={(cashflow?.length || 0) > 1 ? `${formatPct(Math.abs(computed.cashTrend))}` : null}
+                changeDir={computed.cashTrend >= 0 ? "up" : "down"}
+                sparkline={computed.spark(computed.monthlyData.cash)}
+                status={(cashflow?.length || 0) > 0 ? (computed.latestCash > 0 ? "good" : "critical") : "unmeasured"}
+                statusLabel={(cashflow?.length || 0) > 0 ? (computed.latestCash > 0 ? "Bon" : "Critique") : "Non mesuré"}
+                onClick={() => navigate("/tresorerie")} />
+              <KpiCard label="Chiffre d'affaires"
+                value={((transactions?.length || 0) + (orders?.length || 0)) > 0 ? `${Math.round(computed.totalIncome).toLocaleString("fr-CA")} $` : "—"}
+                change={((transactions?.length || 0) + (orders?.length || 0)) > 0 && computed.monthlyData.revenue.length > 1 ? `${formatPct(Math.abs(computed.revTrend))}` : null}
+                changeDir={computed.revTrend >= 0 ? "up" : "down"}
+                sparkline={computed.spark(computed.monthlyData.revenue)}
+                status={((transactions?.length || 0) + (orders?.length || 0)) > 0 ? (computed.revTrend >= 0 ? "good" : "warning") : "unmeasured"}
+                statusLabel={((transactions?.length || 0) + (orders?.length || 0)) > 0 ? (computed.revTrend >= 0 ? "Bon" : "Attention") : "Non mesuré"}
+                onClick={() => navigate("/kpis")} />
+              <KpiCard label="Marge nette"
+                value={((transactions?.length || 0) + (orders?.length || 0)) > 0 ? `${formatPct(computed.marginPct)}` : "—"}
+                change={((transactions?.length || 0) + (orders?.length || 0)) > 0 && computed.monthlyData.margin.length > 1 ? `${formatPct(Math.abs(computed.marginTrend))}` : null}
+                changeDir={computed.marginTrend >= 0 ? "up" : "down"}
+                sparkline={computed.spark(computed.monthlyData.margin)}
+                status={((transactions?.length || 0) + (orders?.length || 0)) > 0 ? (computed.marginPct >= 30 && computed.marginTrend >= 0 ? "good" : computed.marginPct < 10 ? "critical" : "warning") : "unmeasured"}
+                statusLabel={((transactions?.length || 0) + (orders?.length || 0)) > 0 ? (computed.marginPct >= 30 && computed.marginTrend >= 0 ? "Bon" : computed.marginPct < 10 ? "Critique" : "Attention") : "Non mesuré"}
+                onClick={() => navigate("/kpis")} />
             </div>
           </div>
 
@@ -512,18 +552,37 @@ export default function Dashboard() {
               <div className="space-y-6 border-t border-border p-4">
                 {/* KPI secondaires */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <KpiCard label="Coûts opérationnels" value={`${Math.round(computed.totalExpenseAmount).toLocaleString("fr-CA")} $`}
-                    change={`${formatPct(Math.abs(computed.costTrend))}`} changeDir={computed.costTrend >= 0 ? "up" : "down"}
-                    sparkline={computed.spark(computed.monthlyData.costs)} status={computed.costTrend > 5 ? "warning" : "neutral"} statusLabel={computed.costTrend > 5 ? "Attention" : "Stable"} onClick={() => navigate("/tresorerie")} />
-                  <KpiCard label="Clients actifs" value={computed.activeCustomers.toLocaleString("fr-CA")}
-                    change={`${formatPct(Math.abs(computed.clientTrend))}`} changeDir={computed.clientTrend >= 0 ? "up" : "down"}
-                    sparkline={computed.spark(computed.monthlyData.clients)} status={computed.clientTrend >= 0 ? "good" : "warning"} statusLabel={computed.clientTrend >= 0 ? "Bon" : "Attention"} onClick={() => navigate("/clients")} />
-                  <KpiCard label="Panier moyen" value={`${computed.aov.toFixed(2)} $`}
-                    change={`${formatPct(Math.abs(computed.aovTrend))}`} changeDir={computed.aovTrend >= 0 ? "up" : "down"}
-                    sparkline={computed.spark(computed.aovMonthly)} status={computed.aovTrend >= 0 ? "neutral" : "warning"} statusLabel={computed.aovTrend >= 0 ? "Stable" : "Attention"} onClick={() => navigate("/clients")} />
-                  <KpiCard label="Sentiment Client" value={`${computed.customerSentiment.toFixed(1)}/10`}
+                  <KpiCard label="Coûts opérationnels"
+                    value={(expenseRecords?.length || 0) > 0 ? `${Math.round(computed.totalExpenseAmount).toLocaleString("fr-CA")} $` : "—"}
+                    change={(expenseRecords?.length || 0) > 1 ? `${formatPct(Math.abs(computed.costTrend))}` : null}
+                    changeDir={computed.costTrend >= 0 ? "up" : "down"}
+                    sparkline={computed.spark(computed.monthlyData.costs)}
+                    status={(expenseRecords?.length || 0) > 0 ? (computed.costTrend > 5 ? "warning" : "neutral") : "unmeasured"}
+                    statusLabel={(expenseRecords?.length || 0) > 0 ? (computed.costTrend > 5 ? "Attention" : "Stable") : "Non mesuré"}
+                    onClick={() => navigate("/tresorerie")} />
+                  <KpiCard label="Clients actifs"
+                    value={(customers?.length || 0) > 0 ? computed.activeCustomers.toLocaleString("fr-CA") : "—"}
+                    change={(customers?.length || 0) > 1 ? `${formatPct(Math.abs(computed.clientTrend))}` : null}
+                    changeDir={computed.clientTrend >= 0 ? "up" : "down"}
+                    sparkline={computed.spark(computed.monthlyData.clients)}
+                    status={(customers?.length || 0) > 0 ? (computed.clientTrend >= 0 ? "good" : "warning") : "unmeasured"}
+                    statusLabel={(customers?.length || 0) > 0 ? (computed.clientTrend >= 0 ? "Bon" : "Attention") : "Non mesuré"}
+                    onClick={() => navigate("/clients")} />
+                  <KpiCard label="Panier moyen"
+                    value={(orders?.length || 0) > 0 && computed.aov > 0 ? `${computed.aov.toFixed(2)} $` : "—"}
+                    change={(orders?.length || 0) > 1 ? `${formatPct(Math.abs(computed.aovTrend))}` : null}
+                    changeDir={computed.aovTrend >= 0 ? "up" : "down"}
+                    sparkline={computed.spark(computed.aovMonthly)}
+                    status={(orders?.length || 0) > 0 && computed.aov > 0 ? (computed.aovTrend >= 0 ? "neutral" : "warning") : "unmeasured"}
+                    statusLabel={(orders?.length || 0) > 0 && computed.aov > 0 ? (computed.aovTrend >= 0 ? "Stable" : "Attention") : "Non mesuré"}
+                    onClick={() => navigate("/clients")} />
+                  <KpiCard label="Sentiment Client"
+                    value={computed.customerSentiment != null ? `${computed.customerSentiment.toFixed(1)}/10` : "—"}
                     change={null} changeDir="stable"
-                    sparkline={[]} status={computed.customerSentiment >= 7 ? "good" : computed.customerSentiment <= 4 ? "critical" : "warning"} statusLabel={computed.customerSentiment >= 7 ? "Bon" : computed.customerSentiment <= 4 ? "Critique" : "Moyen"} onClick={() => navigate("/kpis")} />
+                    sparkline={[]}
+                    status={computed.customerSentiment != null ? (computed.customerSentiment >= 7 ? "good" : computed.customerSentiment <= 4 ? "critical" : "warning") : "unmeasured"}
+                    statusLabel={computed.customerSentiment != null ? (computed.customerSentiment >= 7 ? "Bon" : computed.customerSentiment <= 4 ? "Critique" : "Moyen") : "Non mesuré"}
+                    onClick={() => navigate("/kpis")} />
                 </div>
 
                 {/* Insights */}
