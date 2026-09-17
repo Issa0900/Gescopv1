@@ -7,7 +7,7 @@
  */
 
 import { ColumnProfile } from './dataProfiler.ts';
-import { buildConceptMappingsFromRegistry } from '../../registry/generateAliases.ts';
+import { buildConceptMappingsFromRegistry } from './registry/generateAliases.ts';
 
 export type SemanticMatch = {
   concept: string;         // e.g. "finance.revenue", "temporal.date", "customer.id"

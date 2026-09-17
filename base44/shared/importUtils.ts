@@ -1,7 +1,7 @@
 // Shared import normalization utilities — used by importData and importMultiData
 import { ENTITY_SCHEMAS } from "./entitySchemas.ts";
 
-import { buildFieldAliasesFromRegistry } from "../../registry/generateAliases.ts";
+import { buildFieldAliasesFromRegistry } from "./registry/generateAliases.ts";
 
 // Strip accents/diacritics for comparison (é→e, à→a, etc.)
 export function stripAccents(str: string): string {

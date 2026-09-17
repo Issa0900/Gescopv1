@@ -4,8 +4,8 @@
 // doit maintenant resoudre vers un concept de mesure au lieu de disparaitre.
 import { matchConcept } from "../../base44/shared/semanticMatcher.ts";
 import { FIELD_ALIASES, ALIAS_CANONIQUES, normalizeKeys, cleCanonique } from "../../base44/shared/importUtils.ts";
-import { buildFieldAliasesFromRegistry, findConceptByHeaderName } from "../../registry/generateAliases.ts";
-import { CONCEPTS } from "../../registry/conceptRegistry.ts";
+import { buildFieldAliasesFromRegistry, findConceptByHeaderName } from "../../base44/shared/registry/generateAliases.ts";
+import { CONCEPTS } from "../../base44/shared/registry/conceptRegistry.ts";
 
 let ko = 0;
 const fail = (label: string, detail: string) => {
