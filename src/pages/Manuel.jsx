@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronDown, Lightbulb, Upload, LayoutDashboard, BarChart3, AlertTriangle, ShieldAlert, Radar as RadarIcon, CheckSquare, Bell, FileText, MessageSquare, Settings, Sparkles, Rocket, Brain, TrendingUp, Calculator, Target, History, Users, Package, Megaphone, Wallet } from "lucide-react";
+import { ChevronDown, Lightbulb, Upload, LayoutDashboard, BarChart3, AlertTriangle, ShieldAlert, Radar as RadarIcon, CheckSquare, Bell, FileText, MessageSquare, Settings, Sparkles, Rocket, Brain, TrendingUp, Calculator, Target, History, Users, Package, Megaphone, Wallet, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ManualTableOfContents from "@/components/ManualTableOfContents";
 import BrandLogo from "@/components/BrandLogo";
@@ -32,10 +32,12 @@ const groups = [
       },
       {
         id: "import",
-        title: "Import de données",
+        title: "Import universel de données (Moteur V3)",
         icon: Upload,
         content: [
-          { h: "Formats supportés", p: "GESCOP accepte les fichiers CSV, Excel (.xlsx, .xls), TSV et PDF texte. Le système reconnaît automatiquement le type de données contenu dans chaque fichier à partir de son nom et de ses colonnes." },
+          { h: "Formats supportés & Moteur Universel V3", p: "GESCOP accepte les fichiers CSV, Excel (.xlsx, .xls), TSV et PDF texte. Grâce au Moteur Universel V3, l'application analyse la structure, le grain des données (transactionnel fin, composite ou agrégé par succursale), et rattache automatiquement chaque colonne au concept commercial approprié." },
+          { h: "Reconnaissance sémantique & Tolérance", p: "Le moteur comprend plus de 7 langues (français québécois, anglais, espagnol, allemand, italien, etc.), gère la tokenisation (camelCase, snake_case, espaces), tolère les fautes de frappe courantes et élimine automatiquement les lignes de « TOTAL » ou « Sommaire » pour ne conserver que la donnée utile." },
+          { h: "Rattrapage contextuel & Mémoire", p: "Si une colonne utilise un terme propre à votre organisation (ex. « Succursale », « Coût Total ($) », « % Marge »), GESCOP utilise le profil d'entreprise et le Dictionnaire d'Entreprise pour la rattacher automatiquement (ex. Succursale ≠ Département, Profit brut $ ≠ Marge brute %)." },
           { h: "Types de données importables", p: "Vous pouvez importer simultanément plusieurs fichiers pour alimenter les différentes tables de l'app. Chaque type de données alimente un ou plusieurs modules spécifiques :" },
           { h: "Transactions (income/expense)", p: "Fichier avec colonnes : date, description, montant, type (income/expense), catégorie. Alimente : Tableau de bord, KPI (domaine Finance), Trésorerie, Anomalies, Prévisions, Assistant IA." },
           { h: "Commandes (Orders)", p: "Fichier avec colonnes : order_id, customer_id, date, channel, product_id, quantity, unit_price, total, payment_status, fulfillment_status. Alimente : KPI (domaine Ventes), Clients (LTV, panier moyen), Produits (ventes mensuelles)." },
@@ -43,7 +45,7 @@ const groups = [
           { h: "Produits (Products)", p: "Fichier avec colonnes : product_id, product_name, category, purchase_cost, selling_price, gross_margin, monthly_sales, inventory_level, reorder_point, status. Alimente : page Produits, KPI (domaine Opérations)." },
           { h: "Stocks (Inventory)", p: "Fichier avec colonnes : date, product_id, opening_stock, units_sold, closing_stock, stock_status. Alimente : page Produits (alertes rupture, stock dormant), KPI (domaine Opérations)." },
           { h: "Campagnes (Campaigns)", p: "Fichier avec colonnes : campaign_id, campaign_name, channel, budget, spend, impressions, clicks, conversions, revenue, status. Alimente : page Marketing, KPI (domaine Marketing)." },
-          { h: "Flux de trésorerie (Cashflow)", p: "Fichier avec colonnes : date, opening_cash, cash_in, cash_out, closing_cash, accounts_receivable, accounts_payable. Alimente : page Trésorerie, KPI (Trésorerie actuelle)." },
+          { h: "Flux de trésorerie (Cashflow)", p: "Fichier avec colonnes : date, opening_cash, cash_in, cash_out, closing_cash, accounts_receivable, accounts_payable. Alimente : page Trésorerie, KPI (Trésorerie actuelle). GESCOP distingue rigoureusement les 4 flux (ouverture, entrées, sorties, clôture)." },
           { h: "Dépenses (Expenses)", p: "Fichier avec colonnes : date, category, supplier, amount, recurring, department. Alimente : page Trésorerie (dépenses récurrentes), analyse IA." },
           { h: "Employés & Paie (Employees, Payroll)", p: "Fichiers avec colonnes : employee_id, department, hourly_rate, weekly_hours / payroll_id, period, regular_pay, overtime. Alimente : page Trésorerie (coûts salariaux), analyse IA." },
           { h: "Fournisseurs (Suppliers)", p: "Fichier avec colonnes : supplier_id, supplier_name, category, average_delivery_days, quality_score, reliability_score. Alimente : analyse IA (risques fournisseurs), radar externe." },
@@ -54,8 +56,7 @@ const groups = [
           { h: "Signaux externes (ExternalSignal)", p: "Fichier avec colonnes : title, family, impact, source, url, date, relevance_score. Alimente : page Radar externe. Note : ces signaux sont normalement générés par l'IA, mais peuvent aussi être importés manuellement." },
           { h: "Objectifs (Goal)", p: "Fichier avec colonnes : goal_id, domain, metric, target, current, period, priority, status. Alimente : suivi des objectifs stratégiques, comparaison cible vs réel." },
           { h: "Événements (Event)", p: "Fichier avec colonnes : event_id, date, event_type, description, impact_area. Alimente : analyse IA (contexte des événements internes ayant un impact sur les performances)." },
-          { h: "Qualité des données", p: "Après l'import, un score de qualité est calculé. Les lignes problématiques sont mises en quarantaine. L'historique des imports reste consultable avec le nombre de lignes traitées, l'entité ciblée et le score." },
-          { h: "Astuce", p: "Pour de meilleurs résultats d'analyse, importez au minimum 3 mois de données. L'IA a besoin d'un historique suffisant pour détecter des tendances et des anomalies fiables." },
+          { h: "Qualité & Audit de données", p: "Après l'import, un score de qualité sur 100 est calculé. Les lignes douteuses sont isolées en quarantaine avec motif explicite. L'historique complet et la traçabilité restent consultables à tout moment." },
         ],
       },
       {
@@ -102,17 +103,14 @@ const groups = [
       },
       {
         id: "kpis",
-        title: "Indicateurs clés (KPI)",
+        title: "Moteur Universel de Découverte des KPI",
         icon: BarChart3,
         content: [
-          { h: "KPI calculés en temps réel", p: "Les KPI sont calculés automatiquement à partir de vos données importées, sans nécessiter de lancer l'analyse IA. Ils se mettent à jour à chaque visite de la page." },
-          { h: "Domaine Finance", p: "Données utilisées : Transactions (income/expense), Cashflow. Indicateurs calculés : revenus du dernier mois, dépenses du dernier mois, marge brute (%), trésorerie actuelle." },
-          { h: "Domaine Ventes", p: "Données utilisées : Orders (commandes). Indicateurs calculés : panier moyen, nombre de commandes du dernier mois, taux de retour, revenu total des commandes." },
-          { h: "Domaine Marketing", p: "Données utilisées : Campaigns (campagnes publicitaires). Indicateurs calculés : ROAS moyen, CAC moyen, taux de clic (CTR), taux de conversion." },
-          { h: "Domaine Opérations", p: "Données utilisées : Products, Inventory. Indicateurs calculés : marge produit moyenne, stock dormant, alertes rupture, produits à réapprovisionner." },
-          { h: "Domaine Clients", p: "Données utilisées : Customers, Orders. Indicateurs calculés : clients actifs, taux de churn, nouveaux clients du dernier mois, valeur vie client (LTV)." },
-          { h: "Graphique de tendance", p: "Un graphique en haut de page montre l'évolution mensuelle sur 8 mois : revenus, panier moyen et marge brute - pour visualiser la trajectoire financière." },
-          { h: "KPI IA complémentaires", p: "Après une analyse IA, des KPI supplémentaires générés par l'IA peuvent apparaître (ex: scores composites, indicateurs de tendance) en complément des KPI calculés." },
+          { h: "Découverte dynamique des indicateurs", p: "GESCOP ne force pas une liste rigide : son Moteur de Découverte inspecte vos données réelles, identifie automatiquement tous les KPI éligibles, vérifie leur faisabilité mathématique et publie instantanément les indicateurs calculables." },
+          { h: "10 Catalogues de Domaines", p: "Le moteur structure les indicateurs en 10 domaines : Finance (marge brute, EBITDA), Ventes (panier moyen, taux de conversion), Trésorerie (cash runway, burn rate), Clients (LTV, churn rate), Opérations (rotation de stock), Marketing (ROAS, CAC, CTR), RH (masse salariale / revenu), Risques, Prévisions et Stratégie." },
+          { h: "Diagnostic de cause racine des métriques manquantes", p: "Si un indicateur stratégique ne peut être calculé, GESCOP détaille la cause exacte (ex: 'Requis: COGS') et suggère le type de fichier à importer pour débloquer automatiquement ce KPI." },
+          { h: "Sécurité mathématique & Blindage", p: "Chaque formule est protégée contre la division par zéro, les dénominateurs nuls et les incohérences d'échelle. Les valeurs font l'objet d'un audit de plausibilité avant publication." },
+          { h: "Graphique de tendance & Épinglage", p: "Suivez l'évolution mensuelle sur 8 à 12 mois et épinglez vos KPI prioritaires directement sur votre tableau de bord via le centre de configuration." },
         ],
       },
       {
@@ -217,14 +215,14 @@ const groups = [
       },
       {
         id: "radar",
-        title: "Radar externe",
+        title: "Radar Stratégique (12 Domaines & Cross-Signal)",
         icon: RadarIcon,
         content: [
-          { h: "Données utilisées", p: "Le radar s'appuie sur l'entité ExternalSignal (signaux externes) et sur l'entité Competitor (concurrents). Les signaux sont générés par l'analyse IA en croisant votre profil d'entreprise (Company) avec des données externes (marché, économie, concurrence)." },
-          { h: "Signaux externes", p: "Le radar surveille l'environnement externe de votre entreprise : signaux gouvernementaux, économiques, de marché, de concurrence, fournisseurs, consommateurs et actualités. Chaque signal est évalué pour sa pertinence et son impact (positif, neutre, négatif)." },
-          { h: "Pourquoi cela vous concerne", p: "Les 3 signaux les plus pertinents sont mis en avant avec une explication personnalisée : pourquoi ce signal concerne spécifiquement votre entreprise (lien avec votre secteur, vos produits, votre clientèle), et une action concrète recommandée pour y répondre." },
-          { h: "Familles de signaux", p: "Les signaux restants sont organisés par famille pour faciliter la lecture. Vous pouvez consulter la source et l'URL de chaque signal pour approfondir." },
-          { h: "Gestion", p: "Marquez les signaux comme « vus » ou « archivés » selon leur pertinence pour votre activité." },
+          { h: "Architecture des 12 Domaines", p: "Le Radar GESCOP surveille l'environnement global de votre PME à travers 12 domaines : 1. Concurrence, 2. Marché & Demande, 3. Clients & Comportements, 4. Prix & Offres, 5. Produits & Services, 6. Marketing & Communication, 7. Technologie & Innovation, 8. Économie & Finance externe, 9. Réglementation & Juridique, 10. Territoire & Économie locale, 11. Chaîne d'approvisionnement, 12. RH & Emploi." },
+          { h: "Moteur Cross-Signal & Typage Strict", p: "Pour garantir une rigueur absolue, le moteur classe chaque information selon 3 statuts : [FAIT] (information vérifiée et objective), [INFÉRENCE] (déduction logique reliant un fait externe aux indicateurs internes de votre entreprise), et [HYPOTHÈSE] (scénario d'anticipation ou signal faible nécessitant vigilance)." },
+          { h: "Les 5 Questions Fondamentales", p: "À chaque actualisation, le Radar répond aux 5 questions clés du dirigeant : 1. Qu'est-ce qui a changé dans l'environnement ? 2. Qu'est-ce qui bouge chez les concurrents ? 3. Qu'est-ce qui influence les clients ? 4. Quels risques ou opportunités émergent ? 5. Quelle action l'entreprise doit-elle engager immédiatement ?" },
+          { h: "Adaptation sectorielle automatique", p: "Selon le profil renseigné dans Paramètres, GESCOP pondère les domaines critiques de votre activité (ex. Commerce de détail et plein air = Concurrence, Prix, Marché, Approvisionnement)." },
+          { h: "Recommandations et Actions immédiates", p: "Chaque signal critique propose une action immédiate directement convertible en tâche stratégique." },
         ],
       },
       {
@@ -323,15 +321,26 @@ const groups = [
         ],
       },
       {
+        id: "audit",
+        title: "Audit & Intégrité des calculs",
+        icon: ShieldCheck,
+        content: [
+          { h: "Transparence & Single Source of Truth (SSOT)", p: "Le module Audit des calculs offre une vue transparente de l'ensemble de la chaîne de valeur analytique : de la donnée brute importée aux KPI consolidés et aux alertes." },
+          { h: "Score de Qualité & Quarantaine", p: "Vérifiez les scores de complétude de chaque fichier, identifiez les anomalies de formats et inspectez les lignes écartées en quarantaine avec le détail de la cause de rejet." },
+          { h: "Souveraineté & Conformité Loi 25", p: "GESCOP garantit la traçabilité intégrale, l'hébergement sécurisé au Canada et l'étanchéité absolue de vos données d'entreprise." },
+        ],
+      },
+      {
         id: "parametres",
-        title: "Paramètres",
+        title: "Centre de Configuration & Contexte Entreprise (Paramètres)",
         icon: Settings,
         content: [
-          { h: "Données utilisées", p: "La page Paramètres gère l'entité Company (profil d'entreprise) et l'entité Competitor (concurrents). Elle permet aussi de gérer votre compte utilisateur (User)." },
-          { h: "Profil de l'entreprise", p: "Modifiez à tout moment les informations de votre entreprise : nom, site web, secteur, localisation, modèle d'affaires, produits, services, clientèle, fournisseurs et outils. Ces informations influencent l'analyse IA et l'assistant." },
-          { h: "Objectifs", p: "Ajustez vos objectifs stratégiques quand votre situation évolue. Les nouveaux objectifs seront pris en compte lors de la prochaine analyse IA." },
-          { h: "Suivi des concurrents", p: "Répertoriez vos principaux concurrents avec leur positionnement (leader, challenger, suiveur, niche), leur positionnement prix, leur chiffre d'affaires estimé, leur nombre d'employés et leur note moyenne. Ces données enrichissent le radar externe et l'analyse concurrentielle." },
-          { h: "Compte & sécurité", p: "Gérez votre compte utilisateur et déconnectez-vous depuis cette page. Vos données sont hébergées au Canada, conformes à la Loi 25 (protection des renseignements personnels, Québec), chiffrées au repos et en transit, et isolées par organisation - elles ne sont jamais partagées." },
+          { h: "Architecture en 5 Piliers & 13 Sections", p: "Paramètres est le cerveau référentiel de GESCOP. Les données renseignées alimentent l'intelligence sémantique d'import, le moteur KPI, le Radar et les décisions." },
+          { h: "1. Contexte Entreprise", p: "Comprend 6 sections : Entreprise (fiche d'identité et carte de connaissance IA), Activité & Modèle (B2B, B2C, abonnements), Organisation & Succursales (distinction nette entre Succursale physique et Département interne), Produits & Services (catalogue, marges, fournisseurs), Clients & Marchés, et Objectifs Stratégiques." },
+          { h: "2. Intelligence & Sémantique", p: "Comprend 3 sections : KPI & Indicateurs (catalogue et épinglage au tableau de bord), Dictionnaire de l'entreprise (liaison des termes internes vers les concepts universels GESCOP), et Ce que GESCOP a compris (audit sémantique et confiance)." },
+          { h: "3. Surveillance", p: "Surveillance des 12 Domaines du Radar, recommandations sectorielles automatiques et suivi des concurrents directs." },
+          { h: "4. Données & Flux", p: "Sources & Connexions : statut d'ingestion des fichiers universels, connecteurs ERP (Acomba, QuickBooks, Sage) et intégrations POS/Shopify." },
+          { h: "5. Gouvernance & Système", p: "Gestion des utilisateurs (rôles Administrateur, Analyste, Gestionnaire, Observateur) et Préférences régionales ($ CAD, format de dates, alertes et Loi 25)." },
         ],
       },
     ],
