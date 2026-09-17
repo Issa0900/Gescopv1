@@ -58,11 +58,12 @@ Convention : chaque ligne = un cas de test réel, exécuté contre le vrai code
 
 - **`notifyCriticalEvent` accepte `user_id` sans vérifier que l'appelant a le droit de notifier CET utilisateur précis.** Le correctif appliqué (item 13) bloque les appels totalement non authentifiés, mais un utilisateur authentifié A pourrait toujours théoriquement déclencher une notification pour un `user_id` B différent du sien — je n'ai pas ajouté de vérification `user_id === caller.id` car je ne sais pas si cette fonction est censée être déclenchée uniquement par l'utilisateur concerné (auto-notification) ou par un processus interne (détection d'anomalie automatique) qui notifierait légitimement un autre utilisateur. Aucun appelant n'existe dans le code actuel (fonction non branchée) — à trancher si/quand elle est câblée à un déclencheur réel.
 
+| 17 | `analyzeBusiness` hors score LLM : wipe des Anomaly/Risk/Opportunity/Kpi seulement APRÈS validation d'un diagnostic exploitable (`dimensions.length === 0` bloque avant toute suppression) | Lecture de code | — | — | ✅ déjà correct, aucune modification — même principe que le fix de `scanExternalRadar`, déjà bien appliqué ici |
+
 ## À faire (ordre de priorité, cf. plan §1-19 du cahier des charges)
 
-- [ ] 17. Score de santé LLM (voir "Trouvé mais PAS corrigé" plus haut) — nécessite une décision produit avant de toucher au prompt/schema
-- [ ] 18. `analyzeBusiness` hors score LLM (le reste de la fonction, pas encore relu)
-- [ ] 19. Tableau de bilan final (§18 du cahier des charges)
+- [ ] 18. Score de santé LLM (voir "Trouvé mais PAS corrigé" plus haut) — nécessite une décision produit avant de toucher au prompt/schema
+- [ ] 19. Tableau de bilan final (§18 du cahier des charges) — produit hors de ce fichier
 
 ## Notes d'architecture à ne pas redécouvrir
 
