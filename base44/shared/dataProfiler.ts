@@ -78,7 +78,6 @@ function inferColumnType(values: any[]): ColumnProfile['inferredType'] {
   const percentRegex = /^-?[\d\s]+([.,]\d+)?\s*%$/;
   let isPercentage = true;
 
-  for (const val of values.slice(0, 50)) { // Ǹchantillonnage sur 50 valeurs
   for (const val of values.slice(0, 50)) {
     const str = String(val).trim();
     // Enlever les espaces pour le test numerique standard
