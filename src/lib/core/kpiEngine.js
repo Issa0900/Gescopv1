@@ -253,12 +253,26 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
   // unavailable, and the single resolved fallback key ("transaction_amount")
   // silently summed income and expense together under the wrong metric.
   if (!targetField) {
-    for (const [fieldName, fs] of (fieldSemantics || new Map()).entries()) {
+    for (const fs of (fieldSemantics || new Map()).values()) {
       const rule = (fs.contextRules || []).find((r) => r.then.canonicalKey === canonicalKey);
       if (!rule) continue;
-      const matches = records.filter((r) => resolveContextualField({ contextRules: fs.contextRules }, r).canonicalKey === canonicalKey);
+      // Scope the match to this field's own entity first: two entities can
+      // carry the same contextRules-bearing field name (e.g. a future
+      // second "amount" column), and matching across all records here,
+      // before the entity filter downstream, would let one entity's rows
+      // decide whether the OTHER entity's field is even considered.
+      const candidates = records.filter((r) => r._entity === undefined || r._entity === fs.source);
+      const matches = candidates.filter((r) => resolveContextualField({ contextRules: fs.contextRules }, r).canonicalKey === canonicalKey);
       if (matches.length === 0) continue;
-      targetField = fieldName;
+      // The map key can be entity-namespaced ("Transaction:amount"); the
+      // real record property is always fs.field, same as the exact-match
+      // loop above it. Using the map key here (fieldName) instead of
+      // fs.field made every downstream `r[targetField]` read undefined the
+      // moment two or more entities were combined (useKpiEngine always
+      // namespaces), so income_amount/expense_amount resolved to null and
+      // total_revenue/total_expense silently fell back to the context-blind
+      // transaction_amount, summing income and expense together.
+      targetField = fs.field;
       targetSemantic = { ...fs, canonicalKey, semanticType: rule.then.semanticType };
       targetRecords = matches;
       break;

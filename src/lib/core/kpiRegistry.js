@@ -40,15 +40,24 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: true,
     dependencies: ["revenue", "income_amount", "transaction_amount"],
     // income_amount and transaction_amount are ALTERNATIVE readings of the
-    // same Transaction rows (income-only vs. every row regardless of type),
-    // never additive: summing them double-counted revenue once the kpiEngine
-    // fix let both resolve on the same dataset (income_amount correctly
-    // context-filtered, transaction_amount its context-blind fallback).
-    // income_amount is preferred whenever it's actually available.
+    // same Transaction rows (income-only vs. every row regardless of type):
+    // never additive between each other, summing them would double-count.
+    // income_amount is preferred over transaction_amount whenever available.
+    // `revenue` is a DIFFERENT source entirely (Order.total, e-commerce
+    // orders) and must be ADDED to the Transaction-derived figure, not
+    // treated as a third alternative: a business with real order revenue in
+    // the millions and a handful of manual Transaction rows for petty cash
+    // used to see Order revenue silently discarded the moment ANY Transaction
+    // income existed, because income_amount was checked first and returned
+    // immediately - reproduced with DS02's 4659 orders ($1.3M) vs a few
+    // Transaction rows: total_revenue read as the tiny Transaction figure
+    // alone.
     calculate: (deps) => {
-      if (deps.income_amount != null) return deps.income_amount;
-      if (deps.transaction_amount != null) return deps.transaction_amount;
-      return deps.revenue || 0;
+      const txnRevenue = deps.income_amount != null ? deps.income_amount
+        : deps.transaction_amount != null ? deps.transaction_amount
+        : null;
+      if (txnRevenue == null && deps.revenue == null) return null;
+      return (txnRevenue || 0) + (deps.revenue || 0);
     }
   },
 
