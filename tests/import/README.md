@@ -12,23 +12,37 @@ Ils ne sont jamais chargés par l'application.
 ## Lancer
 
 Les modules partagés sont écrits pour Deno (`npm:xlsx@0.18.5`). Pour les exécuter
-sous Node, on les compile avec esbuild en redirigeant cet import :
+sous Node, on les compile avec esbuild (déjà en `devDependencies`) en
+redirigeant cet import. `fichiers-mal-formes.ts` et `point-entree.ts` importent
+en plus `base44/shared/client.ts`, qui charge `npm:@base44/sdk` — un module
+qui n'a rien à faire dans ces tests, donc on le redirige lui aussi vers un
+stub minimal.
+
+Compiler un par un (pas en `Promise.all` : dès qu'un fichier échoue à
+compiler, les autres builds encore en vol laissent un `.cjs` obsolète sans
+prévenir) :
 
 ```bash
-npm i -D esbuild xlsx@0.18.5
+mkdir -p tests/import/.build
+echo 'module.exports = { createClient: () => ({}) };' > tests/import/.build/sdk-stub.cjs
 
 node -e "
 const esbuild=require('esbuild');
-const alias={'npm:xlsx@0.18.5':'./node_modules/xlsx','@':'./src'};
-Promise.all(['normalisation','chaine','bout-en-bout','fichiers-mal-formes','cas-limites']
- .map(n=>esbuild.build({entryPoints:['tests/import/'+n+'.ts'],bundle:true,
-   outfile:'tests/import/.build/'+n+'.cjs',platform:'node',format:'cjs',alias})))
- .then(()=>console.log('compile'))"
+const alias={'npm:xlsx@0.18.5':'./node_modules/xlsx','npm:@base44/sdk@0.8.48':'./tests/import/.build/sdk-stub.cjs','@':'./src'};
+const noms=['normalisation','chaine','bout-en-bout','fichiers-mal-formes','cas-limites','point-entree'];
+(async()=>{ for (const n of noms) {
+  await esbuild.build({entryPoints:['tests/import/'+n+'.ts'],bundle:true,
+    outfile:'tests/import/.build/'+n+'.cjs',platform:'node',format:'cjs',alias,logLevel:'error'});
+  console.log('compile', n);
+}})();"
 
 for t in normalisation chaine bout-en-bout fichiers-mal-formes cas-limites; do
   echo "--- $t"; node tests/import/.build/$t.cjs | tail -3
 done
 ```
+
+`tests/import/.build/` est un dossier de travail local (non versionné) — à
+supprimer après usage.
 
 Chaque suite se termine par `cas en echec : 0` quand tout va bien.
 
@@ -42,6 +56,7 @@ Chaque suite se termine par `cas en echec : 0` quand tout va bien.
 | `fichiers-mal-formes.ts` | 12 fichiers réalistes mal formés (BOM, point-virgule, titre, doublons…) |
 | `cas-limites.ts` | Fichier vide, colonne manquante, ligne de totaux, apostrophe Excel |
 | `kpi.mjs` | Fenêtres calendaires, marge pondérée, autonomie de trésorerie |
+| `../recette/DS02-synonymes-revenu.ts` | Synonymes de la colonne revenu (CA, Sales, Revenue, "Chiffre d'affaires"…) sur les entités qui stockent le montant sous des noms différents (`amount` vs `total_revenue`) |
 
 ## Défauts que ces tests ont trouvés
 
@@ -63,3 +78,15 @@ Ils ne sont pas théoriques — chacun a été trouvé par ces tests et corrigé
 6. **Le 31 février était accepté** faute de contrôle calendaire.
 7. **`1.5M` était lu 1,5** — montant divisé par un million.
 8. **`'1000`** (apostrophe Excel « stocker en texte ») était illisible.
+9. **`sheetDetect.ts` appelait `XLSX.utils.sheet_to_json` sans jamais importer
+   `XLSX`.** `sheetRows()` est la seule fonction qui transforme une feuille lue
+   en lignes, et c'est le chemin que `parseDelimitedText` emprunte pour
+   *tout* import CSV/TSV : chaque import délimité levait une
+   `ReferenceError: XLSX is not defined` avant même d'atteindre le mapping.
+10. **CA / Sales / Revenue / "Chiffre d'affaires" faisaient disparaître la
+    ligne entière.** `ALIAS_CANONIQUES` résout ces synonymes vers un champ
+    générique `revenue`/`net_revenue`/`gross_revenue` qu'aucune entité ne
+    possède réellement (Transaction/Expense ont `amount`, Order/Customer/
+    ExecutiveSummary ont `total_revenue`) : la valeur était perdue et la ligne
+    mise en quarantaine pour champ obligatoire manquant, sur la colonne
+    financière la plus centrale d'un relevé.

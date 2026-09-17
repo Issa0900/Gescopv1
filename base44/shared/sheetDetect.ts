@@ -5,6 +5,7 @@
 // Also recovers the header row when a sheet starts with a title line, which
 // otherwise yields __EMPTY columns and zero usable rows.
 
+import * as XLSX from "npm:xlsx@0.18.5";
 import { stripAccents, FIELD_ALIASES } from "./importUtils.ts";
 import { ENTITY_SCHEMAS } from "./entitySchemas.ts";
 

@@ -52,10 +52,10 @@ export const FIELD_ALIASES: Record<string, string> = {
   "valeur_vie": "lifetime_value", "ltv": "lifetime_value", "valeur vie client": "lifetime_value",
   "risque_churn": "churn_risk", "risque de churn": "churn_risk",
   "type_client": "customer_type", "type de client": "customer_type",
-  "premiere_commande": "first_purchase_date", "premiere achat": "first_purchase_date",
-  "derniere_commande": "last_purchase_date", "dernier achat": "last_purchase_date",
-  "date_acquisition": "acquisition_date", "date d acquisition": "acquisition_date",
-  "id produit": "product_id", "nom_campagne": "campaign_name",
+  "premiere_commande": "first_purchase_date", "premiere_achat": "first_purchase_date",
+  "derniere_commande": "last_purchase_date", "dernier_achat": "last_purchase_date",
+  "date_acquisition": "acquisition_date", "date_d_acquisition": "acquisition_date",
+  "id_produit": "product_id", "nom_campagne": "campaign_name",
   "id_concurrent": "competitor_id",
   "cout_unitaire": "unit_cost", "cout_total": "total_cost",
   "prix_unitaire": "unit_price", "quantite_vendue": "quantity",
@@ -128,6 +128,7 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "produit_de_vente": "revenue",
   "sales": "revenue",
   "sales_revenue": "revenue",
+  "total_sales": "revenue",
   "revenue": "revenue",
   "revenues": "revenue",
   "turnover": "revenue",
@@ -1384,6 +1385,20 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "competitor_price": "competitor_price"
 };
 
+// FIELD_ALIASES/ALIAS_CANONIQUES resolve every revenue synonym (CA, Ventes,
+// Sales, Revenue, Net Sales, "Chiffre d'affaires" with the apostrophe...) to
+// one of these canonical concept names, regardless of which entity is being
+// imported. No entity schema actually has a field literally called "revenue"
+// — Transaction/Expense track it as "amount", Order/Customer/ExecutiveSummary
+// as "total_revenue" — so whenever the resolved alias didn't happen to be the
+// exact target field, the row's money value was silently dropped and the row
+// quarantined for a missing required field. A financial column this central
+// must never disappear without explanation, so on a schema mismatch we place
+// it in whichever generic revenue-carrying field the target entity actually
+// has, instead of an alias name nothing declares.
+const REVENUE_CONCEPT_ALIASES = new Set(["revenue", "net_revenue", "gross_revenue", "total_revenue"]);
+const REVENUE_LANDING_FIELDS = ["total_revenue", "amount", "gross_revenue", "net_revenue"];
+
 export function normalizeKeys(row: Record<string, any>, properties?: Record<string, any>): Record<string, any> {
   const out: Record<string, any> = {};
   const schemaFields = properties ? Object.keys(properties) : [];
@@ -1405,6 +1420,17 @@ export function normalizeKeys(row: Record<string, any>, properties?: Record<stri
       if (fuzzyMatch) {
         out[fuzzyMatch] = v;
         continue;
+      }
+      // Last resort: a revenue-family column with nowhere else to go. Land it
+      // on the first revenue-carrying field this entity actually declares,
+      // in priority order, instead of losing the value under an alias name
+      // that isn't one of this entity's fields.
+      if (REVENUE_CONCEPT_ALIASES.has(alias) || REVENUE_CONCEPT_ALIASES.has(canon)) {
+        const landing = REVENUE_LANDING_FIELDS.find((f) => schemaFields.includes(f) && out[f] === undefined);
+        if (landing) {
+          out[landing] = v;
+          continue;
+        }
       }
     }
     out[alias] = v;
