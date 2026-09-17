@@ -39,11 +39,15 @@ export const KPI_REGISTRY = Object.freeze({
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: true,
     dependencies: ["revenue", "income_amount", "transaction_amount"],
+    // income_amount and transaction_amount are ALTERNATIVE readings of the
+    // same Transaction rows (income-only vs. every row regardless of type),
+    // never additive: summing them double-counted revenue once the kpiEngine
+    // fix let both resolve on the same dataset (income_amount correctly
+    // context-filtered, transaction_amount its context-blind fallback).
+    // income_amount is preferred whenever it's actually available.
     calculate: (deps) => {
-      // Prioritize explicit transactions, otherwise fallback to orders
-      if (deps.income_amount || deps.transaction_amount) {
-        return (deps.income_amount || 0) + (deps.transaction_amount || 0);
-      }
+      if (deps.income_amount != null) return deps.income_amount;
+      if (deps.transaction_amount != null) return deps.transaction_amount;
       return deps.revenue || 0;
     }
   },
@@ -218,7 +222,12 @@ export const KPI_REGISTRY = Object.freeze({
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: true,
     dependencies: ["total_revenue", "total_expense"],
-    calculate: (deps) => (deps.total_revenue || 0) - (deps.total_expense || 0),
+    // Same principle as gross_margin_amount: no expense data imported is not
+    // the same as zero expenses, and treating it that way used to make net
+    // income equal total_revenue -- a business with real costs looking
+    // artificially 100% profitable the moment its expense data hadn't
+    // arrived yet.
+    calculate: (deps) => (deps.total_revenue != null && deps.total_expense != null) ? deps.total_revenue - deps.total_expense : null,
   },
   
   net_margin_pct: {
@@ -232,7 +241,7 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: false,
     dependencies: ["total_revenue", "net_income"],
     calculate: (deps) => {
-      if (!deps.total_revenue || deps.total_revenue === 0) return 0;
+      if (!deps.total_revenue || deps.net_income == null) return null;
       return (deps.net_income / deps.total_revenue) * 100;
     },
   },

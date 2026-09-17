@@ -62,10 +62,17 @@ Convention : chaque ligne = un cas de test réel, exécuté contre le vrai code
 
 | 18 | Score de santé LLM : un domaine non mesuré recevait quand même un score 0-100 inventé, moyenné dans le score global | `tests/recette/DS14-score-sante-non-mesure.ts` | pas de champ `measured`, moyenne calculée par le LLM lui-même | 5/5 | ✅ corrigé (décision utilisateur du 2026-09-17 : approuvé) — `computeHealthScore` calcule la moyenne côté serveur sur les dimensions `measured` uniquement ; `Company.health_score`/`AnalysisRun.health_score`/la réponse HTTP utilisent tous la même valeur ; `Historique.jsx` et `Dashboard.jsx` affichent "N/A" au lieu d'un badge rouge "0" quand `health_score` est `null` |
 
+| 20 | `Finance.jsx` unifié sur `kpiRegistry.js` — a révélé un bug d'architecture plus profond : le moteur marquait un KPI entier "indisponible" dès qu'UNE dépendance candidate manquait, même avec des alternatives (`deps.a \|\| deps.b`) disponibles. `total_revenue`/`total_expense` étaient donc TOUJOURS indisponibles sur des Transaction seules (Résultat Net toujours à 0$) | `tests/recette/DS15-kpi-engine-context.ts` | 0 → sonde manuelle confirmée cassée | 10/10 | ✅ corrigé (statut UNAVAILABLE seulement si TOUTES les dépendances échouent ; `_aggregateRawField` sépare désormais revenus/dépenses par ligne au lieu d'un seul champ résolu pour tout le lot) |
+
+## Trouvé, nécessite une décision produit (pas de fix appliqué) — suite 2
+
+- **`Marketing.jsx` n'est PAS unifié sur `kpiRegistry.js`.** Sa logique locale (ROAS/CAC global + par canal + par campagne, avec repli explicite transactions→campagnes et libellés "non mesurable" déjà corrects) est correcte et déjà bien conçue — aucun bug trouvé en la relisant. `useKpiEngine.js` ne supporte même pas encore les entités Campaign/CampaignDaily (seulement transactions/cashflow/orders/expenses/employees/payrolls/customers/products/observations) : unifier vraiment nécessiterait d'abord ajouter cette entité à `entityFieldMap.js` et `useKpiEngine.js`, un chantier séparé et plus risqué que ce que demandait la correction. Laissé tel quel plutôt que forcer un changement qui casserait potentiellement une page qui fonctionne.
+- **Statut `AVAILABLE` imprécis pour un KPI composite dérivé d'un autre KPI déjà calculé dans le même batch** (ex: `net_income` affiche status `AVAILABLE` même quand `total_expense` était `UNAVAILABLE`) : `computeKpiBatch` ne propage que la VALEUR d'un KPI déjà calculé au KPI suivant, pas son statut. La VALEUR reste correcte (`null` quand approprié, vérifié par tests), seul le champ `status` de la lineage est optimiste. Rien dans l'UI actuelle ne lit ce `status` pour décider quoi que ce soit (seule `value` est consommée) — documenté, pas corrigé, risque de changer ce comportement plus large que nécessaire.
+
 ## À faire
 
-- [ ] 19. Tableau de bilan final (§18 du cahier des charges) à régénérer avec les items 17-18 — `tests/recette/BILAN-FINAL.md` date d'avant ces deux corrections
-- [ ] 20. Unifier les moteurs de marge/ROAS de `Finance.jsx`/`Marketing.jsx` sur `kpiRegistry.js` (en cours)
+- [ ] 21. Tableau de bilan final (§18 du cahier des charges) à régénérer avec les items 17-20 — `tests/recette/BILAN-FINAL.md` date d'avant ces corrections
+- [ ] 22. Pages UI réelles (Dashboard, Kpis, Finance, Tresorerie) — en attente que l'utilisateur soit sur son ordinateur pour tester avec de vraies données
 
 ## Notes d'architecture à ne pas redécouvrir
 

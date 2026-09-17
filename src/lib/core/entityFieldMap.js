@@ -318,6 +318,12 @@ export function getFieldSemantic(entityName, fieldName, record = null, options =
     canonicalKey: resolved.canonicalKey,
     semanticType: resolved.semanticType,
     grain: fieldDef.grain,
+    // A field with contextRules (e.g. Transaction.amount: income vs expense
+    // depending on `type`) only got ONE canonicalKey here, picked without a
+    // representative record — the aggregator needs the raw rules too, to
+    // sum the right subset of records per row instead of treating the whole
+    // batch as one undifferentiated field.
+    overrides: { contextRules: fieldDef.contextRules || null },
     ...options,
   });
 }

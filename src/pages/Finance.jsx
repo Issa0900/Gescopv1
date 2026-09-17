@@ -19,9 +19,13 @@ export default function Finance() {
     queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
   });
   
-  // GESCOP Phase 4 SSOT
-  const { kpis: engineKpis } = useKpiEngine({ transactions: transactions || [] }, ["total_revenue", "total_expense", "gross_margin_amount"]);
-  
+  // GESCOP Phase 4 SSOT — net_income/net_margin_pct (revenu - TOUTES les
+  // dépenses), pas gross_margin_amount (revenu - COGS produit, qui a besoin
+  // de commandes avec un coût, jamais présent sur de simples transactions).
+  // Les deux existent dans kpiRegistry.js pour des questions différentes ;
+  // "Résultat Net" sur cette page a toujours voulu dire la première.
+  const { kpis: engineKpis } = useKpiEngine({ transactions: transactions || [] }, ["total_revenue", "total_expense", "net_income", "net_margin_pct"]);
+
   if (ltx) return <p className="text-sm text-muted-foreground">Chargement...</p>;
   if (isError) return <DataErrorState onRetry={refetch} />;
   if (!transactions || transactions.length === 0) {
@@ -34,12 +38,14 @@ export default function Finance() {
     );
   }
 
-  // Consommation officielle de la SSOT
+  // Consommation officielle de la SSOT. netIncome/marginPct restent `null`
+  // (pas 0) quand les dépenses n'ont jamais été importées : voir le rendu
+  // des StatCard plus bas, qui affiche "N/A" plutôt qu'un 0% trompeur.
   const summary = {
     revenue: engineKpis.get("total_revenue")?.value || 0,
     expense: engineKpis.get("total_expense")?.value || 0,
-    netIncome: engineKpis.get("gross_margin_amount")?.value || 0,
-    marginPct: (engineKpis.get("total_revenue")?.value || 0) > 0 ? ((engineKpis.get("gross_margin_amount")?.value || 0) / (engineKpis.get("total_revenue")?.value || 0)) * 100 : 0,
+    netIncome: engineKpis.get("net_income")?.value ?? null,
+    marginPct: engineKpis.get("net_margin_pct")?.value ?? null,
   };
   const monthly = financialMonthlySeries(transactions);
   const chartData = monthly.slice(-12).map((point) => {
@@ -62,8 +68,8 @@ export default function Finance() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Chiffre d'affaires" value={`${Math.round(summary.revenue).toLocaleString("fr-CA")} $`} icon={TrendingUp} accent="bg-emerald-50 text-emerald-600" />
         <StatCard label="Dépenses totales" value={`${Math.round(summary.expense).toLocaleString("fr-CA")} $`} icon={TrendingDown} accent="bg-red-50 text-red-600" />
-        <StatCard label="Résultat Net" value={`${Math.round(summary.netIncome).toLocaleString("fr-CA")} $`} icon={DollarSign} accent={summary.netIncome < 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"} />
-        <StatCard label="Marge Nette" value={`${summary.marginPct.toFixed(1)} %`} icon={PieChart} accent={summary.marginPct < 0 ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"} />
+        <StatCard label="Résultat Net" value={summary.netIncome == null ? "N/A" : `${Math.round(summary.netIncome).toLocaleString("fr-CA")} $`} icon={DollarSign} accent={summary.netIncome == null ? "bg-slate-100 text-slate-500" : summary.netIncome < 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"} />
+        <StatCard label="Marge Nette" value={summary.marginPct == null ? "N/A" : `${summary.marginPct.toFixed(1)} %`} icon={PieChart} accent={summary.marginPct == null ? "bg-slate-100 text-slate-500" : summary.marginPct < 0 ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"} />
       </div>
 
       <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
