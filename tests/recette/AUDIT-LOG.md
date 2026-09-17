@@ -60,10 +60,12 @@ Convention : chaque ligne = un cas de test réel, exécuté contre le vrai code
 
 | 17 | `analyzeBusiness` hors score LLM : wipe des Anomaly/Risk/Opportunity/Kpi seulement APRÈS validation d'un diagnostic exploitable (`dimensions.length === 0` bloque avant toute suppression) | Lecture de code | — | — | ✅ déjà correct, aucune modification — même principe que le fix de `scanExternalRadar`, déjà bien appliqué ici |
 
-## À faire (ordre de priorité, cf. plan §1-19 du cahier des charges)
+| 18 | Score de santé LLM : un domaine non mesuré recevait quand même un score 0-100 inventé, moyenné dans le score global | `tests/recette/DS14-score-sante-non-mesure.ts` | pas de champ `measured`, moyenne calculée par le LLM lui-même | 5/5 | ✅ corrigé (décision utilisateur du 2026-09-17 : approuvé) — `computeHealthScore` calcule la moyenne côté serveur sur les dimensions `measured` uniquement ; `Company.health_score`/`AnalysisRun.health_score`/la réponse HTTP utilisent tous la même valeur ; `Historique.jsx` et `Dashboard.jsx` affichent "N/A" au lieu d'un badge rouge "0" quand `health_score` est `null` |
 
-- [ ] 18. Score de santé LLM (voir "Trouvé mais PAS corrigé" plus haut) — nécessite une décision produit avant de toucher au prompt/schema
-- [ ] 19. Tableau de bilan final (§18 du cahier des charges) — produit hors de ce fichier
+## À faire
+
+- [ ] 19. Tableau de bilan final (§18 du cahier des charges) à régénérer avec les items 17-18 — `tests/recette/BILAN-FINAL.md` date d'avant ces deux corrections
+- [ ] 20. Unifier les moteurs de marge/ROAS de `Finance.jsx`/`Marketing.jsx` sur `kpiRegistry.js` (en cours)
 
 ## Notes d'architecture à ne pas redécouvrir
 

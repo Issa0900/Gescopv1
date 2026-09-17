@@ -23,7 +23,9 @@ export default function Historique() {
 
   const chartData = runs.slice().reverse().map((r) => ({
     date: new Date(r.run_date).toLocaleDateString("fr-CA", { day: "numeric", month: "short" }),
-    score: r.health_score || 0,
+    // null (pas 0) quand aucune dimension n'a ete mesuree : Recharts saute le
+    // point au lieu de dessiner une chute a zero qui n'a jamais eu lieu.
+    score: r.health_score,
   }));
 
   const latest = runs[0];
@@ -31,9 +33,13 @@ export default function Historique() {
   const comparisons = [];
   if (latest?.dimension_scores && previous?.dimension_scores) {
     Object.keys(dimLabels).forEach((key) => {
-      const newScore = latest.dimension_scores[key]?.score || 0;
-      const oldScore = previous.dimension_scores[key]?.score || 0;
-      const diff = Math.round(newScore - oldScore);
+      const newDim = latest.dimension_scores[key];
+      const oldDim = previous.dimension_scores[key];
+      // Une dimension mesurée dans une analyse mais pas dans l'autre ne doit
+      // jamais apparaître comme une chute (ou une hausse) : ce n'est pas une
+      // évolution réelle, c'est juste une mesure qui a disparu ou est apparue.
+      if (!newDim || !oldDim || newDim.measured === false || oldDim.measured === false) return;
+      const diff = Math.round((newDim.score || 0) - (oldDim.score || 0));
       if (diff !== 0) comparisons.push({ key, label: dimLabels[key], diff });
     });
   }
@@ -106,8 +112,8 @@ export default function Historique() {
           {runs.map((r, i) => (
             <div key={r.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
               <div className="flex items-center gap-4">
-                <div className={cn("flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold", (r.health_score || 0) >= 75 ? "bg-emerald-50 text-emerald-700" : (r.health_score || 0) >= 50 ? "bg-orange-50 text-orange-700" : "bg-red-50 text-red-700")}>
-                  {r.health_score || 0}
+                <div className={cn("flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold", r.health_score == null ? "bg-slate-100 text-slate-500" : r.health_score >= 75 ? "bg-emerald-50 text-emerald-700" : r.health_score >= 50 ? "bg-orange-50 text-orange-700" : "bg-red-50 text-red-700")} title={r.health_score == null ? "Aucune dimension n'a pu être mesurée lors de cette analyse" : undefined}>
+                  {r.health_score == null ? "N/A" : r.health_score}
                 </div>
                 <div>
                   <p className="text-sm font-medium">Analyse du {new Date(r.run_date).toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" })}</p>

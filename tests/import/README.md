@@ -67,6 +67,7 @@ Chaque suite se termine par `cas en echec : 0` quand tout va bien.
 | `../recette/DS10-assistant-ia-donnee-absente.ts` | Le contexte envoyé à l'assistant IA ne doit jamais présenter une donnée absente comme une mesure à zéro |
 | `../recette/DS11-rapport-periode-vide.ts` | Comparer une période sans données à une période réelle ne doit jamais afficher un effondrement de -100% inventé |
 | `../recette/DS13-radar-scan-vide.ts` | Un scan radar sans signal exploitable ne doit jamais effacer l'historique existant |
+| `../recette/DS14-score-sante-non-mesure.ts` | Un domaine non mesuré ne doit jamais tirer la moyenne du score de santé vers le bas (ni vers le haut) |
 
 ## Défauts que ces tests ont trouvés
 

@@ -160,7 +160,7 @@ export default function Dashboard() {
       if (data.error) {
         toast({ title: data.error, variant: "destructive" });
       } else {
-        toast({ title: "Analyse terminée", description: `Score de santé: ${data.health_score}/100` });
+        toast({ title: "Analyse terminée", description: data.health_score == null ? "Aucune dimension n'a pu être mesurée — importez des données pour obtenir un score." : `Score de santé: ${data.health_score}/100` });
         qc.invalidateQueries();
       }
     } catch (e) {
