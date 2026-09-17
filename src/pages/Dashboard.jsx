@@ -408,6 +408,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Actions rapides">
         {[
           { label: "Importer des données", to: "/import", icon: Upload, hint: "Ajouter ou synchroniser un fichier" },
+          { label: "Importer des données", to: "/importer", icon: Upload, hint: "Ajouter ou synchroniser un fichier" },
           { label: "Voir les alertes", to: "/alertes", icon: Bell, hint: "Risques et anomalies à traiter" },
           { label: "Contrôler la qualité", to: "/audit", icon: ClipboardCheck, hint: "Vérifier les données et calculs" },
         ].map(({ label, to, icon: Icon, hint }) => (
