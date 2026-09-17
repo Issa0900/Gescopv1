@@ -57,6 +57,7 @@ Chaque suite se termine par `cas en echec : 0` quand tout va bien.
 | `cas-limites.ts` | Fichier vide, colonne manquante, ligne de totaux, apostrophe Excel |
 | `kpi.mjs` | Fenêtres calendaires, marge pondérée, autonomie de trésorerie |
 | `../recette/DS02-synonymes-revenu.ts` | Synonymes de la colonne revenu (CA, Sales, Revenue, "Chiffre d'affaires"…) sur les entités qui stockent le montant sous des noms différents (`amount` vs `total_revenue`) |
+| `../recette/DS03-idempotence-reimport.ts` | Réimporter exactement le même fichier doit être reconnu comme doublon, pas dupliquer chaque ligne |
 
 ## Défauts que ces tests ont trouvés
 
@@ -90,3 +91,11 @@ Ils ne sont pas théoriques — chacun a été trouvé par ces tests et corrigé
     ExecutiveSummary ont `total_revenue`) : la valeur était perdue et la ligne
     mise en quarantaine pour champ obligatoire manquant, sur la colonne
     financière la plus centrale d'un relevé.
+11. **Réimporter le même fichier dupliquait toutes ses lignes.**
+    `generateFingerprint` valait `JSON.stringify(row)`, et chaque ligne
+    normalisée porte un `import_id` propre à SON import — donc deux imports
+    du même fichier produisaient deux empreintes différentes. La
+    déduplication entre imports (§8 de l'audit : « un nouvel import ne doit
+    jamais... provoquer des doublons ») ne fonctionnait jamais : chaque
+    réimport (retry, double clic, cron qui repasse sur le même mois)
+    insérait une deuxième copie complète du fichier.
