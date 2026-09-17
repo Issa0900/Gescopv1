@@ -231,16 +231,31 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
   // contextual fallback below narrows it (see next block).
   let targetRecords = records;
 
+  // More than one raw field can legitimately map to the same canonicalKey
+  // (e.g. Order.total and Order.total_revenue both mean "revenue" - two
+  // header spellings the source file might use, only one of which a given
+  // import actually populated). Picking the first declared match regardless
+  // of whether it has data in THIS batch silently read as null/NOT_MEASURED
+  // whenever the populated field happened not to be the first one declared,
+  // even though a real, already-computed number sat in the other field. Scan
+  // every candidate and prefer the first one that actually has a value on at
+  // least one record, falling back to the first declared candidate (for a
+  // sane field name in the "nothing matched" lineage) when none do.
+  let firstCandidate = null;
   for (const fs of (fieldSemantics || new Map()).values()) {
-    if (fs.canonicalKey === canonicalKey) {
-      // The map key may be namespaced by entity (e.g. "Transaction:amount")
-      // to avoid two entities' same-named fields colliding - the semantic's
-      // own `.field` is always the real property name on the record.
-      targetField = fs.field;
-      targetSemantic = fs;
-      break;
-    }
+    if (fs.canonicalKey !== canonicalKey) continue;
+    // The map key may be namespaced by entity (e.g. "Transaction:amount")
+    // to avoid two entities' same-named fields colliding - the semantic's
+    // own `.field` is always the real property name on the record.
+    if (!firstCandidate) firstCandidate = fs;
+    const hasData = records.some((r) => {
+      if (r._entity !== undefined && r._entity !== fs.source) return false;
+      const v = r[fs.field];
+      return v !== undefined && v !== null && v !== "";
+    });
+    if (hasData) { targetField = fs.field; targetSemantic = fs; break; }
   }
+  if (!targetField && firstCandidate) { targetField = firstCandidate.field; targetSemantic = firstCandidate; }
 
   // Fallback: a contextual field (e.g. Transaction.amount is "income_amount"
   // or "expense_amount" depending on its own `type`) was resolved to ONE

@@ -38,8 +38,18 @@ export const ENTITY_FIELD_MAP = Object.freeze({
     subtotal:           { canonicalKey: "order_subtotal", semanticType: "revenue", grain: GRAIN_TYPES.ORDER },
     discount:           { canonicalKey: "order_discount", semanticType: "discount", grain: GRAIN_TYPES.ORDER },
     tax:                { canonicalKey: "order_tax", semanticType: "tax", grain: GRAIN_TYPES.ORDER },
+    shipping:           { canonicalKey: "order_shipping", semanticType: "cost", grain: GRAIN_TYPES.ORDER },
     total:              { canonicalKey: "revenue", semanticType: "revenue", grain: GRAIN_TYPES.ORDER },
+    // importUtils.ts aliases headers like "Montant Total"/"Total Spent" to the
+    // raw field total_revenue (a real, separate Order schema property, not a
+    // typo for `total`), and its own rescue hook derives it from
+    // quantity*unit_price when a file leaves it blank. Without this entry that
+    // derived value was written to a field this map never recognized, so
+    // total_revenue KPIs read null while the correctly-computed number sat
+    // right there in the record.
+    total_revenue:      { canonicalKey: "revenue", semanticType: "revenue", grain: GRAIN_TYPES.ORDER },
     cost:               { canonicalKey: "cogs", semanticType: "cost", grain: GRAIN_TYPES.ORDER },
+    total_cost:         { canonicalKey: "cogs", semanticType: "cost", grain: GRAIN_TYPES.ORDER },
     gross_margin:       { canonicalKey: "order_gross_margin", semanticType: "revenue", grain: GRAIN_TYPES.ORDER },
     payment_status:     { canonicalKey: "payment_status", semanticType: "status", grain: GRAIN_TYPES.ORDER },
     fulfillment_status: { canonicalKey: "fulfillment_status", semanticType: "status", grain: GRAIN_TYPES.ORDER },
@@ -155,6 +165,7 @@ export const ENTITY_FIELD_MAP = Object.freeze({
     campaign_id: { canonicalKey: "campaign_daily_campaign_id", semanticType: "identifier", grain: GRAIN_TYPES.CAMPAIGN_DAILY },
     date:        { canonicalKey: "campaign_daily_date", semanticType: "date", grain: GRAIN_TYPES.CAMPAIGN_DAILY },
     spend:       { canonicalKey: "marketing_spend", semanticType: "expense", grain: GRAIN_TYPES.CAMPAIGN_DAILY }, // Rolled up with Campaign
+    impressions: { canonicalKey: "campaign_impressions", semanticType: "impressions", grain: GRAIN_TYPES.CAMPAIGN_DAILY }, // Rolled up with Campaign
     clicks:      { canonicalKey: "campaign_clicks", semanticType: "clicks", grain: GRAIN_TYPES.CAMPAIGN_DAILY }, // Rolled up with Campaign
     conversions: { canonicalKey: "campaign_conversions", semanticType: "conversions", grain: GRAIN_TYPES.CAMPAIGN_DAILY }, // Rolled up with Campaign
     revenue:     { canonicalKey: "campaign_revenue", semanticType: "revenue", grain: GRAIN_TYPES.CAMPAIGN_DAILY }, // Rolled up with Campaign
