@@ -65,6 +65,7 @@ Chaque suite se termine par `cas en echec : 0` quand tout va bien.
 | `../recette/DS08-charge-volume.ts` | 1000/10000 lignes : invariant lues=valides+rejetées, débit, et détection d'un montant purement illisible |
 | `../recette/DS09-doublons-intra-fichier.ts` | Trois lignes identiques dans le même fichier ne doivent en persister qu'une |
 | `../recette/DS10-assistant-ia-donnee-absente.ts` | Le contexte envoyé à l'assistant IA ne doit jamais présenter une donnée absente comme une mesure à zéro |
+| `../recette/DS11-rapport-periode-vide.ts` | Comparer une période sans données à une période réelle ne doit jamais afficher un effondrement de -100% inventé |
 
 ## Défauts que ces tests ont trouvés
 

@@ -47,9 +47,13 @@ Convention : chaque ligne = un cas de test réel, exécuté contre le vrai code
 
 | 11 | Assistant IA (`chatAssistant` → `businessContext.ts`) : entreprise sans transaction/commande recevait quand même "Marge nette cumulée: 0 $ (0%)" / "Panier moyen: 0 $" en tête de contexte — donnée absente présentée sous la même forme qu'une donnée mesurée à zéro | `tests/recette/DS10-assistant-ia-donnee-absente.ts` | 4/6 échecs | 6/6 | ✅ corrigé (financeSection + salesSection) |
 
+| 12 | `generateReport` : comparaison de périodes — un mois sans aucune transaction importée, comparé à un mois précédent réel, affichait "Marge %: -100%" (effondrement inventé) au lieu de "non mesurable" | `tests/recette/DS11-rapport-periode-vide.ts` | confirmé : -100% calculé | 5/5, "non-mesurable" explicite | ✅ corrigé |
+
 ## À faire (ordre de priorité, cf. plan §1-19 du cahier des charges)
 
-- [ ] 12. Score de santé LLM (voir "Trouvé mais PAS corrigé" plus haut) — nécessite une décision produit avant de toucher au prompt/schema
+- [ ] 13. Score de santé LLM (voir "Trouvé mais PAS corrigé" plus haut) — nécessite une décision produit avant de toucher au prompt/schema
+- [ ] 14. Fonctions non encore auditées : `notifyCriticalEvent`, `scanExternalRadar`, `enrichFromWebsite`, `inspectSheet`, `analyzeBusiness` (hors score LLM)
+- [ ] 15. Tableau de bilan final (§18 du cahier des charges)
 
 ## Notes d'architecture à ne pas redécouvrir
 

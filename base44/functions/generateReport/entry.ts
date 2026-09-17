@@ -62,7 +62,7 @@ function getPeriodRanges(type, now) {
   };
 }
 
-function computeMetrics(ctx, start, end) {
+export function computeMetrics(ctx, start, end) {
   const inRange = (dateStr) => {
     if (!dateStr) return false;
     const d = new Date(dateStr);
@@ -107,10 +107,22 @@ function computeMetrics(ctx, start, end) {
     marketing: spend,
     roas: roas,
     nouveauxClients: newCustomers,
+    // Which source actually had rows for this period vs. sums over an empty
+    // set that happen to equal 0. Used below so a period with NO transactions
+    // compared against a real previous period reads as "non mesurable", not
+    // as a -100% collapse of the margin.
+    hasData: { finance: txns.length > 0, orders: orderCount > 0, campaigns: campaigns.length > 0, cashflow: cf.length > 0 },
   };
 }
 
-function buildComparison(ctx, type, now) {
+// Which hasData category each metric depends on, for the comparison below.
+const METRIC_SOURCE = {
+  revenus: "finance", depenses: "finance", marge: "finance", margePct: "finance",
+  commandes: "orders", revenuCommandes: "orders", panierMoyen: "orders", tauxRetour: "orders",
+  tresorerie: "cashflow", marketing: "campaigns", roas: "campaigns",
+};
+
+export function buildComparison(ctx, type, now) {
   const ranges = getPeriodRanges(type, now);
   const current = computeMetrics(ctx, ranges.current.start, ranges.current.end);
   const previous = computeMetrics(ctx, ranges.previous.start, ranges.previous.end);
@@ -149,9 +161,19 @@ function buildComparison(ctx, type, now) {
   const metrics = Object.keys(labels).map((key) => {
     const cur = Number(current[key]) || 0;
     const prev = Number(previous[key]) || 0;
+    // A period with NO underlying rows (no transaction/order/campaign
+    // imported for it) sums to 0 by construction, same as a period that was
+    // genuinely flat at $0. Comparing the two as a normal delta produced a
+    // false "-100%" collapse whenever real prior data met an unmeasured
+    // current period, so those comparisons are marked non mesurable instead.
+    const source = METRIC_SOURCE[key];
+    const mesurable = !source || (current.hasData[source] && previous.hasData[source]);
+    const invert = invertKeys.includes(key);
+    if (!mesurable) {
+      return { key, label: labels[key], current: cur, previous: prev, delta: null, deltaPct: null, trend: "non-mesurable", unit: units[key], invert };
+    }
     const delta = cur - prev;
     const deltaPct = prev !== 0 ? Math.round((delta / Math.abs(prev)) * 1000) / 10 : cur !== 0 ? 100 : 0;
-    const invert = invertKeys.includes(key);
     let trend = "stable";
     if (delta > 0) trend = invert ? "down" : "up";
     else if (delta < 0) trend = invert ? "up" : "down";
@@ -177,8 +199,11 @@ function buildComparison(ctx, type, now) {
   };
 }
 
-function comparisonToText(comparison) {
+export function comparisonToText(comparison) {
   const lines = comparison.metrics.map((m) => {
+    if (m.trend === "non-mesurable") {
+      return `${m.label}: non mesurable sur au moins une des deux périodes (aucune donnée importée) — comparaison non pertinente`;
+    }
     const arrow = m.trend === "up" ? "↑" : m.trend === "down" ? "↓" : "→";
     const sign = m.delta > 0 ? "+" : "";
     return `${m.label}: ${m.current}${m.unit} (précédent ${m.previous}${m.unit}, ${sign}${m.delta}${m.unit} ${arrow} ${m.deltaPct}%)`;
