@@ -4,6 +4,22 @@ import { buildBusinessContext } from "../../shared/businessContext.ts";
 import { analyzeQualitativeObservations } from "../../shared/qualitativeEngine.ts";
 import { buildContextGraph } from "../../shared/contextEngine.ts";
 
+// sec9-11 de l'audit : un domaine sans donnees ne doit jamais compter comme
+// s'il avait une bonne (ou mauvaise) performance. On ne fait plus confiance
+// au LLM pour la moyenne globale -- il produit un score par dimension avec
+// un flag measured explicite, et c'est ici, cote serveur, que la moyenne est
+// calculee, sur les seules dimensions reellement mesurees. Une dimension qui
+// omet le flag (le modele ne suit pas toujours une instruction a la lettre)
+// est traitee comme mesuree plutot que silencieusement exclue : le risque
+// inverse (l'exclure a tort) fausserait la moyenne sans que rien ne le
+// signale.
+export function computeHealthScore(dimensions) {
+  const measured = (dimensions || []).filter((d) => d && d.measured !== false);
+  if (measured.length === 0) return null;
+  const sum = measured.reduce((s, d) => s + (Number(d.score) || 0), 0);
+  return Math.round(sum / measured.length);
+}
+
 export default async function(req: any) {
   try {
     const base44 = createClientFromRequest(req);
@@ -49,7 +65,7 @@ Un élément mieux vaut absent que chiffré à l'aveugle.
 INSTRUCTIONS
 Tu as accès aux données de: finance (transactions), ventes (commandes), clients, produits, inventaire, fournisseurs, achats, marketing (campagnes + quotidien), paie, dépenses, trésorerie, interactions clients, concurrents, objectifs et événements. Croise ces sources pour détecter des patterns que une seule source ne révélerait pas.
 
-1. Calcule un score de santé global sur 100 et un score pour chacune des 9 dimensions: finance, ventes, tresorerie, clients, operations, marketing, productivite, risques, croissance. Chaque score entre 0 et 100. Pour chaque dimension donne aussi une tendance (up/down/stable) et une explication courte. Base les scores sur les données réelles, pas sur des suppositions.
+1. Calcule un score pour chacune des 9 dimensions: finance, ventes, tresorerie, clients, operations, marketing, productivite, risques, croissance. Pour CHAQUE dimension, fixe d'abord measured: true si les données ci-dessus permettent réellement de la mesurer, measured: false si les données nécessaires sont absentes ou insuffisantes. Si measured est false, mets score à 0 et l'explication doit dire explicitement "non mesurable : [ce qui manque]" — ne calcule JAMAIS de score pour une dimension non mesurée. Si measured est true, le score (0-100) doit venir des données réelles, jamais d'une supposition. Donne aussi une tendance (up/down/stable) et une explication courte. Ne calcule PAS de score de santé global toi-même : il sera calculé côté serveur à partir des seules dimensions mesurées.
 
 2. Détecte les anomalies en croisant les sources. Cherche notamment:
    - Dépenses inhabituelles ou montants aberrants (transactions)
@@ -108,6 +124,7 @@ Réponds UNIQUEMENT avec un JSON valide respectant ce schéma. Aucun texte hors 
               properties: {
                 name: { type: "string" },
                 score: { type: "number" },
+                measured: { type: "boolean" },
                 trend: { type: "string" },
                 explanation: { type: "string" },
               },
@@ -238,13 +255,21 @@ Réponds UNIQUEMENT avec un JSON valide respectant ce schéma. Aucun texte hors 
     // fonction (scanExternalRadar), déclenchée à la demande avec recherche web
     // et sources consultables. Le diagnostic ne doit plus écraser ces signaux.
 
+    // Calculé ici, pas lu depuis data.health_score (voir computeHealthScore
+    // plus haut) : null si aucune dimension n'est mesurée (ne devrait pas
+    // arriver puisque hasData est déjà vérifié plus haut, mais un health_score
+    // fantôme serait pire qu'un champ absent). Utilisé partout ci-dessous —
+    // Company, AnalysisRun et la réponse HTTP doivent tous les trois montrer
+    // le même score, jamais celui que le LLM aurait calculé lui-même.
+    const healthScore = computeHealthScore(data.dimensions);
+
     // Update company health
     const dimScores = {};
     (data.dimensions || []).forEach((d: any) => {
-      dimScores[dimKey(d.name)] = { score: d.score, trend: d.trend, explanation: d.explanation };
+      dimScores[dimKey(d.name)] = { score: d.score, trend: d.trend, explanation: d.explanation, measured: d.measured !== false };
     });
     await base44.entities.Company.update(company.id, {
-      health_score: data.health_score,
+      health_score: healthScore,
       dimension_scores: dimScores,
       last_analysis_date: new Date().toISOString(),
     });
@@ -363,7 +388,7 @@ Réponds UNIQUEMENT avec un JSON valide respectant ce schéma. Aucun texte hors 
     }
 
     await base44.entities.AnalysisRun.create({
-      health_score: data.health_score,
+      health_score: healthScore,
       dimension_scores: dimScores,
       counts: {
         anomalies: (data.anomalies || []).length,
@@ -376,7 +401,7 @@ Réponds UNIQUEMENT avec un JSON valide respectant ce schéma. Aucun texte hors 
     });
 
     return Response.json({
-      health_score: data.health_score,
+      health_score: healthScore,
       dimensions: data.dimensions || [],
       counts: {
         anomalies: (data.anomalies || []).length,

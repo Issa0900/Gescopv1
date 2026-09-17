@@ -1,6 +1,13 @@
 import { createClient } from "npm:@base44/sdk@0.8.48";
 
 export function createFixedClientFromRequest(request) {
+    // Test-only seam: tests/import/point-entree.ts drives entry.ts handlers
+    // end-to-end against a fake Base44 client, without a real SDK session.
+    // Never set outside a test process.
+    if (typeof globalThis !== "undefined" && globalThis.__BASE44_STUB) {
+        return globalThis.__BASE44_STUB;
+    }
+
     const authHeader = request.headers.get("Authorization");
     const serviceRoleAuthHeader = request.headers.get("Base44-Service-Authorization");
     const appId = request.headers.get("Base44-App-Id");

@@ -443,13 +443,13 @@ export function planParRegles(
   const colonnes = entetes.map((c: string) => {
     const rec = recognizedCols.get(c);
     let champ = null;
+    const cleanC = c.toLowerCase().trim();
+    const noAccentC = cleanC.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_");
 
     // Exact schema fields always win over semantic guesses
     if (entite) {
       const schema = getSchema(entite);
       if (schema) {
-        const cleanC = c.toLowerCase().trim();
-        const noAccentC = cleanC.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_");
         const fields = Object.keys(schema.properties);
         if (fields.includes(c)) champ = c;
         else if (fields.includes(cleanC)) champ = cleanC;
@@ -614,11 +614,14 @@ export function appliquerPlan(plan: PlanImport, matrix: any[][]): Record<string,
 
       if (col && col.champ) {
         obj[col.champ] = valeur;
-      } else {
-        // Toujours conserver l'entête d'origine : permet au dictionnaire d'alias
-        // et à la normalisation de rattraper les colonnes financières et métier
+      } else if (!col || rattacherParSynonymes) {
+        // Colonne jamais rattachée par le plan (ou plan par règles, qui
+        // n'a pas tenté le rattachement) : on conserve l'entête d'origine
+        // pour que le dictionnaire d'alias et la normalisation la rattrapent.
         obj[entete] = valeur;
       }
+      // Sinon : l'analyse a explicitement jugé cette colonne sans
+      // correspondance (col.champ === null) — on ne la réintroduit pas.
     });
     if (isSummaryOrTotalRow(obj)) continue;
     if (Object.keys(obj).length > 0) rows.push(obj);

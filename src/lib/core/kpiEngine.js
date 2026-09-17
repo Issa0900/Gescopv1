@@ -11,6 +11,7 @@ import { getKpiDefinition, sortKpisTopologically } from "./kpiRegistry";
 import { buildKpiLineage, buildLineageSource } from "./dataLineage";
 import { computeFieldQuality, isQualitySufficient } from "./dataQualityEngine";
 import { getAggregationMethod } from "./fieldSemantic";
+import { resolveContextualField } from "./entityFieldMap";
 import { KPI_STATUS, ECONOMIC_ROLES, AGGREGATION_METHODS, TEMPORAL_TYPES } from "./semanticTypes";
 
 /**
@@ -226,6 +227,9 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
   // Find the field in the records that matches this canonicalKey
   let targetField = null;
   let targetSemantic = null;
+  // Records this field actually applies to. Equal to `records` unless a
+  // contextual fallback below narrows it (see next block).
+  let targetRecords = records;
 
   for (const fs of (fieldSemantics || new Map()).values()) {
     if (fs.canonicalKey === canonicalKey) {
@@ -234,6 +238,29 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
       // own `.field` is always the real property name on the record.
       targetField = fs.field;
       targetSemantic = fs;
+      break;
+    }
+  }
+
+  // Fallback: a contextual field (e.g. Transaction.amount is "income_amount"
+  // or "expense_amount" depending on its own `type`) was resolved to ONE
+  // default canonicalKey for the whole batch, because getEntitySemantics is
+  // called once with no representative record — a single row can't stand in
+  // for a whole file that mixes income and expense. Match it here instead,
+  // per record, using the same context rules getFieldSemantic carries on
+  // the semantic object (see entityFieldMap.js). Without this, "revenue"
+  // and "expense" for Transaction-only data were both permanently
+  // unavailable, and the single resolved fallback key ("transaction_amount")
+  // silently summed income and expense together under the wrong metric.
+  if (!targetField) {
+    for (const [fieldName, fs] of (fieldSemantics || new Map()).entries()) {
+      const rule = (fs.contextRules || []).find((r) => r.then.canonicalKey === canonicalKey);
+      if (!rule) continue;
+      const matches = records.filter((r) => resolveContextualField({ contextRules: fs.contextRules }, r).canonicalKey === canonicalKey);
+      if (matches.length === 0) continue;
+      targetField = fieldName;
+      targetSemantic = { ...fs, canonicalKey, semanticType: rule.then.semanticType };
+      targetRecords = matches;
       break;
     }
   }
@@ -250,14 +277,17 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
     });
   }
 
-  // Restrict to rows from the entity this field actually belongs to, before
-  // anything reads `records` again. Without this, two entities sharing a raw
-  // field name (Transaction and Expense both have "amount") got their
-  // quality score, lineage record count and aggregated value all computed
-  // over BOTH entities' rows combined the moment records from both were
-  // passed into the same batch - untagged rows (single-entity callers that
+  // Restrict to rows from the entity this field actually belongs to, on top
+  // of the contextual narrowing above (targetRecords), not instead of it:
+  // without this, two entities sharing a raw field name (Transaction and
+  // Expense both have "amount") got their quality score, lineage record
+  // count and aggregated value all computed over BOTH entities' rows
+  // combined the moment records from both were passed into the same batch;
+  // without keeping targetRecords as the base, this alone would also have
+  // silently reintroduced the income/expense mixing the contextual fallback
+  // above exists to prevent. Untagged rows (single-entity callers that
   // predate this tag) are kept as-is.
-  const recordsForEntity = records.filter(
+  const recordsForEntity = targetRecords.filter(
     (r) => r._entity === undefined || r._entity === targetSemantic.source
   );
 

@@ -61,10 +61,10 @@ export const FIELD_ALIASES: Record<string, string> = {
   "valeur_vie": "lifetime_value", "ltv": "lifetime_value", "valeur vie client": "lifetime_value",
   "risque_churn": "churn_risk", "risque de churn": "churn_risk",
   "type_client": "customer_type", "type de client": "customer_type",
-  "premiere_commande": "first_purchase_date", "premiere achat": "first_purchase_date",
-  "derniere_commande": "last_purchase_date", "dernier achat": "last_purchase_date",
-  "date_acquisition": "acquisition_date", "date d acquisition": "acquisition_date",
-  "id produit": "product_id", "nom_campagne": "campaign_name",
+  "premiere_commande": "first_purchase_date", "premiere_achat": "first_purchase_date",
+  "derniere_commande": "last_purchase_date", "dernier_achat": "last_purchase_date",
+  "date_acquisition": "acquisition_date", "date_d_acquisition": "acquisition_date",
+  "id_produit": "product_id", "nom_campagne": "campaign_name",
   "id_concurrent": "competitor_id",
   "cout_unitaire": "unit_cost", "cout_total": "total_cost",
   "prix_unitaire": "unit_price", "quantite_vendue": "quantity",
@@ -137,6 +137,7 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "produit_de_vente": "revenue",
   "sales": "revenue",
   "sales_revenue": "revenue",
+  "total_sales": "revenue",
   "revenue": "revenue",
   "revenues": "revenue",
   "turnover": "revenue",
@@ -1403,7 +1404,29 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   ...buildFieldAliasesFromRegistry(),
 };
 
-export function normalizeKeys(row: Record<string, any>, properties?: Record<string, any>): Record<string, any> {
+// FIELD_ALIASES/ALIAS_CANONIQUES resolve every revenue synonym (CA, Ventes,
+// Sales, Revenue, Net Sales, "Chiffre d'affaires" with the apostrophe...) to
+// one of these canonical concept names, regardless of which entity is being
+// imported. No entity schema actually has a field literally called "revenue"
+// — Transaction/Expense track it as "amount", Order/Customer/ExecutiveSummary
+// as "total_revenue" — so whenever the resolved alias didn't happen to be the
+// exact target field, the row's money value was silently dropped and the row
+// quarantined for a missing required field. A financial column this central
+// must never disappear without explanation, so on a schema mismatch we place
+// it in whichever generic revenue-carrying field the target entity actually
+// has, instead of an alias name nothing declares.
+const REVENUE_CONCEPT_ALIASES = new Set(["revenue", "net_revenue", "gross_revenue", "total_revenue"]);
+const REVENUE_LANDING_FIELDS = ["total_revenue", "amount", "gross_revenue", "net_revenue"];
+
+export function normalizeKeys(
+  row: Record<string, any>,
+  properties?: Record<string, any>,
+  // Filled with the ORIGINAL column names (not aliases) that could not be
+  // matched to any field of the target entity — a financial or business
+  // column must never disappear from a column that isn't in the schema
+  // without the user being told which one and why (sec6 of the audit).
+  unmapped?: Set<string>,
+): Record<string, any> {
   const out: Record<string, any> = {};
   const schemaFields = properties ? Object.keys(properties) : [];
   for (const [k, v] of Object.entries(row || {})) {
@@ -1425,6 +1448,17 @@ export function normalizeKeys(row: Record<string, any>, properties?: Record<stri
         out[fuzzyMatch] = v;
         continue;
       }
+      // Last resort: a revenue-family column with nowhere else to go. Land it
+      // on the first revenue-carrying field this entity actually declares,
+      // in priority order, instead of losing the value under an alias name
+      // that isn't one of this entity's fields.
+      if (REVENUE_CONCEPT_ALIASES.has(alias) || REVENUE_CONCEPT_ALIASES.has(canon)) {
+        const landing = REVENUE_LANDING_FIELDS.find((f) => schemaFields.includes(f) && out[f] === undefined);
+        if (landing) {
+          out[landing] = v;
+          continue;
+        }
+      }
       if (alias === "status" && schemaFields.includes("fulfillment_status") && !schemaFields.includes("status")) {
         out["fulfillment_status"] = v;
         continue;
@@ -1445,6 +1479,7 @@ export function normalizeKeys(row: Record<string, any>, properties?: Record<stri
         out["amount"] = v;
         continue;
       }
+      if (unmapped) unmapped.add(k);
     }
     out[alias] = v;
   }
@@ -1717,6 +1752,12 @@ export function parseNumber(value: any): number | null {
   }
   // Strip currency, percent signs and every kind of space (incl. non-breaking).
   s = s.replace(/[$€£%]|[a-zA-Z]|\s|\u00A0|\u202F/g, "");
+  // A value that was ALL letters ("abc", "texte-invalide", a stray currency
+  // code with no amount attached) has nothing left after stripping -- no
+  // digit anywhere. Number("") is 0 in JS, so without this check unreadable
+  // text silently became a valid $0 instead of being rejected: it passed
+  // validation, was counted in volumes, and stayed invisible in every sum.
+  if (!/\d/.test(s)) return null;
   const lastComma = s.lastIndexOf(",");
   const lastDot = s.lastIndexOf(".");
   if (lastComma >= 0 && lastDot >= 0) {
@@ -1786,8 +1827,8 @@ export function parseDate(value: any, convention?: ConventionDate | null): strin
     if (!dateReelle(year, month, day)) return null;
     return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
   }
-  // "15 janv. 2025" / "15 janvier 2025"
-  m = stripAccents(s.toLowerCase()).match(/^(\d{1,2})\s+([a-z]+)\.?\s+(\d{4})$/);
+  // "15 janv. 2025" / "15 janvier 2025" / "1er janvier 2025" (ordinal du 1er du mois)
+  m = stripAccents(s.toLowerCase()).match(/^(\d{1,2})(?:er|e|eme)?\s+([a-z]+)\.?\s+(\d{4})$/);
   if (m) {
     const mm = MONTHS_FR[m[2].slice(0, 4)] || MONTHS_FR[m[2].slice(0, 3)];
     if (mm) return dateReelle(m[3], mm, m[1]) ? `${m[3]}-${mm}-${m[1].padStart(2, "0")}` : null;
@@ -1847,11 +1888,12 @@ export function normalizeRow(
   properties: Record<string, any> | null = null,
   sourceType?: string,
   enumIssues?: EnumIssue[],
+  unmapped?: Set<string>,
 ): Record<string, any> {
   const schemaProps = properties || ENTITY_SCHEMAS[entityName]?.properties || null;
 
   if (isSummaryOrTotalRow(row)) return {};
-  const r = normalizeKeys(row, schemaProps);
+  const r = normalizeKeys(row, schemaProps, unmapped);
   if (isSummaryOrTotalRow(r)) return {};
 
   // Preserve explicit Transaction headers before aliases or legacy plans can
@@ -1922,7 +1964,10 @@ export function normalizeRow(
       type: normalizedType,
       category: r.category || "",
       source: sourceType || "csv",
-      currency: "CAD",
+      // Une colonne Devise/Currency explicite doit etre respectee : sans ce
+      // fallback, un fichier en USD ou EUR etait toujours etiquete CAD,
+      // faussant silencieusement toute conversion ou tout total multi-devise.
+      currency: r.currency || "CAD",
       client: r.client || r.customer_id || "",
       product: r.product || r.product_id || "",
       import_id: importId,

@@ -39,11 +39,15 @@ export const KPI_REGISTRY = Object.freeze({
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: true,
     dependencies: ["revenue", "income_amount", "transaction_amount"],
+    // income_amount and transaction_amount are ALTERNATIVE readings of the
+    // same Transaction rows (income-only vs. every row regardless of type),
+    // never additive: summing them double-counted revenue once the kpiEngine
+    // fix let both resolve on the same dataset (income_amount correctly
+    // context-filtered, transaction_amount its context-blind fallback).
+    // income_amount is preferred whenever it's actually available.
     calculate: (deps) => {
-      // Prioritize explicit transactions, otherwise fallback to orders
-      if (deps.income_amount || deps.transaction_amount) {
-        return (deps.income_amount || 0) + (deps.transaction_amount || 0);
-      }
+      if (deps.income_amount != null) return deps.income_amount;
+      if (deps.transaction_amount != null) return deps.transaction_amount;
       return deps.revenue || 0;
     }
   },
@@ -227,8 +231,17 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RESULT, // It's a calculated result, not a raw flow
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: true, // Margin amounts can be summed across periods
-    dependencies: ["total_revenue", "cost", "purchase_cost"],
-    calculate: (deps) => (deps.total_revenue || 0) - ((deps.cost || 0) + (deps.purchase_cost || 0)),
+    // "cogs" is the canonical key Order.cost actually resolves to in
+    // entityFieldMap.js — "cost"/"purchase_cost" (an earlier attempt on
+    // main) don't match any field there, so this dependency would always
+    // read as unmeasured and margin would default to 100% of revenue.
+    dependencies: ["total_revenue", "cogs"],
+    // A COGS column that was never imported is not the same as a COGS of $0
+    // (a real, measured zero-cost sale). `|| 0` made an absent COGS silently
+    // read as zero cost, so gross margin came out at 100% for any revenue
+    // whose cost data simply hadn't arrived yet — an invented "excellent
+    // performance" from missing data, exactly what sec9-11 prohibits.
+    calculate: (deps) => (deps.total_revenue != null && deps.cogs != null) ? deps.total_revenue - deps.cogs : null,
   },
 
   gross_margin_pct: {
@@ -242,7 +255,7 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: false, // Rates can NEVER be summed
     dependencies: ["total_revenue", "gross_margin_amount"],
     calculate: (deps) => {
-      if (!deps.total_revenue || deps.total_revenue === 0) return 0;
+      if (!deps.total_revenue || deps.gross_margin_amount == null) return null;
       return (deps.gross_margin_amount / deps.total_revenue) * 100;
     },
   },
@@ -257,7 +270,12 @@ export const KPI_REGISTRY = Object.freeze({
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: true,
     dependencies: ["total_revenue", "total_expense"],
-    calculate: (deps) => (deps.total_revenue || 0) - (deps.total_expense || 0),
+    // Same principle as gross_margin_amount: no expense data imported is not
+    // the same as zero expenses, and treating it that way used to make net
+    // income equal total_revenue -- a business with real costs looking
+    // artificially 100% profitable the moment its expense data hadn't
+    // arrived yet.
+    calculate: (deps) => (deps.total_revenue != null && deps.total_expense != null) ? deps.total_revenue - deps.total_expense : null,
   },
   
   net_margin_pct: {
@@ -271,7 +289,7 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: false,
     dependencies: ["total_revenue", "net_income"],
     calculate: (deps) => {
-      if (!deps.total_revenue || deps.total_revenue === 0) return 0;
+      if (!deps.total_revenue || deps.net_income == null) return null;
       return (deps.net_income / deps.total_revenue) * 100;
     },
   },
@@ -413,13 +431,21 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RATIO,
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: false,
-    dependencies: ["budget", "active_customers"], // 'new_customers' doesn't exist, we fallback to active_customers. 'budget' serves as marketing spend
+    // marketing_spend (Campaign.spend) and new_customers (Campaign.new_customers)
+    // are both real canonical keys in entityFieldMap.js — verified against it
+    // directly; an earlier attempt on main claimed they "don't exist" and
+    // substituted "budget"/"active_customers", neither of which any field
+    // maps to (Campaign.budget resolves to "campaign_budget", not "budget").
+    dependencies: ["marketing_spend", "new_customers"],
+    // Zero new customers makes the ratio undefined (division by zero), and an
+    // unmeasured spend/count is not a spend/count of zero — both must read as
+    // "non mesurable" (null), not as a free $0 acquisition cost.
     calculate: (deps) => {
-      if (!deps.active_customers || deps.active_customers === 0) return 0;
-      return (deps.budget || 0) / deps.active_customers;
+      if (deps.marketing_spend == null || !deps.new_customers) return null;
+      return deps.marketing_spend / deps.new_customers;
     },
   },
-  
+
   roas: {
     id: "roas",
     name: { fr: "Retour sur Investissement Publicitaire (ROAS)", en: "ROAS" },
@@ -429,10 +455,15 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RATIO,
     dataType: DATA_TYPES.NUMBER,
     isAdditive: false,
-    dependencies: ["total_revenue", "budget"], // 'campaign_revenue' & 'marketing_spend' don't exist
+    // campaign_revenue (Campaign.revenue) and marketing_spend (Campaign.spend)
+    // are real canonical keys — see the note on `cac` above. total_revenue
+    // (whole-company revenue) would also be the wrong numerator for ROAS
+    // even if "budget" did resolve: ROAS is revenue attributed to the ad
+    // spend, not every dollar the business made.
+    dependencies: ["campaign_revenue", "marketing_spend"],
     calculate: (deps) => {
-      if (!deps.budget || deps.budget === 0) return 0;
-      return (deps.total_revenue || 0) / deps.budget;
+      if (!deps.marketing_spend || deps.campaign_revenue == null) return null;
+      return deps.campaign_revenue / deps.marketing_spend;
     },
   },
 
@@ -445,10 +476,12 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RATIO,
     dataType: DATA_TYPES.PERCENTAGE,
     isAdditive: false,
-    dependencies: ["total_revenue", "budget"],
+    // Same correction as roas above: campaign_revenue/marketing_spend are
+    // the real canonical keys for this figure, not total_revenue/budget.
+    dependencies: ["campaign_revenue", "marketing_spend"],
     calculate: (deps) => {
-      if (!deps.budget || deps.budget === 0) return 0;
-      return ((deps.total_revenue - deps.budget) / deps.budget) * 100;
+      if (!deps.marketing_spend || deps.campaign_revenue == null) return null;
+      return ((deps.campaign_revenue - deps.marketing_spend) / deps.marketing_spend) * 100;
     },
   },
 
@@ -461,10 +494,12 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RATIO,
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: false,
-    dependencies: ["budget", "clicks"],
+    // Campaign.budget resolves to canonicalKey "campaign_budget", not
+    // "budget" (no field maps to that bare key) — same fix as roas/cac above.
+    dependencies: ["campaign_budget", "clicks"],
     calculate: (deps) => {
       if (!deps.clicks) return null;
-      return (deps.budget || 0) / deps.clicks;
+      return (deps.campaign_budget || 0) / deps.clicks;
     },
   },
 
@@ -477,10 +512,10 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RATIO,
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: false,
-    dependencies: ["budget", "impressions"],
+    dependencies: ["campaign_budget", "impressions"],
     calculate: (deps) => {
       if (!deps.impressions) return null;
-      return ((deps.budget || 0) / deps.impressions) * 1000;
+      return ((deps.campaign_budget || 0) / deps.impressions) * 1000;
     },
   },
 
@@ -498,8 +533,8 @@ export const KPI_REGISTRY = Object.freeze({
     calculate: (deps) => {
       const records = deps._records || [];
       const orderCount = records.filter(r => r.order_id && (!r.status || !["annul", "cancel", "void", "draft"].some(s => String(r.status).toLowerCase().includes(s)))).length;
-      if (orderCount === 0) return 0;
-      return (deps.total_revenue || 0) / orderCount;
+      if (orderCount === 0 || deps.total_revenue == null) return null;
+      return deps.total_revenue / orderCount;
     },
   },
 

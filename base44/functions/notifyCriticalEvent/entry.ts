@@ -3,6 +3,15 @@ import { createFixedClientFromRequest as createClientFromRequest } from "../../s
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
+    // Every other Base44 function in this app gates on auth.me() before doing
+    // anything (sec17 of the audit). This one used asServiceRole for the
+    // email send and the Alert write further down without ever checking who
+    // was calling, so any request carrying a valid Base44-App-Id — no user
+    // session required — could make GESCOP send a real email and create an
+    // Alert for an arbitrary user_id taken straight from the request body.
+    const caller = await base44.auth.me();
+    if (!caller) return Response.json({ error: "Non autorisé" }, { status: 401 });
+
     const body = await req.json();
     const { entity_type, entity_id, title, description, detail, financial_impact, user_id } = body;
 
