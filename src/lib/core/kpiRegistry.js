@@ -69,10 +69,21 @@ export const KPI_REGISTRY = Object.freeze({
     semanticType: "expense",
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: true,
-    dependencies: ["expense", "expense_amount", "operating_expense"],
+    // "expense" was never a real canonicalKey (nothing maps to it) — removed
+    // rather than guessed at, since calculate() already treats a missing
+    // piece as 0 and the other two (Expense.amount, Transaction context)
+    // cover the real sources.
+    dependencies: ["expense_amount", "operating_expense"],
+    // Same class of bug as total_revenue: expense_amount (Transaction rows)
+    // and operating_expense (the separate Expense entity) are two different
+    // sources, not alternative readings of the same one — a company can
+    // have both real Expense records AND a few manual expense-type
+    // Transaction rows. The old `if (deps.expense_amount) return ...`
+    // silently dropped operating_expense the moment any Transaction expense
+    // existed, however small.
     calculate: (deps) => {
-      if (deps.expense_amount) return deps.expense_amount;
-      return (deps.expense || 0) + (deps.operating_expense || 0);
+      if (deps.expense_amount == null && deps.operating_expense == null) return null;
+      return (deps.expense_amount || 0) + (deps.operating_expense || 0);
     }
   },
 
@@ -329,16 +340,19 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RESULT,
     dataType: DATA_TYPES.NUMBER,
     isAdditive: false,
-    dependencies: ["cash_balance", "net_burn_rate"],
+    // "cash_balance" matched no field anywhere - Cashflow.closing_cash
+    // resolves to "cash_closing". Found auditing every KPI dependency
+    // against entityFieldMap.js's real canonicalKeys.
+    dependencies: ["cash_closing", "net_burn_rate"],
     calculate: (deps) => {
-      if (!deps.cash_balance) return 0;
+      if (!deps.cash_closing) return 0;
       if (deps.net_burn_rate >= 0) return Infinity; // Profitable, infinite runway
-      
+
       const periodDays = deps.period_days || 30;
       const dailyBurnRate = Math.abs(deps.net_burn_rate) / periodDays;
       const monthlyBurnRate = dailyBurnRate * 30.416; // Average days in a month
-      
-      return deps.cash_balance / monthlyBurnRate;
+
+      return deps.cash_closing / monthlyBurnRate;
     },
   },
 
@@ -367,8 +381,10 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RESULT,
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: false, // It's a STOCK-derived metric (AR + Inv - AP)
-    dependencies: ["receivable", "inventory_value", "payable"],
-    calculate: (deps) => (deps.receivable || 0) + (deps.inventory_value || 0) - (deps.payable || 0),
+    // "receivable"/"payable" matched no field - Cashflow.accounts_receivable
+    // and .accounts_payable resolve to "accounts_receivable"/"accounts_payable".
+    dependencies: ["accounts_receivable", "inventory_value", "accounts_payable"],
+    calculate: (deps) => (deps.accounts_receivable || 0) + (deps.inventory_value || 0) - (deps.accounts_payable || 0),
   },
   
   bfr_days: {
@@ -401,11 +417,11 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: false,
     // Standard finance KPI: how many days of revenue sit uncollected in
     // accounts receivable. Lower is better (customers pay faster).
-    dependencies: ["receivable", "total_revenue"],
+    dependencies: ["accounts_receivable", "total_revenue"],
     calculate: (deps) => {
       if (!deps.total_revenue || deps.total_revenue === 0) return null;
       const periodDays = deps.period_days || 365;
-      return ((deps.receivable || 0) / deps.total_revenue) * periodDays;
+      return ((deps.accounts_receivable || 0) / deps.total_revenue) * periodDays;
     },
   },
 
@@ -421,11 +437,11 @@ export const KPI_REGISTRY = Object.freeze({
     // Pairs with DSO: how many days of expenses sit unpaid in accounts
     // payable. Higher can mean better cash management, or slow-paying
     // suppliers strain - read it alongside DSO, not alone.
-    dependencies: ["payable", "total_expense"],
+    dependencies: ["accounts_payable", "total_expense"],
     calculate: (deps) => {
       if (!deps.total_expense || deps.total_expense === 0) return null;
       const periodDays = deps.period_days || 365;
-      return ((deps.payable || 0) / deps.total_expense) * periodDays;
+      return ((deps.accounts_payable || 0) / deps.total_expense) * periodDays;
     },
   },
 
@@ -505,10 +521,16 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: false,
     // Campaign.budget resolves to canonicalKey "campaign_budget", not
     // "budget" (no field maps to that bare key) — same fix as roas/cac above.
-    dependencies: ["campaign_budget", "clicks"],
+    // Campaign/CampaignDaily.clicks resolves to "campaign_clicks", not the
+    // bare "clicks" this depended on until now — no field anywhere maps to
+    // that key, so this KPI could never compute a value, silently, since
+    // the merge that introduced it. Found by auditing every KPI dependency
+    // against entityFieldMap.js's actual canonicalKeys (same check that
+    // caught the total_revenue bug).
+    dependencies: ["campaign_budget", "campaign_clicks"],
     calculate: (deps) => {
-      if (!deps.clicks) return null;
-      return (deps.campaign_budget || 0) / deps.clicks;
+      if (!deps.campaign_clicks) return null;
+      return (deps.campaign_budget || 0) / deps.campaign_clicks;
     },
   },
 
@@ -521,10 +543,12 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RATIO,
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: false,
-    dependencies: ["campaign_budget", "impressions"],
+    // Same fix as cpc above: "impressions" matches no field: Campaign's own
+    // impressions column resolves to "campaign_impressions".
+    dependencies: ["campaign_budget", "campaign_impressions"],
     calculate: (deps) => {
-      if (!deps.impressions) return null;
-      return ((deps.campaign_budget || 0) / deps.impressions) * 1000;
+      if (!deps.campaign_impressions) return null;
+      return ((deps.campaign_budget || 0) / deps.campaign_impressions) * 1000;
     },
   },
 

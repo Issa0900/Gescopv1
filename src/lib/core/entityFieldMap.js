@@ -164,6 +164,7 @@ export const ENTITY_FIELD_MAP = Object.freeze({
     campaign_id: { canonicalKey: "campaign_daily_campaign_id", semanticType: "identifier", grain: GRAIN_TYPES.CAMPAIGN_DAILY },
     date:        { canonicalKey: "campaign_daily_date", semanticType: "date", grain: GRAIN_TYPES.CAMPAIGN_DAILY },
     spend:       { canonicalKey: "marketing_spend", semanticType: "expense", grain: GRAIN_TYPES.CAMPAIGN_DAILY }, // Rolled up with Campaign
+    impressions: { canonicalKey: "campaign_impressions", semanticType: "impressions", grain: GRAIN_TYPES.CAMPAIGN_DAILY }, // Rolled up with Campaign
     clicks:      { canonicalKey: "campaign_clicks", semanticType: "clicks", grain: GRAIN_TYPES.CAMPAIGN_DAILY }, // Rolled up with Campaign
     conversions: { canonicalKey: "campaign_conversions", semanticType: "conversions", grain: GRAIN_TYPES.CAMPAIGN_DAILY }, // Rolled up with Campaign
     revenue:     { canonicalKey: "campaign_revenue", semanticType: "revenue", grain: GRAIN_TYPES.CAMPAIGN_DAILY }, // Rolled up with Campaign
