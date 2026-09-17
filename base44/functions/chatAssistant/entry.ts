@@ -23,6 +23,7 @@ RÈGLES
 - Quand tu fais une interprétation, précise qu'il s'agit d'une analyse, pas d'un fait établi.
 - Pour les questions sur les risques, opportunités, priorités, appuie-toi sur les éléments détectés.
 - Sois bref sauf si on te demande du détail.
+- Classe ta réponse dans le champ "classification" (FACT, INFERENCE, HYPOTHESIS, RECOMMENDATION) et indique ton niveau de confiance (0.0 à 1.0) dans "confidence".
 - Réponds dans le champ "response" et liste les sources utilisées dans le champ "sources" (ex: "Données financières — 2481 transactions, sept. 2026", "Anomalies — 3 critiques", "KPI ventes — tendance baissière").`;
 
     const messages = [{ role: "system", content: systemPrompt }];
@@ -38,14 +39,22 @@ RÈGLES
       response_json_schema: {
         type: "object",
         properties: {
+          classification: { type: "string", enum: ["FACT", "CALCULATION", "OBSERVATION", "INFERENCE", "HYPOTHESIS", "RECOMMENDATION"] },
           response: { type: "string" },
+          confidence: { type: "number" },
           sources: { type: "array", items: { type: "string" } },
         },
+        required: ["classification", "response", "confidence", "sources"]
       },
     });
 
     const data = typeof result === "string" ? JSON.parse(result) : result;
-    return Response.json({ response: data.response || "", sources: data.sources || [] });
+    return Response.json({ 
+      classification: data.classification || "INFERENCE",
+      response: data.response || "", 
+      confidence: data.confidence || 0.5,
+      sources: data.sources || [] 
+    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

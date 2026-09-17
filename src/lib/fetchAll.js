@@ -5,7 +5,7 @@
 
 const PAGE = 500;
 
-export async function fetchAll(entity, sort = "-created_date", maxPages = 40) {
+export async function fetchAll(entity, sort = "-created_date", maxPages = 500) {
   const out = [];
   for (let page = 0; page < maxPages; page += 1) {
     const batch = await entity.list(sort, PAGE, page * PAGE);

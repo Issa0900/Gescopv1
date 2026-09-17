@@ -8,7 +8,6 @@ import {
 } from "../../shared/importPlan.ts";
 import { insertRows, missingRequired } from "../../shared/bulkInsert.ts";
 import { buildBusinessContext } from "../../shared/businessContext.ts";
-import { resolveFieldSemantics } from "../../shared/semanticEngine.ts";
 import { normalizeRow as normalizeRowForCore } from "../../shared/normalizationEngine.ts";
 import { profileData } from "../../shared/dataProfiler.ts";
 import { matchConcept } from "../../shared/semanticMatcher.ts";
@@ -128,7 +127,14 @@ function lignesSelonPlan(plan: PlanImport, matrix: any[][], nomFichier: string, 
   let rows: Record<string, any>[] = [];
   try { rows = appliquerPlan(plan, matrix); } catch { rows = []; }
   const disponibles = Math.max(matrix.length - plan.ligne_entetes - 1 - plan.lignes_ignorees.length, 0);
-  if (rows.length > 0 || disponibles === 0) return { rows, plan, note: "" };
+  // Une ligne d'en-tetes decalee d'un cran ne rend pas toujours 0 ligne : les
+  // intitules pointent alors sur de vraies donnees, qui deviennent des colonnes
+  // au nom absurde produisant 1 ou 2 lignes bien formees mais illisibles. Le
+  // signal fiable n'est donc pas "0 ligne" mais "aucune des colonnes decrites
+  // par le plan n'a ete retrouvee dans la ligne d'en-tetes reelle".
+  const entetesReelles = new Set((matrix[plan.ligne_entetes] || []).map((h: any) => String(h ?? "").trim()));
+  const aucuneColonneRattachee = plan.colonnes.length > 0 && plan.colonnes.every((c) => !entetesReelles.has(c.colonne));
+  if ((rows.length > 0 && !aucuneColonneRattachee) || disponibles === 0) return { rows, plan, note: "" };
 
   const secours = planParRegles(matrix, nomFichier, entite || plan.entite);
   let rowsSecours: Record<string, any>[] = [];
@@ -375,6 +381,7 @@ export default async function (req: Request) {
               
               let validCount = 0;
               let mappedCount = 0;
+              let quarantinedCount = 0;
               const quarantine: any[] = [];
               const properties = getSchema(plan.entite)?.properties || null;
               const required = getSchema(plan.entite)?.required || [];
@@ -400,6 +407,7 @@ export default async function (req: Request) {
                   }
 
                   if (errors.length > 0) {
+                    quarantinedCount++;
                     if (quarantine.length < 50) {
                       quarantine.push({ rowIndex: i + plan.ligne_entetes + 1, original: row, mapped: normalized, errors });
                     }
@@ -416,17 +424,15 @@ export default async function (req: Request) {
               results.push({
                 file_name: label, sheet: nomFeuille, entity: plan.entite,
                 plan, signature: analyse.signature, refus: analyse.refus, analyse_erreur: analyse.erreur,
-                apercu: lignesSelonPlan(plan, matrix, file_name).rows.slice(0, 5),
                 apercu: lecture.rows.slice(0, 5),
                 echantillon: construireEchantillon(matrix, 8),
-                rows_read: Math.max(matrix.length - plan.ligne_entetes - 1, 0),
                 rows_read: totalRows,
                 status: "analyse",
                 quality: {
                   score: quality_score || 0,
                   valid_rows: validCount,
                   total_rows: totalRows,
-                  quarantined_rows: quarantine.length,
+                  quarantined_rows: quarantinedCount,
                   quarantine_samples: quarantine
                 }
               });

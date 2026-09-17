@@ -90,6 +90,7 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
       role: S, hire_date: D,
       employment_type: E("temps_plein", "temps_partiel", "contractuel", "stagiaire"),
       hourly_rate: N, weekly_hours: N,
+      full_name: S, name: S, annual_salary: N, salary: N, branch: S, location: S,
       status: E("actif", "depart", "conge", "essai"),
       import_id: S, fingerprint: S, original_data: S,
     },

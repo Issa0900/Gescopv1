@@ -20,6 +20,7 @@ import {
   sumPrev,
 } from "@/lib/periods";
 import { getStockAlertSettings, computeStockAlerts } from "@/lib/stockAlerts";
+import { warnIfDataMissing } from "@/lib/core/dataCompleteness";
 import {
   aggregateMarginPct,
   previousMarginPct,
@@ -31,6 +32,7 @@ import {
   churnStats,
   roasWindow,
   previousRoasWindow,
+  validSalesOrders,
 } from "@/lib/metrics";
 
 function clamp(v) {
@@ -51,7 +53,11 @@ function applyTrend(score, pct, bonus = 8, penalty = 12, threshold = 5) {
 }
 
 export function computeDomainScores(data) {
-  const { transactions, orders, customers, campaigns, campaignDaily, products, inventory, cashflow, company } = data;
+  warnIfDataMissing("computeDomainScores", data, [
+    "transactions", "orders", "customers", "campaigns", "campaignDaily",
+    "products", "inventory", "cashflow", "expenses", "company",
+  ]);
+  const { transactions, orders, customers, campaigns, campaignDaily, products, inventory, cashflow, expenses, company } = data;
   const scores = {};
 
   // === FINANCE - aggregated margin over 3 complete months ===
@@ -73,11 +79,16 @@ export function computeDomainScores(data) {
     "date", 
     "_amt"
   );
-  const expMonthly = monthlyAggComplete(
-    txnExpenses.map(t => ({ ...t, _amt: Number(t.amount) || Number(t.expense_amount) || 0 })), 
-    "date", 
-    "_amt"
-  );
+  // Expenses live in two separate places that a company can populate
+  // independently: expense-typed rows in the bank-feed Transaction import,
+  // and the dedicated Expense entity (itemized bills, subscriptions, etc.
+  // imported separately). Reading only one made "Dépenses" read 0 $ whenever
+  // a company had real costs recorded exclusively in the other.
+  const expenseRows = [
+    ...txnExpenses.map(t => ({ date: t.date, _amt: Number(t.amount) || Number(t.expense_amount) || 0 })),
+    ...(expenses || []).map(e => ({ date: e.date, _amt: Number(e.amount) || 0 })),
+  ];
+  const expMonthly = monthlyAggComplete(expenseRows, "date", "_amt");
 
   const recentMargin = aggregateMarginPct(revMonthly, expMonthly, 3);
   const priorMargin = previousMarginPct(revMonthly, expMonthly, 3);
@@ -141,12 +152,15 @@ export function computeDomainScores(data) {
   };
 
   // === VENTES - complete-month revenue and basket trend ===
+  // A refunded order's total was already reversed - counting it as revenue
+  // overstated this score's input by the store's full return rate.
+  const salesOrders = validSalesOrders(orders);
   const orderRevMonthly = monthlyAggComplete(
-    (orders || []).map(o => ({ ...o, _computed_rev: Number(o.total) || Number(o.revenue_amount) || Number(o.amount) || 0 })),
-    "date", 
+    salesOrders.map(o => ({ ...o, _computed_rev: Number(o.total) || Number(o.revenue_amount) || Number(o.amount) || 0 })),
+    "date",
     "_computed_rev"
   );
-  const orderCntMonthly = monthlyAggComplete(orders || [], "date", "order_id", "count");
+  const orderCntMonthly = monthlyAggComplete(salesOrders, "date", "order_id", "count");
   // 3-month blocks, but only when BOTH blocks are fully covered.
   const rev3 = sumLast(orderRevMonthly, 3);
   const revPrev3 = sumPrev(orderRevMonthly, 3);

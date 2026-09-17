@@ -1,0 +1,52 @@
+{
+  "name": "Observation",
+  "type": "object",
+  "properties": {
+    "observation_type": {
+      "type": "string",
+      "enum": ["quantitative", "qualitative", "external"]
+    },
+    "concept": {
+      "type": "string"
+    },
+    "value": {
+      "type": "number"
+    },
+    "text": {
+      "type": "string"
+    },
+    "unit": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "entity_id": {
+      "type": "string"
+    },
+    "source_id": {
+      "type": "string"
+    },
+    "confidence": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "observation_type",
+    "concept",
+    "source_id"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}
+

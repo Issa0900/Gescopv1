@@ -1,6 +1,8 @@
 // Shared import normalization utilities — used by importData and importMultiData
 import { ENTITY_SCHEMAS } from "./entitySchemas.ts";
 
+import { buildFieldAliasesFromRegistry } from "./registry/generateAliases.ts";
+
 // Strip accents/diacritics for comparison (é→e, à→a, etc.)
 export function stripAccents(str: string): string {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -21,19 +23,26 @@ export const FIELD_ALIASES: Record<string, string> = {
   "id_campagne": "campaign_id", "id_depense": "expense_id", "depense_id": "expense_id",
   "date_operation": "date", "periode": "period",
   "solde_cloture": "closing_cash", "solde_final": "closing_cash",
+  "solde_banque": "closing_cash", "solde_bancaire": "closing_cash", "solde": "closing_cash",
   "encaissements": "cash_in", "decaissements": "cash_out",
   "entrees": "cash_in", "sorties": "cash_out",
   "categorie": "category", "catégorie": "category",
-  "nom": "name", "nom du produit": "product_name", "nom_produit": "product_name",
+  "nom": "name", "nom du produit": "product_name", "nom_produit": "product_name", "nom_complet": "full_name",
   "prix": "price", "prix_vente": "selling_price", "prix de vente": "selling_price",
   "cout": "cost", "cout_achat": "purchase_cost", "coût": "cost", "coût_achat": "purchase_cost",
-  "marge": "gross_margin",
-  "quantite": "quantity", "quantité": "quantity",
-  "date_achat": "date", "date_vente": "date", "date_commande": "date",
+  "cout_produits": "total_cost", "cout_produit": "unit_cost", "cout_total": "total_cost",
+  "profit_brut": "gross_profit",
+  "marge": "gross_margin", "marge_pct": "gross_margin", "%_marge": "gross_margin",
+  "quantite": "quantity", "quantité": "quantity", "quantite_articles": "quantity", "quantite_commandee": "quantity",
+  "date_achat": "date", "date_vente": "date", "date_commande": "date", "date_de_commande": "date", "date de commande": "date",
   "client_id": "customer_id", "produit_id": "product_id",
   "fournisseur_id": "supplier_id", "fournisseur_nom": "supplier_name",
   "employe_id": "employee_id", "employé_id": "employee_id",
-  "montant": "amount", "sous_total": "subtotal",
+  "montant": "amount", "montant_ttc": "total", "montant_ht": "subtotal", "total_ttc": "total", "total_ht": "subtotal",
+  "salaire_annuel": "annual_salary", "salaire": "salary",
+  "ventes_totales": "total", "ventes_brutes": "gross_revenue",
+  "clics_pub": "clicks", "impressions_pub": "impressions", "budget_depense": "spend", "revenu_attribue": "revenue",
+  "sous_total": "subtotal",
   "statut": "status", "canal": "channel", "segment": "segment",
   "ventes_mensuelles": "monthly_sales", "ventes mensuelles": "monthly_sales",
   "niveau_stock": "inventory_level", "seuil_reappro": "reorder_point",
@@ -119,7 +128,7 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "nom_de_campagne": "campaign_name",
   "nom_campagne": "campaign_name",
   "profit_brut": "gross_profit",
-  "succursale": "department",
+  "succursale": "branch",
   "mode_de_paiement": "payment_method",
   "chiffre_d_affaires_net": "net_revenue",
   "ca_net": "net_revenue",
@@ -1382,7 +1391,17 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "store_id": "location_id",
   "demand_forecast": "predicted_sales",
   "economic_indicator": "external_metric",
-  "competitor_price": "competitor_price"
+  "competitor_price": "competitor_price",
+
+  // Genere depuis le registre unique (registry/conceptRegistry.ts, spec v2
+  // section 3) : concepts de mesure (revenu, couts, marketing...), y compris
+  // les en-tetes de canal publicitaire ("Facebook Ads", "Google Ads"...) qui
+  // n'avaient jamais d'alias de COLONNE ici — seulement de VALEUR de cellule
+  // dans ENUM_TRANSLATIONS, ce qui les rendait invisibles a l'import quand un
+  // fichier a une colonne nommee "Facebook Ads" plutot qu'une colonne
+  // "canal" contenant la valeur "Facebook Ads". Place en dernier : gagne sur
+  // toute collision avec les alias structurels ecrits a la main ci-dessus.
+  ...buildFieldAliasesFromRegistry(),
 };
 
 // FIELD_ALIASES/ALIAS_CANONIQUES resolve every revenue synonym (CA, Ventes,
@@ -1422,7 +1441,7 @@ export function normalizeKeys(
       || FIELD_ALIASES[canon]
       || ALIAS_CANONIQUES[canon]
       || (schemaFields.includes(canon) ? canon : lower);
-    // If alias is not a schema field, try fuzzy match against schema field names
+    // If alias is not a schema field, try fuzzy match against schema field names or contextual adaptations
     if (schemaFields.length > 0 && !schemaFields.includes(alias)) {
       const fuzzyMatch = schemaFields.find((f) => cleCanonique(f) === canon);
       if (fuzzyMatch) {
@@ -1439,6 +1458,26 @@ export function normalizeKeys(
           out[landing] = v;
           continue;
         }
+      }
+      if (alias === "status" && schemaFields.includes("fulfillment_status") && !schemaFields.includes("status")) {
+        out["fulfillment_status"] = v;
+        continue;
+      }
+      if (alias === "amount" && schemaFields.includes("total") && !schemaFields.includes("amount")) {
+        out["total"] = v;
+        continue;
+      }
+      if (alias === "customer_name" && schemaFields.includes("customer_id") && !schemaFields.includes("customer_name")) {
+        out["customer_id"] = v;
+        continue;
+      }
+      if (alias === "expense" && schemaFields.includes("expense_amount") && !schemaFields.includes("expense")) {
+        out["expense_amount"] = v;
+        continue;
+      }
+      if (["expense", "depense", "debit"].includes(alias) && schemaFields.includes("amount") && !schemaFields.includes(alias)) {
+        out["amount"] = v;
+        continue;
       }
       if (unmapped) unmapped.add(k);
     }
@@ -1461,7 +1500,7 @@ const ENUM_TRANSLATIONS: Record<string, string[]> = {
 
   // States
   "new": ["nouveau", "nouvelle"], "seen": ["vu", "lue"], "resolved": ["resolu"], "archived": ["archivee", "archive"],
-  "active": ["active", "actif"], "inactive": ["inactif"], "lost": ["perdu"], "dormant": ["dormant"], "terminated": ["terminee"],
+  "active": ["active", "actif"], "actif": ["active", "actif"], "inactive": ["inactif", "pause", "terminee"], "inactif": ["inactif", "pause", "terminee"], "lost": ["perdu"], "dormant": ["dormant"], "terminated": ["terminee"],
   "paused": ["pause"], "planned": ["planifiee"], "discontinued": ["discontinue"],
   "terminee": ["terminee"], "termine": ["terminee"],
 
@@ -1487,10 +1526,11 @@ const ENUM_TRANSLATIONS: Record<string, string[]> = {
   "sms": ["sms"], "print": ["print"], "courrier": ["print"],
   "autre": ["autre"], "other": ["autre"], "divers": ["autre"],
 
-  // Employee & Customer types
+  // Employee & Customer types & Departments
   "full time": ["temps_plein"], "part time": ["temps_partiel"], "contractor": ["contractuel"], "intern": ["stagiaire"],
   "departed": ["depart"], "on leave": ["conge"], "probation": ["essai"],
   "individual": ["particulier"], "business": ["entreprise", "b2b"],
+  "service client": ["service_client"], "service clientele": ["service_client"], "service a la clientele": ["service_client"], "customer service": ["service_client"], "support": ["service_client"], "operations": ["logistique", "atelier"],
 
   // Sentiment & Impact
   "positive": ["positif"], "neutral": ["neutre"], "negative": ["negatif"], "very negative": ["tres_negatif"],
@@ -1814,8 +1854,16 @@ export function coerceType(value: any, prop: any): any {
       }
       return String(value);
     case "number": {
+      // Same principle as the date branch just above, generalized: this used
+      // to return the unparsed value as-is on failure, so a malformed number
+      // (bad separator, stray text, an unrecognized unit) was stored VERBATIM
+      // in a numeric field - passing `missingRequired` (the key isn't blank,
+      // just unreadable) and then reading as NaN → 0 everywhere downstream
+      // does `Number(x) || 0`. Only Transaction.amount got this fix before;
+      // every other entity's numeric fields (Expense.amount, Order.total,
+      // Payroll.total_cost, Cashflow balances...) kept the old behavior.
       const n = parseNumber(value);
-      return n === null ? value : n;
+      return n === null ? null : n;
     }
     case "boolean": {
       if (typeof value === "boolean") return value;
@@ -1935,8 +1983,8 @@ export function normalizeRow(
     if (cin !== null || cout !== null) r.net_cash_flow = (cin || 0) - (cout || 0);
   }
 
-  // Les exports de campagnes contiennent la dǸpense, le revenu et les
-  // conversions, mais presque jamais le ROAS ni le CAC : sans dǸrivation, la
+  // Les exports de campagnes contiennent la dépense, le revenu et les
+  // conversions, mais presque jamais le ROAS ni le CAC : sans dérivation, la
   // page Marketing affichait des colonnes vides alors que tout est calculable.
   if (entityName === "Campaign") {
     const spend = parseNumber(r.spend);
@@ -1944,6 +1992,21 @@ export function normalizeRow(
     const conversions = parseNumber(r.conversions);
     if (r.roas == null && spend && revenue != null) r.roas = Math.round((revenue / spend) * 100) / 100;
     if (r.cac == null && spend && conversions) r.cac = Math.round((spend / conversions) * 100) / 100;
+  }
+
+  // Les inventaires instantanés n'ont souvent pas de colonne date explicite.
+  // Assurer une date du jour par défaut évite le rejet en base de données.
+  if (entityName === "Inventory" && !r.date) {
+    r.date = new Date().toISOString().slice(0, 10);
+  }
+
+  // Pour les employés avec salaire annuel sans taux horaire, dériver le taux horaire.
+  if (entityName === "Employee") {
+    if (r.annual_salary && !r.hourly_rate) {
+      const sal = parseNumber(r.annual_salary);
+      const hours = parseNumber(r.weekly_hours) || 37.5;
+      if (sal) r.hourly_rate = Math.round((sal / (52 * hours)) * 100) / 100;
+    }
   }
 
   // --- ORDER RESCUE HOOKS ---

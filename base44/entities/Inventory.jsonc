@@ -64,7 +64,6 @@
     }
   },
   "required": [
-    "date",
     "product_id"
   ],
   "rls": {

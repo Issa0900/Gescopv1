@@ -22,6 +22,10 @@ export default function Simulateur() {
     queryKey: ["transactions-summary"],
     queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
   });
+  const { data: expenses } = useQuery({
+    queryKey: ["expenses-summary"],
+    queryFn: () => fetchAll(base44.entities.Expense, "-date"),
+  });
 
   // Phase 7: Fetch live alerts to provide contextual recommendations
   const { company } = useCompany();
@@ -36,13 +40,13 @@ export default function Simulateur() {
         fetchAll(base44.entities.Product),
         fetchAll(base44.entities.Cashflow, "-date")
       ]);
-      return computeLiveAlerts({ transactions, orders, customers, campaignDaily, products, inventory, cashflow, company });
+      return computeLiveAlerts({ transactions, orders, customers, campaignDaily, products, inventory, cashflow, expenses, company });
     },
     enabled: !!transactions
   });
 
   const current = useMemo(() => {
-    const series = financialMonthlySeries(transactions || []);
+    const series = financialMonthlySeries(transactions || [], expenses || []);
     if (series.length === 0) return null;
     const last = series[series.length - 1];
     const baseMonth = last.month;
@@ -55,7 +59,7 @@ export default function Simulateur() {
     const avgPrice = income / volume;
     
     return { income, expense, margin, volume, avgPrice, baseMonth };
-  }, [transactions]);
+  }, [transactions, expenses]);
 
   const sim = useMemo(() => {
     if (!current) return null;

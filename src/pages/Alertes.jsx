@@ -36,7 +36,7 @@ export default function Alertes() {
       // source moves the threshold. Cashflow in particular was capped at 100
       // rows here, which is barely three months of daily balances to judge a
       // runway on. Destructured by name to keep the order unambiguous.
-      const [transactions, customers, orders, campaignDaily, inventory, cashflow, products] = await Promise.all([
+      const [transactions, customers, orders, campaignDaily, inventory, cashflow, products, expenses] = await Promise.all([
         fetchAll(base44.entities.Transaction, "-date"),
         fetchAll(base44.entities.Customer, "-created_date"),
         fetchAll(base44.entities.Order, "-date"),
@@ -44,8 +44,9 @@ export default function Alertes() {
         fetchAll(base44.entities.Inventory, "-date"),
         fetchAll(base44.entities.Cashflow, "-date"),
         fetchAll(base44.entities.Product),
+        fetchAll(base44.entities.Expense, "-date"),
       ]);
-      return computeLiveAlerts({ transactions, orders, customers, campaignDaily, products, inventory, cashflow, company });
+      return computeLiveAlerts({ transactions, orders, customers, campaignDaily, products, inventory, cashflow, expenses, company });
     },
   });
 

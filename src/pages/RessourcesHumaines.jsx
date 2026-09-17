@@ -10,6 +10,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { motion } from "@/lib/fake-framer-motion.jsx";
 import DataErrorState from "@/components/DataErrorState";
 import { fetchAll } from "@/lib/fetchAll";
+import { validSalesOrders } from "@/lib/metrics";
 
 function formatCurrency(val) {
   if (val === null || val === undefined) return "-";
@@ -59,7 +60,9 @@ export default function RessourcesHumaines() {
       const month = String(p.period || p.date || "").slice(0, 7);
       add(p, month, "payroll_total", Math.abs(Number(p.total_cost) || 0));
     });
-    (data.orders || []).forEach((o) => {
+    // Refunded orders' money went back to the customer - excluded so
+    // "CA par employé" / "Poids sur CA" don't count revenue that was reversed.
+    validSalesOrders(data.orders).forEach((o) => {
       const month = String(o.date || "").slice(0, 7);
       const total = Number(o.total);
       if (month && Number.isFinite(total)) add(o, month, "total_revenue", Math.max(0, total));

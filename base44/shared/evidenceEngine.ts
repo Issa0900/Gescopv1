@@ -38,3 +38,4 @@ export function buildInsight(insightText: string, evidences: Evidence[]): Insigh
 //   { type: 'external', concept: 'competitor_price_change', value: -10 },
 //   { type: 'qualitative', concept: 'customer_feedback', topic: 'price' }
 // ]);
+

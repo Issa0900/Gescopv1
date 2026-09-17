@@ -36,27 +36,9 @@ export function computeKpi({ kpiId, records, fieldSemantics, context = {} }) {
   const resolvedDeps = { ...context };
   const lineageSources = [];
   let lowestQuality = 100;
-  let status = KPI_STATUS.AVAILABLE;
+  let status = KPI_STATUS.MEASURED;
 
-  // Many KPIs here list several ALTERNATIVE raw-field dependencies for the
-  // same concept (e.g. total_revenue tries "revenue", "income_amount" AND
-  // "transaction_amount" — whichever one the dataset actually has), and
-  // their calculate() functions are written for that: `deps.a || deps.b`.
-  // The status propagation below used to treat every dependency as
-  // mandatory (AND): the FIRST one that came back UNAVAILABLE forced the
-  // whole KPI to UNAVAILABLE, so calculate() never even ran, no matter how
-  // many of the other alternatives had real data. A Transaction-only
-  // dataset has no "revenue" or "cogs" field by that name, so total_revenue
-  // and gross_margin_amount read as permanently unavailable even with
-  // transactions actually present. Only "every single dependency failed"
-  // should block calculate() outright (nothing at all to compute from); one
-  // missing among several resolves to CONDITIONAL instead, matching the
-  // status's own documented meaning ("some optional data missing - result
-  // is valid but incomplete") and letting calculate() apply the per-field
-  // fallbacks it was already written with.
-  let anyDepUnavailable = false;
-  let anyDepResolved = kpiDef.dependencies.length === 0;
-
+  let unavailableDeps = 0;
   for (const depId of kpiDef.dependencies) {
     if (resolvedDeps[depId] === undefined) {
       // Need to compute this dependency
@@ -69,22 +51,24 @@ export function computeKpi({ kpiId, records, fieldSemantics, context = {} }) {
       lowestQuality = Math.min(lowestQuality, depResult.qualityScore);
 
       // Propagate status
-      if (depResult.status === KPI_STATUS.UNAVAILABLE) {
-        anyDepUnavailable = true;
-      } else {
-        anyDepResolved = true;
-        if (depResult.status === KPI_STATUS.CONDITIONAL && status === KPI_STATUS.AVAILABLE) {
-          status = KPI_STATUS.CONDITIONAL;
-        }
+      if (depResult.status === KPI_STATUS.NOT_MEASURED) {
+        unavailableDeps += 1;
+      } else if (depResult.status === KPI_STATUS.UNKNOWN && status === KPI_STATUS.MEASURED) {
+        status = KPI_STATUS.UNKNOWN;
       }
-    } else {
-      anyDepResolved = true;
     }
   }
-  if (!anyDepResolved) {
-    status = KPI_STATUS.UNAVAILABLE;
-  } else if (anyDepUnavailable && status === KPI_STATUS.AVAILABLE) {
-    status = KPI_STATUS.CONDITIONAL;
+  // A KPI is only NOT_MEASURED when EVERY dependency is. Many KPIs list several
+  // alternative sources for the same figure (e.g. total_revenue accepts
+  // income_amount OR transaction_amount) and their calculate() fn already
+  // handles a missing one via `deps.x || 0` - blocking calculate() the moment
+  // any single alternative is missing skipped that fallback entirely and
+  // silently produced a fake 0 (e.g. Finance page showing "0 $" of revenue
+  // while transaction_amount had the real, available total).
+  if (kpiDef.dependencies.length > 0 && unavailableDeps === kpiDef.dependencies.length) {
+    status = KPI_STATUS.NOT_MEASURED;
+  } else if (unavailableDeps > 0 && status === KPI_STATUS.MEASURED) {
+    status = KPI_STATUS.UNKNOWN;
   }
 
   // Deduplicate sources
@@ -100,12 +84,14 @@ export function computeKpi({ kpiId, records, fieldSemantics, context = {} }) {
 
   // 2. Execute calculation
   let value = null;
-  if (status !== KPI_STATUS.UNAVAILABLE) {
+  if (status !== KPI_STATUS.NOT_MEASURED) {
     try {
       value = kpiDef.calculate(resolvedDeps);
       if (!Number.isFinite(value) && value !== null) {
         status = KPI_STATUS.INVALID;
         value = null;
+      } else if (value === 0 && status === KPI_STATUS.MEASURED) {
+        status = KPI_STATUS.VALID_ZERO;
       }
     } catch (e) {
       status = KPI_STATUS.INVALID;
@@ -213,9 +199,13 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
   // --- NOUVEAU DATA CORE (PHASE 2) ---
   // Si le jeu de données contient des Observations, on utilise directement la valeur stockée
   // sans avoir besoin du vieux mappage de colonnes (fieldSemantics).
-  if (records && records.length > 0 && records[0].observation_type) {
-    const matchingObs = records.filter(r => 
-      r.concept === canonicalKey || r.concept === `finance.${canonicalKey}` || r.concept === `customer.${canonicalKey}`
+  // Note: les Observations sont mélangées avec d'autres entités dans le tableau `records`
+  // (voir useKpiEngine), donc on ne peut pas se fier à records[0] pour les détecter.
+  if (records && records.some(r => r && r.observation_type)) {
+    const matchingObs = records.filter(r =>
+      r.observation_type && (
+        r.concept === canonicalKey || r.concept === `finance.${canonicalKey}` || r.concept === `customer.${canonicalKey}`
+      )
     );
     
     if (matchingObs.length > 0) {
@@ -228,7 +218,7 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
         unit: matchingObs[0].unit || null,
         formula: "Agrégation d'Observations Sémantiques",
         sources: [{ entity: "Observation", field: "value", canonicalKey, records: matchingObs.length, qualityScore: matchingObs[0].confidence ? matchingObs[0].confidence * 100 : 100 }],
-        status: 1 // KPI_STATUS.AVAILABLE
+        status: sum === 0 ? KPI_STATUS.VALID_ZERO : KPI_STATUS.MEASURED
       });
     }
   }
@@ -241,9 +231,12 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
   // contextual fallback below narrows it (see next block).
   let targetRecords = records;
 
-  for (const [fieldName, fs] of (fieldSemantics || new Map()).entries()) {
+  for (const fs of (fieldSemantics || new Map()).values()) {
     if (fs.canonicalKey === canonicalKey) {
-      targetField = fieldName;
+      // The map key may be namespaced by entity (e.g. "Transaction:amount")
+      // to avoid two entities' same-named fields colliding - the semantic's
+      // own `.field` is always the real property name on the record.
+      targetField = fs.field;
       targetSemantic = fs;
       break;
     }
@@ -280,19 +273,33 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
       unit: null,
       formula: "Source manquante",
       sources: [],
-      status: KPI_STATUS.UNAVAILABLE
+      status: KPI_STATUS.NOT_MEASURED
     });
   }
 
+  // Restrict to rows from the entity this field actually belongs to, on top
+  // of the contextual narrowing above (targetRecords), not instead of it:
+  // without this, two entities sharing a raw field name (Transaction and
+  // Expense both have "amount") got their quality score, lineage record
+  // count and aggregated value all computed over BOTH entities' rows
+  // combined the moment records from both were passed into the same batch;
+  // without keeping targetRecords as the base, this alone would also have
+  // silently reintroduced the income/expense mixing the contextual fallback
+  // above exists to prevent. Untagged rows (single-entity callers that
+  // predate this tag) are kept as-is.
+  const recordsForEntity = targetRecords.filter(
+    (r) => r._entity === undefined || r._entity === targetSemantic.source
+  );
+
   // Quality check
-  const quality = computeFieldQuality(targetRecords, targetField, targetSemantic);
+  const quality = computeFieldQuality(recordsForEntity, targetField, targetSemantic);
   const qualityCheck = isQualitySufficient(quality);
 
   const source = buildLineageSource({
     entity: targetSemantic.source || "Inconnu",
     field: targetField,
     canonicalKey,
-    records: targetRecords,
+    records: recordsForEntity,
     qualityScore: quality.global
   });
 
@@ -304,7 +311,7 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
       unit: targetSemantic.dataType,
       formula: `Agrégation de ${targetField}`,
       sources: [source],
-      status: KPI_STATUS.UNAVAILABLE
+      status: KPI_STATUS.NOT_MEASURED
     });
   }
 
@@ -313,11 +320,10 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
   let value = null;
 
   // GESCOP Phase 3 : Validation Sémantique SSOT avant calcul
-  const validValues = targetRecords
-    .filter(r => {
+  const filteredRecords = recordsForEntity.filter(r => {
       // Filtrage sémantique SSOT basé sur le statut et l'entité
       if (targetSemantic.source === "Order") {
-        // Utilisation d'un helper rudimentaire ici si on ne peut pas l'importer en haut, 
+        // Utilisation d'un helper rudimentaire ici si on ne peut pas l'importer en haut,
         // mais le mieux est de vérifier le status directement.
         const st = String(r.status || r.payment_status || r.fulfillment_status || "").toLowerCase();
         if (st.includes("annul") || st.includes("cancel") || st.includes("void") || st.includes("brouillon") || st.includes("draft") || st.includes("rembours")) {
@@ -330,9 +336,30 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
         }
       }
       return true;
-    })
-    .map(r => Number(r[targetField]))
-    .filter(n => Number.isFinite(n));
+    });
+
+  // "Last" must mean chronologically last, not last-in-input-order: callers
+  // fetch records sorted various ways (a page fetching "-date" for a table
+  // put the newest row first, so picking array-index -1 silently returned
+  // the OLDEST balance instead of the current one).
+  let validValues;
+  if (method === AGGREGATION_METHODS.LAST) {
+    const dated = filteredRecords
+      .map(r => ({ date: r.date || r.acquisition_date || r.period || null, value: Number(r[targetField]) }))
+      .filter(x => Number.isFinite(x.value));
+    const withDate = dated.filter(x => x.date);
+    if (withDate.length > 0) {
+      withDate.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+      validValues = withDate.map(x => x.value);
+    } else {
+      // No date field to sort by - fall back to input order as before.
+      validValues = dated.map(x => x.value);
+    }
+  } else {
+    validValues = filteredRecords
+      .map(r => Number(r[targetField]))
+      .filter(n => Number.isFinite(n));
+  }
 
   if (validValues.length > 0) {
     switch (method) {
@@ -369,7 +396,7 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
     unit: targetSemantic.dataType,
     formula: `Agrégation (${method}) de ${targetField}`,
     sources: [source],
-    status: KPI_STATUS.AVAILABLE
+    status: value === 0 ? KPI_STATUS.VALID_ZERO : KPI_STATUS.MEASURED
   });
 }
 

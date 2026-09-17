@@ -11,6 +11,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { getStockAlertSettings, isStockAlert, computeStockAlerts } from "@/lib/stockAlerts";
 import { latestByKey, currentMonthKey } from "@/lib/periods";
 import { fetchAll } from "@/lib/fetchAll";
+import { validSalesOrders } from "@/lib/metrics";
 import DataErrorState from "@/components/DataErrorState";
 import { Package, AlertTriangle, Boxes, DollarSign } from "lucide-react";
 import {
@@ -158,7 +159,9 @@ export default function Produits() {
   const salesByProduct = {};
   const totalSalesByProduct = {};
   const totalRevByProduct = {};
-  (orders || []).forEach((o) => {
+  // Refunded orders are excluded - their quantity/revenue was reversed and
+  // must not count as a sale.
+  validSalesOrders(orders).forEach((o) => {
     const m = (o.date || "").slice(0, 7);
     const pid = o.product_id;
     if (!pid) return;
@@ -168,11 +171,6 @@ export default function Produits() {
     totalRevByProduct[pid] = (totalRevByProduct[pid] || 0) + rev;
     if (windowMonths.size > 0 && !windowMonths.has(m)) return;
     salesByProduct[pid] = (salesByProduct[pid] || 0) + qty;
-    if (!o.product_id) return;
-    const q = Number(o.quantity) || 0;
-    totalSalesByProduct[o.product_id] = (totalSalesByProduct[o.product_id] || 0) + q;
-    totalRevByProduct[o.product_id] = (totalRevByProduct[o.product_id] || 0) + (Number(o.total) || 0);
-
   });
 
   const topBySales = products

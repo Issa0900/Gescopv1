@@ -47,3 +47,4 @@ export function parseDecisionResponse(llmOutput: any): StructuredAIDecision {
     based_on: llmOutput.based_on || []
   };
 }
+

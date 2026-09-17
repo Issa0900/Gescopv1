@@ -14,11 +14,12 @@ export async function deduplicateRows(base44: any, entityName: string, rows: any
     const batch = await base44.entities[entityName].list("-created_date", 500, page * 500);
     if (!batch || batch.length === 0) break;
     batch.forEach((b: any) => {
-      if (b.fingerprint) existingFingerprints.add(b.fingerprint);
+      const fp = b.fingerprint || generateFingerprint(entityName, b);
+      if (fp) existingFingerprints.add(fp);
     });
     if (batch.length < 500) break;
     page++;
-    if (page > 40) break; // Safe limit (20,000 rows max per entity)
+    if (page > 500) break; // Supports up to 250,000 rows
   }
 
   const newRows: any[] = [];

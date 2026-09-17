@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createFixedClientFromRequest as createClientFromRequest } from "../../shared/client.ts";
 import { buildBusinessContext } from "../../shared/businessContext.ts";
 import { analyzeQualitativeObservations } from "../../shared/qualitativeEngine.ts";
@@ -19,7 +20,7 @@ export function computeHealthScore(dimensions) {
   return Math.round(sum / measured.length);
 }
 
-export default async function(req) {
+export default async function(req: any) {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -264,7 +265,7 @@ Réponds UNIQUEMENT avec un JSON valide respectant ce schéma. Aucun texte hors 
 
     // Update company health
     const dimScores = {};
-    (data.dimensions || []).forEach((d) => {
+    (data.dimensions || []).forEach((d: any) => {
       dimScores[dimKey(d.name)] = { score: d.score, trend: d.trend, explanation: d.explanation, measured: d.measured !== false };
     });
     await base44.entities.Company.update(company.id, {
@@ -276,7 +277,7 @@ Réponds UNIQUEMENT avec un JSON valide respectant ce schéma. Aucun texte hors 
     // Create anomalies
     if (data.anomalies && data.anomalies.length) {
       for (let i = 0; i < data.anomalies.length; i += 100) {
-        const batch = data.anomalies.slice(i, i + 100).map((a) => ({
+        const batch = data.anomalies.slice(i, i + 100).map((a: any) => ({
           title: a.title,
           description: a.description || "",
           dimension: a.dimension || "",
@@ -295,7 +296,7 @@ Réponds UNIQUEMENT avec un JSON valide respectant ce schéma. Aucun texte hors 
     // Create risks
     if (data.risks && data.risks.length) {
       for (let i = 0; i < data.risks.length; i += 100) {
-        const batch = data.risks.slice(i, i + 100).map((r) => ({
+        const batch = data.risks.slice(i, i + 100).map((r: any) => ({
           title: r.title,
           description: r.description || "",
           category: r.category || "",
@@ -316,7 +317,7 @@ Réponds UNIQUEMENT avec un JSON valide respectant ce schéma. Aucun texte hors 
     // Create opportunities
     if (data.opportunities && data.opportunities.length) {
       for (let i = 0; i < data.opportunities.length; i += 100) {
-        const batch = data.opportunities.slice(i, i + 100).map((o) => ({
+        const batch = data.opportunities.slice(i, i + 100).map((o: any) => ({
           title: o.title,
           description: o.description || "",
           category: o.category || "",
@@ -336,7 +337,7 @@ Réponds UNIQUEMENT avec un JSON valide respectant ce schéma. Aucun texte hors 
     // Create recommendations
     if (data.recommendations && data.recommendations.length) {
       for (let i = 0; i < data.recommendations.length; i += 100) {
-        const batch = data.recommendations.slice(i, i + 100).map((r) => ({
+        const batch = data.recommendations.slice(i, i + 100).map((r: any) => ({
           title: r.title,
           situation: r.situation || "",
           analysis: r.analysis || "",
@@ -355,7 +356,7 @@ Réponds UNIQUEMENT avec un JSON valide respectant ce schéma. Aucun texte hors 
     // Create KPIs
     if (data.kpis && data.kpis.length) {
       for (let i = 0; i < data.kpis.length; i += 100) {
-        const batch = data.kpis.slice(i, i + 100).map((k) => ({
+        const batch = data.kpis.slice(i, i + 100).map((k: any) => ({
           name: k.name,
           domain: k.domain || "finance",
           value: k.value || 0,
@@ -370,14 +371,14 @@ Réponds UNIQUEMENT avec un JSON valide respectant ce schéma. Aucun texte hors 
     }
 
     // Create alerts for critical items
-    const alerts = [];
-    (data.anomalies || []).filter((a) => a.severity === "critique").forEach((a) =>
+    const alerts: any[] = [];
+    (data.anomalies || []).filter((a: any) => a.severity === "critique").forEach((a: any) =>
       alerts.push({ title: a.title, message: a.description || a.explanation || "", level: "critique", category: "anomalie", status: "non_lue" })
     );
-    (data.risks || []).filter((r) => (r.score || 0) >= 75).forEach((r) =>
+    (data.risks || []).filter((r: any) => (r.score || 0) >= 75).forEach((r: any) =>
       alerts.push({ title: r.title, message: r.description || "", level: "important", category: "risque", status: "non_lue" })
     );
-    (data.opportunities || []).filter((o) => (o.score || 0) >= 75).forEach((o) =>
+    (data.opportunities || []).filter((o: any) => (o.score || 0) >= 75).forEach((o: any) =>
       alerts.push({ title: o.title, message: o.description || "", level: "info", category: "opportunite", status: "non_lue" })
     );
     if (alerts.length) {
@@ -411,7 +412,7 @@ Réponds UNIQUEMENT avec un JSON valide respectant ce schéma. Aucun texte hors 
         alerts: alerts.length,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 }

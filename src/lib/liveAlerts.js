@@ -10,6 +10,7 @@ import {
   hasWindow,
 } from "@/lib/periods";
 import { getStockAlertSettings, computeStockAlerts } from "@/lib/stockAlerts";
+import { warnIfDataMissing } from "@/lib/core/dataCompleteness";
 import {
   aggregateMarginPct,
   previousMarginPct,
@@ -20,6 +21,7 @@ import {
   churnStats,
   roasWindow,
   previousRoasWindow,
+  validSalesOrders,
 } from "@/lib/metrics";
 
 function alert(level, category, title, message) {
@@ -27,13 +29,23 @@ function alert(level, category, title, message) {
 }
 
 export function computeLiveAlerts(data) {
-  const { transactions, orders, customers, campaignDaily, products, inventory, cashflow, company } = data;
+  warnIfDataMissing("computeLiveAlerts", data, [
+    "transactions", "orders", "customers", "campaignDaily",
+    "products", "inventory", "cashflow", "expenses", "company",
+  ]);
+  const { transactions, orders, customers, campaignDaily, products, inventory, cashflow, expenses, company } = data;
   const out = [];
 
   const incomes = (transactions || []).filter((t) => t.type === "income");
   const txnExpenses = (transactions || []).filter((t) => t.type === "expense");
   const revMonthly = monthlyAggComplete(incomes, "date", "amount");
-  const expMonthly = monthlyAggComplete(txnExpenses, "date", "amount");
+  // Costs can live in expense-typed Transaction rows, in the dedicated
+  // Expense entity, or both - both are read so the runway/margin alerts
+  // above never miss real costs recorded in the other one.
+  const expMonthly = monthlyAggComplete(
+    [...txnExpenses, ...(expenses || []).map((e) => ({ ...e, amount: Number(e.amount) || 0 }))],
+    "date", "amount"
+  );
 
   // --- Trésorerie : runway sur le burn NET ---
   // Une entreprise rentable n'a pas de problème d'autonomie : comparer le solde
@@ -212,17 +224,20 @@ export function computeLiveAlerts(data) {
   // 2. Produits -> Ventes : Rupture sur les produits phares
   // Identifier si les ruptures concernent les produits qui génèrent le plus de CA
   if (ruptures.length > 0 && orders && orders.length > 0) {
+    // Refunded orders' money went back to the customer - counting them here
+    // could crown a heavily-returned product "top seller" and misdirect this alert.
+    const salesOrders = validSalesOrders(orders);
     const revenueByProduct = {};
-    orders.forEach(o => {
+    salesOrders.forEach(o => {
       const pid = o.product_id;
       if (pid) revenueByProduct[pid] = (revenueByProduct[pid] || 0) + (Number(o.total) || 0);
     });
     // Trier les produits en rupture par leur revenu historique
     const rupturesWithRev = ruptures.map(r => ({ ...r, rev: revenueByProduct[r.product_id] || 0 }));
     rupturesWithRev.sort((a, b) => b.rev - a.rev);
-    
+
     // Si le produit en rupture générait des revenus significatifs (> 5% du revenu total ou juste un top 5 absolu)
-    const totalOrderRev = orders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    const totalOrderRev = salesOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
     if (totalOrderRev > 0 && rupturesWithRev[0].rev > (totalOrderRev * 0.02)) {
       out.push(
         alert(

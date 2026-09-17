@@ -47,8 +47,12 @@ export default function LiveAlertBadge({ compact }) {
     queryKey: ["products-dashboard"],
     queryFn: () => fetchAll(base44.entities.Product),
   });
+  const { data: expenses } = useQuery({
+    queryKey: ["expenses-summary"],
+    queryFn: () => fetchAll(base44.entities.Expense, "-date"),
+  });
 
-  const live = computeLiveAlerts({ transactions, orders, customers, campaignDaily, products, inventory, cashflow, company });
+  const live = computeLiveAlerts({ transactions, orders, customers, campaignDaily, products, inventory, cashflow, expenses, company });
   const liveCount = live.filter((a) => a.level === "critique" || a.level === "important").length;
   const unreadStored = (stored || []).filter((a) => a.status !== "lue").length;
   const count = liveCount + unreadStored;

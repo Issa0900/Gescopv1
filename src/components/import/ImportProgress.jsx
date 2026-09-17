@@ -10,7 +10,7 @@ const steps = [
   { icon: Database, label: "Enregistrement", hint: "Rattachement à vos indicateurs" },
 ];
 
-export default function ImportProgress({ phase }) {
+export default function ImportProgress({ phase, totalRows, processedRows }) {
   // phase: "uploading" | "analyzing" | "processing"
   const [step, setStep] = useState(0);
 
@@ -23,6 +23,8 @@ export default function ImportProgress({ phase }) {
     const id = setInterval(() => setStep((s) => Math.min(s + 1, steps.length - 1)), 3500);
     return () => clearInterval(id);
   }, [phase]);
+
+  const pct = totalRows && totalRows > 0 ? Math.min(100, Math.round(((processedRows || 0) / totalRows) * 100)) : null;
 
   return (
     <div className="mx-auto max-w-md">
@@ -41,6 +43,11 @@ export default function ImportProgress({ phase }) {
             ? "Lecture du fichier : repérage des colonnes et du format…"
             : "Extraction et normalisation des données…"}
       </p>
+      {totalRows != null && totalRows > 0 && (
+        <p className="mt-1 text-center text-xs font-medium text-muted-foreground">
+          {processedRows ?? 0} / {totalRows} lignes traitées {pct != null ? `(${pct} %)` : ""}
+        </p>
+      )}
 
       <div className="mt-6 space-y-2.5 text-left">
         {steps.map((s, i) => {
