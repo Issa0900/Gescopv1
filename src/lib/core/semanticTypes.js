@@ -105,6 +105,10 @@ export const DOMAINS = Object.freeze({
 /**
  * Grain types - the level of detail of each record.
  */
+/**
+ * @typedef {"transaction"|"order"|"customer"|"product"|"employee"|"campaign"|"campaign_daily"|"day"|"week"|"month"|"quarter"|"year"|"supplier"|"purchase"|"interaction"|"event"} GrainType
+ * @typedef {"day"|"week"|"month"|"quarter"|"year"} TemporalGrain
+ */
 export const GRAIN_TYPES = Object.freeze({
   TRANSACTION: "transaction",
   ORDER: "order",

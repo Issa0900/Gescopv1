@@ -96,8 +96,8 @@ export function detectTemporalType(fieldSemantic) {
  * Checks if a grain can be aggregated to another grain (fine to coarse).
  * / Vérifie si un grain peut être agrégé vers un autre (fin vers grossier).
  * 
- * @param {string} fromGrain - Source grain / Grain source
- * @param {string} toGrain - Target grain / Grain cible
+ * @param {import("./semanticTypes").TemporalGrain} fromGrain - Source grain / Grain source
+ * @param {import("./semanticTypes").TemporalGrain} toGrain - Target grain / Grain cible
  * @returns {boolean} True if aggregation is valid / Vrai si l'agrégation est valide
  */
 export function canAggregate(fromGrain, toGrain) {
@@ -117,8 +117,8 @@ export function canAggregate(fromGrain, toGrain) {
  * Checks if two grains are compatible. Same grain or aggregateable.
  * / Vérifie si deux grains sont compatibles.
  * 
- * @param {string} grainA - First grain / Premier grain
- * @param {string} grainB - Second grain / Deuxième grain
+ * @param {import("./semanticTypes").TemporalGrain} grainA - First grain / Premier grain
+ * @param {import("./semanticTypes").TemporalGrain} grainB - Second grain / Deuxième grain
  * @returns {boolean} True if compatible / Vrai si compatible
  */
 export function areGrainsCompatible(grainA, grainB) {
@@ -130,7 +130,7 @@ export function areGrainsCompatible(grainA, grainB) {
  * Returns a human-readable label for the grain.
  * / Retourne une étiquette lisible pour le grain.
  * 
- * @param {string} grain - The grain type / Le type de grain
+ * @param {import("./semanticTypes").GrainType} grain - The grain type / Le type de grain
  * @param {string} [locale='fr'] - The locale, 'fr' or 'en' / La langue
  * @returns {string} Localized label / Étiquette localisée
  */
@@ -144,9 +144,9 @@ export function getGrainLabel(grain, locale = 'fr') {
  * Returns the coarsest common grain that both can be aggregated to.
  * / Retourne le grain commun le plus grossier.
  * 
- * @param {string} grainA - First grain / Premier grain
- * @param {string} grainB - Second grain / Deuxième grain
- * @returns {string|null} Aligned grain or null / Grain aligné ou null
+ * @param {import("./semanticTypes").TemporalGrain} grainA - First grain / Premier grain
+ * @param {import("./semanticTypes").TemporalGrain} grainB - Second grain / Deuxième grain
+ * @returns {import("./semanticTypes").TemporalGrain|null} Aligned grain or null / Grain aligné ou null
  */
 export function alignGrains(grainA, grainB) {
     if (grainA === grainB) return grainA;
