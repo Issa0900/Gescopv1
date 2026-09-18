@@ -1430,6 +1430,13 @@ export function normalizeKeys(
   // column must never disappear from a column that isn't in the schema
   // without the user being told which one and why (sec6 of the audit).
   unmapped?: Set<string>,
+  // Vocabulaire propre a CETTE entreprise (Company.company_dictionary),
+  // deja indexe sous forme canonique par l'appelant (cf. cleCanonique) :
+  // terme du fichier -> nom de concept. Consulte avant les tables generiques
+  // (FIELD_ALIASES/ALIAS_CANONIQUES) : le mot qu'une entreprise a deja
+  // corrige une fois ne doit plus jamais redemander la meme correction,
+  // meme quand ce mot n'existe dans aucune liste generique.
+  companyDictionary?: Record<string, string>,
 ): Record<string, any> {
   const out: Record<string, any> = {};
   const schemaFields = properties ? Object.keys(properties) : [];
@@ -1440,7 +1447,9 @@ export function normalizeKeys(
       : schemaFields.includes(lower) ? lower
         : schemaFields.includes(canon) ? canon
           : null;
-    const alias = direct || FIELD_ALIASES[lower]
+    const alias = direct
+      || (companyDictionary && companyDictionary[canon])
+      || FIELD_ALIASES[lower]
       || FIELD_ALIASES[lower.replace(/[\s-]/g, "_")]
       || FIELD_ALIASES[canon]
       || ALIAS_CANONIQUES[canon]
@@ -1938,6 +1947,127 @@ export function deriveFallbackIdentity(entityName: string, row: Record<string, a
   if (rule.name && !row[rule.name]) row[rule.name] = label;
 }
 
+// Company.company_dictionary est stocke tel que l'utilisateur l'a tape
+// ("ID Transaction" -> "order_id") : l'indexer une seule fois par import,
+// sous la meme forme canonique que cleCanonique() utilise pour chercher un
+// en-tete de colonne, plutot que de re-canonicaliser a chaque ligne.
+export function buildCompanyDictionaryIndex(raw: Record<string, string> | null | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [term, concept] of Object.entries(raw)) {
+    if (!term || !concept) continue;
+    out[cleCanonique(term)] = String(concept).trim();
+  }
+  return out;
+}
+
+// Detection d'entite par en-tetes, deplacee depuis sheetDetect.ts (18 sept
+// 2026) : fonctions pures, aucune dependance a XLSX, contrairement au reste
+// de ce fichier — les y laisser empechait de les tester sous le test runner
+// Node du repo (npm:xlsx@0.18.5 n'est resolvable que sous Deno). sheetDetect.ts
+// les re-exporte pour ne rien casser chez les appelants existants.
+const HEADER_SIGNATURES: { entity: string; must: string[] }[] = [
+  { entity: "CampaignDaily", must: ["campaign_id", "date"] },
+  { entity: "Campaign", must: ["campaign_id"] },
+  { entity: "Inventory", must: ["product_id", "closing_stock"] },
+  { entity: "Inventory", must: ["product_id", "opening_stock"] },
+  { entity: "Purchase", must: ["supplier_id", "product_id"] },
+  { entity: "Order", must: ["order_id"] },
+  { entity: "Customer", must: ["customer_id"] },
+  { entity: "Product", must: ["product_id"] },
+  { entity: "Supplier", must: ["supplier_id"] },
+  { entity: "Payroll", must: ["employee_id", "period"] },
+  { entity: "Employee", must: ["employee_id"] },
+  { entity: "Cashflow", must: ["closing_cash"] },
+  { entity: "Cashflow", must: ["cash_in", "cash_out"] },
+  { entity: "Expense", must: ["expense_id"] },
+  { entity: "Interaction", must: ["interaction_id"] },
+  { entity: "Competitor", must: ["competitor_id"] },
+  { entity: "Goal", must: ["goal_id"] },
+  { entity: "Event", must: ["event_id"] },
+  { entity: "Transaction", must: ["date", "amount", "type"] },
+];
+
+const HEADER_ALIASES: Record<string, string> = {
+  "id_commande": "order_id", "commande_id": "order_id", "no_commande": "order_id",
+  "id_client": "customer_id", "client_id": "customer_id",
+  "id_produit": "product_id", "produit_id": "product_id",
+  "id_fournisseur": "supplier_id", "fournisseur_id": "supplier_id",
+  "id_employe": "employee_id", "employe_id": "employee_id",
+  "id_campagne": "campaign_id", "campagne_id": "campaign_id",
+  "id_depense": "expense_id", "depense_id": "expense_id",
+  "montant": "amount", "date_operation": "date", "periode": "period",
+  "stock_cloture": "closing_stock", "stock_final": "closing_stock",
+  "stock_ouverture": "opening_stock", "stock_initial": "opening_stock",
+  "solde_cloture": "closing_cash", "solde_final": "closing_cash",
+  "encaissements": "cash_in", "decaissements": "cash_out",
+  "entrees": "cash_in", "sorties": "cash_out",
+};
+
+function normalizeHeader(h: string, companyDictionary?: Record<string, string>): string {
+  const raw = String(h || "").toLowerCase().trim();
+  const base = stripAccents(raw).replace(/[\s\-.]+/g, "_");
+  // The importer's own alias table is consulted too, so a column the import can
+  // actually read ("catégorie", "montant_total") is also visible to detection.
+  // Le dictionnaire d'entreprise (mot propre a une PME, ex. "Ref. Vte") est
+  // consulte en dernier plutot qu'en premier ici : contrairement au mapping de
+  // colonnes (normalizeKeys), une detection de FEUILLE se trompe rarement sur
+  // un terme deja standard — mieux vaut ne pas laisser une entree de
+  // dictionnaire mal choisie ecraser une reconnaissance generique qui marche.
+  return HEADER_ALIASES[base] || FIELD_ALIASES[raw] || FIELD_ALIASES[base] || (companyDictionary && companyDictionary[base]) || base;
+}
+
+/**
+ * Last-resort detection: which entity do these columns describe best?
+ *
+ * The signatures above demand an exact key column ("order_id", "customer_id"…).
+ * A perfectly importable export that names its columns differently, or has no id
+ * column at all, matched nothing — the sheet was reported "Type non reconnu" and
+ * zero rows were imported even though every other column lined up. This scores
+ * each entity by how many of the file's columns it explains, and only accepts a
+ * candidate whose required fields are all present, so the rows can actually be
+ * stored rather than quarantined one by one.
+ */
+export function detectEntityByFieldOverlap(headers: string[], companyDictionary?: Record<string, string>): string | null {
+  const set = new Set((headers || []).map((h) => normalizeHeader(h, companyDictionary)).filter(Boolean));
+  if (set.size === 0) return null;
+  let best: string | null = null;
+  let bestScore = 0;
+  for (const [entity, schema] of Object.entries(ENTITY_SCHEMAS)) {
+    if (!(schema.required || []).every((r) => set.has(r))) continue;
+    const fields = Object.keys(schema.properties).filter((f) => f !== "import_id");
+    const matched = fields.filter((f) => set.has(f)).length;
+    const coverage = matched / set.size;
+    if (matched < 3 || coverage < 0.5) continue;
+    const score = matched + coverage;
+    if (score > bestScore) { bestScore = score; best = entity; }
+  }
+  return best;
+}
+
+/**
+ * Les colonnes permettent-elles de stocker cette entite ?
+ *
+ * Le nom du fichier l'emportait sur les colonnes : un releve de transactions
+ * appele "ventes.csv" partait en Order, ou order_id est obligatoire, et chaque
+ * ligne etait mise en quarantaine. Le nom reste prioritaire, mais seulement
+ * quand le fichier peut effectivement alimenter l'entite qu'il annonce.
+ */
+export function entiteCompatible(entity: string, headers: string[], companyDictionary?: Record<string, string>): boolean {
+  const schema = (ENTITY_SCHEMAS as Record<string, any>)[entity];
+  if (!schema) return false;
+  const set = new Set((headers || []).map((h) => normalizeHeader(h, companyDictionary)).filter(Boolean));
+  return (schema.required || []).every((r: string) => set.has(r));
+}
+
+export function detectEntityByHeaders(headers: string[], companyDictionary?: Record<string, string>): string | null {
+  const set = new Set((headers || []).map((h) => normalizeHeader(h, companyDictionary)));
+  for (const sig of HEADER_SIGNATURES) {
+    if (sig.must.every((m) => set.has(m))) return sig.entity;
+  }
+  return null;
+}
+
 export function normalizeRow(
   entityName: string,
   row: Record<string, any>,
@@ -1946,11 +2076,12 @@ export function normalizeRow(
   sourceType?: string,
   enumIssues?: EnumIssue[],
   unmapped?: Set<string>,
+  companyDictionary?: Record<string, string>,
 ): Record<string, any> {
   const schemaProps = properties || ENTITY_SCHEMAS[entityName]?.properties || null;
 
   if (isSummaryOrTotalRow(row)) return {};
-  const r = normalizeKeys(row, schemaProps, unmapped);
+  const r = normalizeKeys(row, schemaProps, unmapped, companyDictionary);
   if (isSummaryOrTotalRow(r)) return {};
 
   // Preserve explicit Transaction headers before aliases or legacy plans can

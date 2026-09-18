@@ -6,8 +6,7 @@
 // otherwise yields __EMPTY columns and zero usable rows.
 
 import * as XLSX from "npm:xlsx@0.18.5";
-import { stripAccents, FIELD_ALIASES } from "./importUtils.ts";
-import { ENTITY_SCHEMAS } from "./entitySchemas.ts";
+import { stripAccents } from "./importUtils.ts";
 
 const NAME_ENTITY_MAP = [
   { pattern: /campaign.*(daily|jour)|marketing.*(daily|jour)|(daily|jour).*campaign|campagne.*(jour|quotidien)/i, entity: "CampaignDaily" },
@@ -40,102 +39,17 @@ export function detectEntityByName(name: string): string | null {
 
 // Header signatures: every "must" column has to be present. Ordered from the
 // most specific signature to the least, so CampaignDaily wins over Campaign.
-const HEADER_SIGNATURES: { entity: string; must: string[] }[] = [
-  { entity: "CampaignDaily", must: ["campaign_id", "date"] },
-  { entity: "Campaign", must: ["campaign_id"] },
-  { entity: "Inventory", must: ["product_id", "closing_stock"] },
-  { entity: "Inventory", must: ["product_id", "opening_stock"] },
-  { entity: "Purchase", must: ["supplier_id", "product_id"] },
-  { entity: "Order", must: ["order_id"] },
-  { entity: "Customer", must: ["customer_id"] },
-  { entity: "Product", must: ["product_id"] },
-  { entity: "Supplier", must: ["supplier_id"] },
-  { entity: "Payroll", must: ["employee_id", "period"] },
-  { entity: "Employee", must: ["employee_id"] },
-  { entity: "Cashflow", must: ["closing_cash"] },
-  { entity: "Cashflow", must: ["cash_in", "cash_out"] },
-  { entity: "Expense", must: ["expense_id"] },
-  { entity: "Interaction", must: ["interaction_id"] },
-  { entity: "Competitor", must: ["competitor_id"] },
-  { entity: "Goal", must: ["goal_id"] },
-  { entity: "Event", must: ["event_id"] },
-  { entity: "Transaction", must: ["date", "amount", "type"] },
-];
-
-const HEADER_ALIASES: Record<string, string> = {
-  "id_commande": "order_id", "commande_id": "order_id", "no_commande": "order_id",
-  "id_client": "customer_id", "client_id": "customer_id",
-  "id_produit": "product_id", "produit_id": "product_id",
-  "id_fournisseur": "supplier_id", "fournisseur_id": "supplier_id",
-  "id_employe": "employee_id", "employe_id": "employee_id",
-  "id_campagne": "campaign_id", "campagne_id": "campaign_id",
-  "id_depense": "expense_id", "depense_id": "expense_id",
-  "montant": "amount", "date_operation": "date", "periode": "period",
-  "stock_cloture": "closing_stock", "stock_final": "closing_stock",
-  "stock_ouverture": "opening_stock", "stock_initial": "opening_stock",
-  "solde_cloture": "closing_cash", "solde_final": "closing_cash",
-  "encaissements": "cash_in", "decaissements": "cash_out",
-  "entrees": "cash_in", "sorties": "cash_out",
-};
-
-function normalizeHeader(h: string): string {
-  const raw = String(h || "").toLowerCase().trim();
-  const base = stripAccents(raw).replace(/[\s\-.]+/g, "_");
-  // The importer's own alias table is consulted too, so a column the import can
-  // actually read ("catégorie", "montant_total") is also visible to detection.
-  return HEADER_ALIASES[base] || FIELD_ALIASES[raw] || FIELD_ALIASES[base] || base;
-}
-
-/**
- * Last-resort detection: which entity do these columns describe best?
- *
- * The signatures above demand an exact key column ("order_id", "customer_id"…).
- * A perfectly importable export that names its columns differently, or has no id
- * column at all, matched nothing — the sheet was reported "Type non reconnu" and
- * zero rows were imported even though every other column lined up. This scores
- * each entity by how many of the file's columns it explains, and only accepts a
- * candidate whose required fields are all present, so the rows can actually be
- * stored rather than quarantined one by one.
- */
-export function detectEntityByFieldOverlap(headers: string[]): string | null {
-  const set = new Set((headers || []).map(normalizeHeader).filter(Boolean));
-  if (set.size === 0) return null;
-  let best: string | null = null;
-  let bestScore = 0;
-  for (const [entity, schema] of Object.entries(ENTITY_SCHEMAS)) {
-    if (!(schema.required || []).every((r) => set.has(r))) continue;
-    const fields = Object.keys(schema.properties).filter((f) => f !== "import_id");
-    const matched = fields.filter((f) => set.has(f)).length;
-    const coverage = matched / set.size;
-    if (matched < 3 || coverage < 0.5) continue;
-    const score = matched + coverage;
-    if (score > bestScore) { bestScore = score; best = entity; }
-  }
-  return best;
-}
-
-/**
- * Les colonnes permettent-elles de stocker cette entite ?
- *
- * Le nom du fichier l'emportait sur les colonnes : un releve de transactions
- * appele "ventes.csv" partait en Order, ou order_id est obligatoire, et chaque
- * ligne etait mise en quarantaine. Le nom reste prioritaire, mais seulement
- * quand le fichier peut effectivement alimenter l'entite qu'il annonce.
- */
-export function entiteCompatible(entity: string, headers: string[]): boolean {
-  const schema = (ENTITY_SCHEMAS as Record<string, any>)[entity];
-  if (!schema) return false;
-  const set = new Set((headers || []).map(normalizeHeader).filter(Boolean));
-  return (schema.required || []).every((r: string) => set.has(r));
-}
-
-export function detectEntityByHeaders(headers: string[]): string | null {
-  const set = new Set((headers || []).map(normalizeHeader));
-  for (const sig of HEADER_SIGNATURES) {
-    if (sig.must.every((m) => set.has(m))) return sig.entity;
-  }
-  return null;
-}
+// Detection par en-tetes deplacee vers importUtils.ts (18 sept 2026) : ces
+// fonctions sont pures (aucune dependance a XLSX), contrairement au reste de
+// ce fichier — les y laisser empechait de les tester sous le test runner Node
+// du repo (npm:xlsx@0.18.5 n'est resolvable que sous Deno), exactement le
+// probleme deja rencontre avec deriveFallbackIdentity. Re-exportees ici pour
+// ne rien casser chez les appelants existants.
+export {
+  detectEntityByFieldOverlap,
+  entiteCompatible,
+  detectEntityByHeaders,
+} from "./importUtils.ts";
 
 /**
  * Une cellule ressemble-t-elle a un libelle de colonne ?
