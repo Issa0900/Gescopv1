@@ -57,6 +57,25 @@ function forceTransactionColumns(plan: PlanImport): PlanImport {
   };
 }
 
+// Entités où un identifiant/nom individuel est exigé par le schéma mais où
+// de nombreux exports réels n'en fournissent aucun (rollup mensuel par
+// canal, par exemple) : plutôt que rejeter 100% des lignes pour une colonne
+// qui n'a jamais existé dans le fichier, on dérive un identifiant de repli à
+// partir de ce que le mapping a effectivement reconnu.
+const FALLBACK_IDENTITY: Record<string, { id: string; name?: string; from: string[] }> = {
+  Campaign: { id: "campaign_id", name: "campaign_name", from: ["channel", "date"] },
+};
+
+function deriveFallbackIdentity(entityName: string, row: Record<string, any>, index: number): void {
+  const rule = FALLBACK_IDENTITY[entityName];
+  if (!rule) return;
+  if (row[rule.id] && (!rule.name || row[rule.name])) return;
+  const parts = rule.from.map((f) => row[f]).filter((v) => v !== undefined && v !== null && v !== "");
+  const label = parts.length > 0 ? parts.join(" - ") : `${entityName} ${index + 1}`;
+  if (!row[rule.id]) row[rule.id] = `AUTO-${label}`.slice(0, 60);
+  if (rule.name && !row[rule.name]) row[rule.name] = label;
+}
+
 
 /**
  * Plan de lecture d'une feuille : memoire, puis IA, puis regles.
@@ -206,11 +225,12 @@ async function importRows(
     grain = detectGrain(profile, matchedConcepts);
   } catch(e) { console.error("Semantic engine failed", e); }
 
-  rows.forEach((row) => {
+  rows.forEach((row, index) => {
     if (!row || typeof row !== "object" || isSummaryOrTotalRow(row)) return;
     const enumIssues: { field: string; value: string; allowed: string[] }[] = [];
     const normalized = normalizeRow(entityName, row, importRec.id, properties, sourceType, enumIssues, unmappedColumns);
     if (Object.keys(normalized).filter((k) => k !== "import_id").length === 0) return;
+    deriveFallbackIdentity(entityName, normalized, index);
     // Reject up front rather than letting one row fail its whole batch.
     const missing = missingRequired(normalized, required);
     if (missing.length > 0) {
@@ -393,10 +413,11 @@ export default async function (req: Request) {
                   
                   const enumIssues: { field: string; value: string; allowed: string[] }[] = [];
                   const normalized = normalizeRow(plan.entite, row, "tmp", properties, sourceType, enumIssues);
-                  
+
                   if (Object.keys(normalized).filter(k => k !== "import_id").length === 0) {
                     continue; // Ligne vide ou total filtré : ne pas générer de faux positif en quarantaine
                   }
+                  deriveFallbackIdentity(plan.entite, normalized, i);
                   mappedCount++;
 
                   const errors: string[] = [];

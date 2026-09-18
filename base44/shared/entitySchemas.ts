@@ -136,7 +136,7 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
       status: E("recu", "en_cours", "retard", "annule"),
       import_id: S, fingerprint: S, original_data: S,
     },
-    required: ["date", "supplier_id", "product_id"],
+    required: ["date", "supplier_id"],
   },
   Interaction: {
     properties: {

@@ -44,6 +44,13 @@ export default function Clients() {
     queryKey: ["orders-clients"],
     queryFn: () => fetchAll(base44.entities.Order, "-date"),
   });
+  // Interaction (contacts client : canal, sentiment, résolution) n'avait
+  // aucune page — importée, jamais montrée. Elle vit ici, à côté du client
+  // qu'elle concerne.
+  const { data: interactions } = useQuery({
+    queryKey: ["interactions"],
+    queryFn: () => fetchAll(base44.entities.Interaction, "-date"),
+  });
 
   if (isLoading || lo) return <p className="text-sm text-muted-foreground">Chargement…</p>;
   if (!customers || customers.length === 0) {
@@ -226,6 +233,44 @@ export default function Clients() {
           </tbody>
         </table>
       </div>
+
+      {interactions && interactions.length > 0 && (
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <h2 className="px-4 pt-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Interactions récentes</h2>
+          <table className="w-full min-w-[600px] text-sm">
+            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 font-medium">Date</th>
+                <th className="px-4 py-3 font-medium">Client</th>
+                <th className="px-4 py-3 font-medium">Canal</th>
+                <th className="px-4 py-3 font-medium">Sujet</th>
+                <th className="px-4 py-3 font-medium">Sentiment</th>
+                <th className="px-4 py-3 font-medium">Résolu</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {interactions.slice(0, 30).map((it) => {
+                const c = customers.find((x) => x.customer_id === it.customer_id);
+                const label = c ? `${c.first_name || ""} ${c.last_name || ""}`.trim() || c.customer_id : it.customer_id;
+                return (
+                  <tr key={it.id} className="hover:bg-muted/30">
+                    <td className="px-4 py-3">{it.date || "-"}</td>
+                    <td className="px-4 py-3 font-medium">{label || "-"}</td>
+                    <td className="px-4 py-3">{it.channel || "-"}</td>
+                    <td className="px-4 py-3">{it.subject || it.type || "-"}</td>
+                    <td className="px-4 py-3">
+                      <span className={it.sentiment === "negatif" || it.sentiment === "tres_negatif" ? "text-red-600" : it.sentiment === "positif" ? "text-emerald-600" : "text-muted-foreground"}>
+                        {it.sentiment || "-"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">{it.resolved === true ? "Oui" : it.resolved === false ? "Non" : "-"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

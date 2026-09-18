@@ -21,6 +21,13 @@ export default function Decisions() {
     queryKey: ["decisions"],
     queryFn: async () => { const l = await base44.entities.Decision.list("-created_date", 50); return l || []; },
   });
+  // Goal (objectifs importés/saisis : cible vs actuel par domaine) n'avait
+  // aucune page — la donnée arrivait par import et disparaissait. Elle vit
+  // ici, à côté des décisions qu'elle est censée éclairer.
+  const { data: goals } = useQuery({
+    queryKey: ["goals"],
+    queryFn: async () => { const l = await base44.entities.Goal.list("-created_date", 50); return l || []; },
+  });
 
   const handleCreate = async () => {
     if (!form.title) return;
@@ -111,6 +118,42 @@ export default function Decisions() {
       {pending.length > 0 && <Section title="À décider" items={pending} onDecide={handleDecide} />}
       {decided.length > 0 && <Section title="Décisions prises" items={decided} onAddResult={(id) => setEditingId(id)} editingId={editingId} resultValue={resultValue} setResultValue={setResultValue} submitResult={() => handleAddResult(editingId)} />}
       {results.length > 0 && <Section title="Résultats" items={results} />}
+
+      {goals && goals.length > 0 && (
+        <div>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Objectifs ({goals.length})</h2>
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full min-w-[600px] text-sm">
+              <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Métrique</th>
+                  <th className="px-4 py-3 font-medium">Domaine</th>
+                  <th className="px-4 py-3 font-medium">Période</th>
+                  <th className="px-4 py-3 font-medium">Cible</th>
+                  <th className="px-4 py-3 font-medium">Actuel</th>
+                  <th className="px-4 py-3 font-medium">Statut</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {goals.map((g) => (
+                  <tr key={g.id} className="hover:bg-muted/30">
+                    <td className="px-4 py-3 font-medium">{g.metric}</td>
+                    <td className="px-4 py-3">{g.domain || "-"}</td>
+                    <td className="px-4 py-3">{g.period || "-"}</td>
+                    <td className="px-4 py-3">{g.target != null ? g.target.toLocaleString() : "-"}</td>
+                    <td className="px-4 py-3">{g.current != null ? g.current.toLocaleString() : "-"}</td>
+                    <td className="px-4 py-3">
+                      <span className={g.status === "atteint" || g.status === "depasse" ? "text-emerald-600" : g.status === "non_atteint" ? "text-red-600" : "text-amber-600"}>
+                        {g.status || "-"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

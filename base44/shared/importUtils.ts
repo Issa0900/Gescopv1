@@ -1416,7 +1416,11 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
 // it in whichever generic revenue-carrying field the target entity actually
 // has, instead of an alias name nothing declares.
 const REVENUE_CONCEPT_ALIASES = new Set(["revenue", "net_revenue", "gross_revenue", "total_revenue"]);
-const REVENUE_LANDING_FIELDS = ["total_revenue", "amount", "gross_revenue", "net_revenue"];
+// "revenue" doit etre en tete de liste : c'est le nom reel du champ argent
+// sur Campaign (Campaign.jsonc n'a pas de "total_revenue"), et il manquait
+// ici — toute colonne de revenu marketing sans alias exact n'avait donc
+// jamais de champ ou atterrir sur cette entite.
+const REVENUE_LANDING_FIELDS = ["revenue", "total_revenue", "amount", "gross_revenue", "net_revenue"];
 
 export function normalizeKeys(
   row: Record<string, any>,
@@ -1479,7 +1483,14 @@ export function normalizeKeys(
         out["amount"] = v;
         continue;
       }
+      // Aucune retombée n'a de champ à offrir sur CETTE entité : la colonne
+      // est reellement non mappee. On le signale et on n'ecrit PAS out[alias]
+      // — avant ce garde-fou, la ligne suivante ecrivait quand meme un champ
+      // absent du schema (ex. "total_revenue" sur Campaign, qui ne declare
+      // que "revenue"), silencieusement perdu a l'enregistrement sans que la
+      // colonne n'apparaisse jamais comme non mappee dans l'aperçu.
       if (unmapped) unmapped.add(k);
+      continue;
     }
     out[alias] = v;
   }
@@ -1530,6 +1541,13 @@ const ENUM_TRANSLATIONS: Record<string, string[]> = {
   "full time": ["temps_plein"], "part time": ["temps_partiel"], "contractor": ["contractuel"], "intern": ["stagiaire"],
   "departed": ["depart"], "on leave": ["conge"], "probation": ["essai"],
   "individual": ["particulier"], "business": ["entreprise", "b2b"],
+  // "Occasionnel" (client qui achete peu souvent) est un segment courant dans
+  // les exports CRM francophones, mais absent de l'enum Customer.segment
+  // (nouveau/regulier/vip/inactif/b2b/haute_valeur/a_risque). Faute d'un
+  // segment "achat ponctuel" dedie, on le rattache au segment generique
+  // plutot que de perdre la ligne : mieux vaut un segment approximatif
+  // qu'un client entier mis en quarantaine pour un mot absent du dictionnaire.
+  "occasionnel": ["regulier"], "occasionnels": ["regulier"], "ponctuel": ["regulier"], "irregulier": ["regulier"],
   "service client": ["service_client"], "service clientele": ["service_client"], "service a la clientele": ["service_client"], "customer service": ["service_client"], "support": ["service_client"], "operations": ["logistique", "atelier"],
 
   // Sentiment & Impact
@@ -1836,6 +1854,16 @@ export function parseDate(value: any, convention?: ConventionDate | null): strin
   // YYYY-MM (period) → first day of month
   m = s.match(/^(\d{4})[\/\-](\d{1,2})$/);
   if (m) return `${m[1]}-${m[2].padStart(2, "0")}-01`;
+  // "Janvier 2026" / "janv. 2025" (rapports mensuels sans jour) → 1er du mois.
+  // Ces exports (marketing, trésorerie) donnent une période, pas une date
+  // précise ; sans ce motif la valeur restait lisible dans l'aperçu mais ne
+  // parsait jamais, et la ligne finissait en quarantaine pour "date manquante"
+  // alors que la colonne était bien reliée.
+  m = stripAccents(s.toLowerCase()).match(/^([a-z]+)\.?\s+(\d{4})$/);
+  if (m) {
+    const mm = MONTHS_FR[m[1].slice(0, 4)] || MONTHS_FR[m[1].slice(0, 3)];
+    if (mm) return `${m[2]}-${mm}-01`;
+  }
   return null;
 }
 

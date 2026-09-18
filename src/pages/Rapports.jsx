@@ -45,6 +45,14 @@ export default function Rapports() {
       return list || [];
     },
   });
+  // ExecutiveSummary (synthèse revenu/coût/marge par succursale et période)
+  // n'était référencée nulle part dans le frontend : un type d'import valide
+  // dont la donnée disparaissait entièrement après enregistrement. Elle vit
+  // ici, au milieu des autres synthèses.
+  const { data: summaries } = useQuery({
+    queryKey: ["executive-summaries"],
+    queryFn: async () => { const l = await base44.entities.ExecutiveSummary.list("-date", 50); return l || []; },
+  });
 
   const generate = async (type) => {
     setGenerating(type);
@@ -136,6 +144,36 @@ export default function Rapports() {
           </div>
         </div>
       </div>
+
+      {summaries && summaries.length > 0 && (
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <h2 className="px-4 pt-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Synthèse par succursale</h2>
+          <table className="w-full min-w-[700px] text-sm">
+            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 font-medium">Succursale</th>
+                <th className="px-4 py-3 font-medium">Période</th>
+                <th className="px-4 py-3 font-medium">CA</th>
+                <th className="px-4 py-3 font-medium">Coûts</th>
+                <th className="px-4 py-3 font-medium">Marge brute</th>
+                <th className="px-4 py-3 font-medium">Commandes</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {summaries.map((s) => (
+                <tr key={s.id} className="hover:bg-muted/30">
+                  <td className="px-4 py-3 font-medium">{s.succursale || s.store || s.location_id}</td>
+                  <td className="px-4 py-3">{s.period || s.date || "-"}</td>
+                  <td className="px-4 py-3">{s.total_revenue != null ? `${Math.round(s.total_revenue).toLocaleString()} $` : "-"}</td>
+                  <td className="px-4 py-3">{s.total_cost != null ? `${Math.round(s.total_cost).toLocaleString()} $` : "-"}</td>
+                  <td className="px-4 py-3">{s.gross_margin != null ? `${s.gross_margin}%` : "-"}</td>
+                  <td className="px-4 py-3">{s.total_orders != null ? s.total_orders : "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Comparison toggle */}
       <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4">
