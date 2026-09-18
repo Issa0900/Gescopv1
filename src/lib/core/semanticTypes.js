@@ -125,6 +125,10 @@ export const GRAIN_TYPES = Object.freeze({
 });
 
 /**
+ * @typedef {"MEASURED"|"VALID_ZERO"|"NOT_MEASURED"|"UNKNOWN"|"INVALID"|"NOT_APPLICABLE"} KpiStatus
+ */
+
+/**
  * KPI status - the reliability state of a computed indicator.
  */
 export const KPI_STATUS = Object.freeze({

@@ -1,7 +1,31 @@
 import React from 'react';
 
+/**
+ * @typedef {Object} MotionProps
+ * @property {Object} [initial]
+ * @property {Object} [animate]
+ * @property {Object} [exit]
+ * @property {Object} [transition]
+ * @property {Object} [whileHover]
+ * @property {Object} [whileTap]
+ * @property {boolean|string} [layout]
+ * @property {string} [layoutId]
+ * @property {Object} [variants]
+ * @property {React.CSSProperties} [style]
+ * @property {*} [custom]
+ * @property {boolean|string} [drag]
+ * @property {Object} [dragConstraints]
+ * @property {Object} [whileInView]
+ * @property {Object} [viewport]
+ */
+
 const createMotionComponent = (Tag) => {
-  return React.forwardRef(({ initial, animate, exit, transition, whileHover, whileTap, layout, layoutId, variants, style, custom, drag, dragConstraints, whileInView, viewport, ...props }, ref) => {
+  return React.forwardRef(
+    /**
+     * @param {MotionProps & Record<string, any>} props
+     * @param {React.Ref<any>} ref
+     */
+    ({ initial, animate, exit, transition, whileHover, whileTap, layout, layoutId, variants, style, custom, drag, dragConstraints, whileInView, viewport, ...props }, ref) => {
     // We pass style through, but strip the framer-motion specific props
     return <Tag ref={ref} style={style} {...props} />;
   });

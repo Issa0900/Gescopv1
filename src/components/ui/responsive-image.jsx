@@ -4,6 +4,10 @@ import { buildSrcSet, buildTransformUrl, splitImageProps } from "./image-helpers
 import { useResponsiveImage } from "./use-responsive-image"
 
 export const ResponsiveImage = React.forwardRef(
+  /**
+   * @param {React.ComponentPropsWithoutRef<'img'> & { src?: string, parsed?: any, fittingType?: 'fill'|'fit', focalPoint?: {x: number, y: number}, quality?: number, aspectRatio?: string, onSourceChange?: (value: any, className: any) => void }} props
+   * @param {React.Ref<HTMLImageElement>} ref
+   */
   ({ src, parsed, fittingType, focalPoint, quality, className, style, aspectRatio, onLoad, onSourceChange, ...props }, ref) => {
     const { wrapperRef, imgRef, loaded, options, handleLoad } = useResponsiveImage(
       { parsed, fittingType, focalPoint, quality, className, onLoad, onSourceChange }, ref
