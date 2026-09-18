@@ -97,13 +97,29 @@ function normalizeHeader(h: string): string {
  * candidate whose required fields are all present, so the rows can actually be
  * stored rather than quarantined one by one.
  */
+// Champs obligatoires qu'un filet de secours à la normalisation (importUtils.ts,
+// "ORDER RESCUE HOOKS") sait toujours reconstituer, même absents du fichier
+// source. Sans cette exception, un fichier de ventes sans colonne d'identifiant
+// de commande — le format le plus courant chez un petit commerce qui tient ses
+// ventes dans un tableur sans système de caisse — n'était jamais détecté comme
+// "Order" : ce garde-fou des champs obligatoires l'écartait ici comme dans
+// entiteCompatible, alors que normalizeRow sait déjà fabriquer order_id et date.
+const REQUIRED_RECOVERABLE: Record<string, string[]> = {
+  Order: ["order_id", "date"],
+};
+
+function requiredSatisfied(entity: string, required: string[], set: Set<string>): boolean {
+  const recoverable = new Set(REQUIRED_RECOVERABLE[entity] || []);
+  return required.every((r) => set.has(r) || recoverable.has(r));
+}
+
 export function detectEntityByFieldOverlap(headers: string[]): string | null {
   const set = new Set((headers || []).map(normalizeHeader).filter(Boolean));
   if (set.size === 0) return null;
   let best: string | null = null;
   let bestScore = 0;
   for (const [entity, schema] of Object.entries(ENTITY_SCHEMAS)) {
-    if (!(schema.required || []).every((r) => set.has(r))) continue;
+    if (!requiredSatisfied(entity, schema.required || [], set)) continue;
     const fields = Object.keys(schema.properties).filter((f) => f !== "import_id");
     const matched = fields.filter((f) => set.has(f)).length;
     const coverage = matched / set.size;
@@ -126,6 +142,11 @@ export function entiteCompatible(entity: string, headers: string[]): boolean {
   const schema = (ENTITY_SCHEMAS as Record<string, any>)[entity];
   if (!schema) return false;
   const set = new Set((headers || []).map(normalizeHeader).filter(Boolean));
+  // Volontairement strict (pas de REQUIRED_RECOVERABLE ici) : cette fonction
+  // decide si le NOM du fichier doit l'emporter sur ses colonnes. Un fichier
+  // nomme "ventes.csv" mais dont les colonnes sont clairement un releve
+  // (date/montant/type) doit rester une Transaction — c'est detectEntityByFieldOverlap,
+  // pas cette fonction, qui doit repecher un vrai fichier de ventes sans order_id.
   return (schema.required || []).every((r: string) => set.has(r));
 }
 

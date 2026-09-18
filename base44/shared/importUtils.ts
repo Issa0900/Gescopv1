@@ -2017,6 +2017,20 @@ export function normalizeRow(
         const loc = String(r.location_id || r.succursale || r.store || r.location).trim();
         r.order_id = `ORD-${stripAccents(loc).toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
       }
+      // Dernier filet : ni identifiant, ni colonne de succursale — le cas le
+      // plus courant pour un petit commerce qui exporte ses ventes depuis un
+      // tableur sans système de caisse. Sans ce filet, chaque ligne était
+      // mise en quarantaine faute d'order_id, même quand date/client/produit/
+      // quantité/prix étaient tous lus correctement. L'identifiant est
+      // dérivé du contenu de la ligne (déterministe) : une réimportation du
+      // même fichier redonne le même order_id, donc la détection de doublons
+      // (fingerprint.ts) continue de fonctionner au lieu de dupliquer.
+      if (!r.order_id) {
+        const cle = [r.date, r.customer_id || r.customer_name, r.product_id || r.product_name, r.quantity, r.unit_price]
+          .map((v) => String(v ?? "").trim().toLowerCase())
+          .join("|");
+        r.order_id = `ORD-${stripAccents(cle).toUpperCase().replace(/[^A-Z0-9]+/g, "_").slice(0, 80)}`;
+      }
     }
     if (!r.date) {
       r.date = new Date().toISOString().slice(0, 10);

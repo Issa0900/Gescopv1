@@ -7,7 +7,7 @@ import QualityCard from "@/components/audit/QualityCard";
 import MetricTrace from "@/components/audit/MetricTrace";
 import { runCoherenceChecks, runQualityChecks, buildMetricTraces, runReconciliation } from "@/lib/dataAudit";
 import { fetchAll } from "@/lib/fetchAll";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, CircleDashed } from "lucide-react";
 
 // Every source is read with pagination: a single call caps at 500 records and
 // a truncated source produces false incoherences.
@@ -61,6 +61,11 @@ export default function Audit() {
     + quality.filter((q) => q.status === "warn").length;
   const qErrors = quality.filter((q) => q.status === "error").length
     + reconcile.filter((r) => r.status === "error").length;
+  // Sans le moindre import, tous les contrôles ci-dessus n'ont simplement rien
+  // à comparer et retombent à 0 erreur — ce qui affichait le même bandeau vert
+  // "toutes les vérifications passent" qu'une vraie vérification réussie,
+  // laissant croire à une donnée validée alors qu'il n'y a rien eu à valider.
+  const rienAAuditer = !!data && Object.values(data).every((rows) => !Array.isArray(rows) || rows.length === 0);
 
   return (
     <div className="space-y-6">
@@ -72,14 +77,25 @@ export default function Audit() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
-        <ShieldCheck className={`h-5 w-5 ${errors + qErrors > 0 ? "text-red-600" : warns > 0 ? "text-amber-600" : "text-emerald-600"}`} />
-        <p className="text-sm">
-          {errors + qErrors > 0
-            ? `${errors + qErrors} incohérence(s) bloquante(s) et ${warns} avertissement(s) détectés.`
-            : warns > 0
-              ? `Aucune incohérence bloquante · ${warns} point(s) à surveiller.`
-              : "Toutes les vérifications passent : vos indicateurs reposent sur des données cohérentes."}
-        </p>
+        {rienAAuditer ? (
+          <>
+            <CircleDashed className="h-5 w-5 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              Aucune donnée à auditer pour l'instant — importez des données pour lancer les contrôles.
+            </p>
+          </>
+        ) : (
+          <>
+            <ShieldCheck className={`h-5 w-5 ${errors + qErrors > 0 ? "text-red-600" : warns > 0 ? "text-amber-600" : "text-emerald-600"}`} />
+            <p className="text-sm">
+              {errors + qErrors > 0
+                ? `${errors + qErrors} incohérence(s) bloquante(s) et ${warns} avertissement(s) détectés.`
+                : warns > 0
+                  ? `Aucune incohérence bloquante · ${warns} point(s) à surveiller.`
+                  : "Toutes les vérifications passent : vos indicateurs reposent sur des données cohérentes."}
+            </p>
+          </>
+        )}
       </div>
 
       <Tabs defaultValue="reconcile">
