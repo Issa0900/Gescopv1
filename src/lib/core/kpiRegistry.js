@@ -100,7 +100,11 @@ export const KPI_REGISTRY = Object.freeze({
     // THIS kpi (getKpiDefinition found itself) instead of the Payroll.total_cost
     // field, so it always came back 0 rather than the real payroll sum.
     dependencies: ["payroll_total_cost"],
-    calculate: (deps) => deps.payroll_total_cost || 0,
+    // `|| 0` masquait une masse salariale absente (aucun Payroll importé) en
+    // un zero mesuré : rh_expense_ratio et revenue_per_employee en héritaient
+    // sans jamais passer par KPI_STATUS.NOT_MEASURED. Une absence reste
+    // absente jusqu'à kpiEngine, qui sait déjà la traiter.
+    calculate: (deps) => (deps.payroll_total_cost == null ? null : deps.payroll_total_cost),
   },
 
   employee_count_raw: {
@@ -183,7 +187,12 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: false,
     dependencies: ["payroll_total", "total_revenue"],
     calculate: (deps) => {
-      if (!deps.total_revenue || deps.total_revenue === 0) return 0;
+      // Un CA absent (pas encore de Transaction/Order importé) et un CA
+      // mesuré à zéro sont deux réalités différentes, mais ni l'un ni
+      // l'autre ne donne un ratio "0 %" exploitable : les deux doivent
+      // laisser kpiEngine marquer le KPI comme non mesuré plutôt que
+      // d'afficher un poids RH nul et rassurant à tort.
+      if (!deps.total_revenue || deps.payroll_total == null) return null;
       // dataType is PERCENTAGE, like every other ratio KPI here (marketing_roi,
       // net_margin_pct...) - all of them already scale to 0-100, this one
       // didn't and rendered as "0.35 %" instead of "35 %".
@@ -202,7 +211,7 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: false,
     dependencies: ["total_revenue", "employee_count"],
     calculate: (deps) => {
-      if (!deps.employee_count || deps.employee_count === 0) return 0;
+      if (!deps.employee_count || deps.total_revenue == null) return null;
       return deps.total_revenue / deps.employee_count;
     },
   },
@@ -345,7 +354,10 @@ export const KPI_REGISTRY = Object.freeze({
     // against entityFieldMap.js's real canonicalKeys.
     dependencies: ["cash_closing", "net_burn_rate"],
     calculate: (deps) => {
-      if (!deps.cash_closing) return 0;
+      if (deps.cash_closing == null || deps.net_burn_rate == null) return null;
+      if (deps.cash_closing === 0) return 0;
+      // `null >= 0` vaut true en JS (coercion vers 0) : sans le garde ci-dessus,
+      // un burn rate non mesuré était lu comme "rentable, piste infinie".
       if (deps.net_burn_rate >= 0) return Infinity; // Profitable, infinite runway
 
       const periodDays = deps.period_days || 30;
@@ -367,8 +379,11 @@ export const KPI_REGISTRY = Object.freeze({
     isAdditive: false, // Usually calculated over a specific window (e.g. 3 months avg)
     dependencies: ["net_cash_flow"],
     // In a real scenario, the engine provides windowed values if requested.
-    // Here we just use the period's net cash flow directly.
-    calculate: (deps) => deps.net_cash_flow || 0, 
+    // Here we just use the period's net cash flow directly. `|| 0` used to
+    // read "aucun Cashflow importé" as "trésorerie stable" (burn rate nul),
+    // ce qui masquait ensuite la piste de trésorerie (runway) calculée
+    // dessus. Rien à mesurer doit rester "rien à mesurer".
+    calculate: (deps) => (deps.net_cash_flow == null ? null : deps.net_cash_flow),
   },
 
   // Le fameux Besoin en Fonds de Roulement (BFR) demandé dans le plan (Phase 9)

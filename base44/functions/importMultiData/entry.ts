@@ -1,5 +1,5 @@
 import { createFixedClientFromRequest as createClientFromRequest } from "../../shared/client.ts";
-import { normalizeRow, isSummaryOrTotalRow } from "../../shared/importUtils.ts";
+import { normalizeRow, isSummaryOrTotalRow, deriveFallbackIdentity, buildCompanyDictionaryIndex } from "../../shared/importUtils.ts";
 import { detectEntityByName, detectEntityByHeaders, detectEntityByFieldOverlap, entiteCompatible, sheetRows, trouverLigneEntetes } from "../../shared/sheetDetect.ts";
 import { fetchDelimitedRows, fetchMatrice } from "../../shared/csvParse.ts";
 import {
@@ -26,19 +26,19 @@ import * as XLSX from "npm:xlsx@0.18.5";
  * Then: name, exact header signature, and finally a best-fit score over the
  * columns, which rescues sheets that carry no recognizable id column.
  */
-export function detect(label: string, headers: string[], fileGuess?: string | null, manual?: string | null) {
+export function detect(label: string, headers: string[], fileGuess?: string | null, manual?: string | null, companyDictionary?: Record<string, string>) {
   if (manual) return { entity: manual, via: "manuel" };
   const byName = detectEntityByName(label);
-  const byHeaders = detectEntityByHeaders(headers);
+  const byHeaders = detectEntityByHeaders(headers, companyDictionary);
   // Le nom ne l'emporte que si les colonnes peuvent reellement alimenter
   // l'entite qu'il designe. Sinon ce sont les colonnes qui decident : elles
   // decrivent le contenu, le nom ne fait que le suggerer.
-  if (byName && (headers.length === 0 || entiteCompatible(byName, headers))) {
+  if (byName && (headers.length === 0 || entiteCompatible(byName, headers, companyDictionary))) {
     return { entity: byName, via: "nom" };
   }
   if (byHeaders) return { entity: byHeaders, via: "colonnes" };
   if (byName) return { entity: byName, via: "nom (colonnes non concluantes)" };
-  const byOverlap = detectEntityByFieldOverlap(headers);
+  const byOverlap = detectEntityByFieldOverlap(headers, companyDictionary);
   if (byOverlap) return { entity: byOverlap, via: "colonnes (approché)" };
   if (fileGuess) return { entity: fileGuess, via: "nom du fichier" };
   return { entity: null, via: null };
@@ -56,7 +56,6 @@ function forceTransactionColumns(plan: PlanImport): PlanImport {
     }),
   };
 }
-
 
 /**
  * Plan de lecture d'une feuille : memoire, puis IA, puis regles.
@@ -160,6 +159,7 @@ async function importRows(
   fileLabel: string,
   fileUrl = "",
   memoire?: { plan: PlanImport | null; signature: string; confirme: boolean },
+  companyDictionary?: Record<string, string>,
 ) {
   const schema = getSchema(entityName);
   const properties = schema ? schema.properties : null;
@@ -206,11 +206,12 @@ async function importRows(
     grain = detectGrain(profile, matchedConcepts);
   } catch(e) { console.error("Semantic engine failed", e); }
 
-  rows.forEach((row) => {
+  rows.forEach((row, index) => {
     if (!row || typeof row !== "object" || isSummaryOrTotalRow(row)) return;
     const enumIssues: { field: string; value: string; allowed: string[] }[] = [];
-    const normalized = normalizeRow(entityName, row, importRec.id, properties, sourceType, enumIssues, unmappedColumns);
+    const normalized = normalizeRow(entityName, row, importRec.id, properties, sourceType, enumIssues, unmappedColumns, companyDictionary);
     if (Object.keys(normalized).filter((k) => k !== "import_id").length === 0) return;
+    deriveFallbackIdentity(entityName, normalized, index);
     // Reject up front rather than letting one row fail its whole batch.
     const missing = missingRequired(normalized, required);
     if (missing.length > 0) {
@@ -327,6 +328,20 @@ export default async function (req: Request) {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: "Non autorisé" }, { status: 401 });
 
+    // Vocabulaire propre a cette entreprise (Company.company_dictionary) :
+    // consulte en priorite, avant les tables generiques de normalizeKeys, pour
+    // qu'une correction deja faite une fois ne soit plus jamais redemandee.
+    // Aujourd'hui alimente uniquement par ce que l'utilisateur tape dans
+    // Parametres > Dictionnaire — l'apprentissage automatique depuis une
+    // correction manuelle sur l'ecran d'import reste a cabler separement.
+    let companyDictionary: Record<string, string> = {};
+    try {
+      const companies = await base44.entities.Company.list();
+      companyDictionary = buildCompanyDictionaryIndex(companies?.[0]?.company_dictionary);
+    } catch (e) {
+      console.error("Lecture du dictionnaire d'entreprise impossible, poursuite sans", e);
+    }
+
     const body = await req.json();
     const { files, entity_override, mode, plans } = body;
     // Deux temps : "analyser" lit le fichier et rend un plan sans rien ecrire ;
@@ -392,11 +407,12 @@ export default async function (req: Request) {
                   if (!row || typeof row !== "object" || isSummaryOrTotalRow(row)) continue;
                   
                   const enumIssues: { field: string; value: string; allowed: string[] }[] = [];
-                  const normalized = normalizeRow(plan.entite, row, "tmp", properties, sourceType, enumIssues);
-                  
+                  const normalized = normalizeRow(plan.entite, row, "tmp", properties, sourceType, enumIssues, undefined, companyDictionary);
+
                   if (Object.keys(normalized).filter(k => k !== "import_id").length === 0) {
                     continue; // Ligne vide ou total filtré : ne pas générer de faux positif en quarantaine
                   }
+                  deriveFallbackIdentity(plan.entite, normalized, i);
                   mappedCount++;
 
                   const errors: string[] = [];
@@ -445,7 +461,7 @@ export default async function (req: Request) {
             let entity = plan.entite;
             let via = plan.origine;
             if (!entity) {
-              const parRegles = detect(generic ? "" : (nomFeuille || file_name), entetesLues, detectEntityByName(file_name), entity_override);
+              const parRegles = detect(generic ? "" : (nomFeuille || file_name), entetesLues, detectEntityByName(file_name), entity_override, companyDictionary);
               entity = parRegles.entity;
               via = parRegles.via as any;
             }
@@ -461,7 +477,7 @@ export default async function (req: Request) {
             const lecture = lignesSelonPlan(plan, matrix, file_name, entity);
             const res = await importRows(base44, entity, lecture.rows, sourceType, label, file_url, {
               plan: lecture.plan, signature: analyse.signature, confirme: Boolean(planValide) && !lecture.note,
-            });
+            }, companyDictionary);
             if (res.rateLimited) await pause(RATE_LIMIT_COOLDOWN_MS);
             results.push({
               file_name: label, detected_via: via,
@@ -520,7 +536,7 @@ export default async function (req: Request) {
           else if (out && Array.isArray(Object.values(out)[0])) rows = Object.values(out)[0] as any[];
         }
 
-        const res = await importRows(base44, entityName, rows, sourceType, file_name, file_url);
+        const res = await importRows(base44, entityName, rows, sourceType, file_name, file_url, undefined, companyDictionary);
         if (res.rateLimited) await pause(RATE_LIMIT_COOLDOWN_MS);
         results.push({ file_name, detected_via: entity_override ? "manuel" : "nom", ...res });
       } catch (e: any) {

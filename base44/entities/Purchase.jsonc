@@ -50,8 +50,7 @@
   },
   "required": [
     "date",
-    "supplier_id",
-    "product_id"
+    "supplier_id"
   ],
   "rls": {
     "read": {

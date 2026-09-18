@@ -17,9 +17,32 @@ export default function Historique() {
     queryKey: ["analysis-runs"],
     queryFn: async () => { const l = await base44.entities.AnalysisRun.list("-run_date", 50); return l || []; },
   });
+  // Event (journal d'événements métier datés : promotion, rupture, incident...)
+  // n'avait aucune page — importé, jamais montré. Il vit ici, dans la
+  // chronologie de l'entreprise, à côté des analyses.
+  const { data: events, isLoading: le } = useQuery({
+    queryKey: ["events"],
+    queryFn: async () => { const l = await base44.entities.Event.list("-date", 50); return l || []; },
+  });
 
-  if (isLoading) return <div className="flex h-96 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800" /></div>;
-  if (!runs || runs.length === 0) return <EmptyState icon={HistoryIcon} title="Aucun historique d'analyse" description="Lancez votre première analyse pour commencer à suivre l'évolution de votre entreprise dans le temps." />;
+  if (isLoading || le) return <div className="flex h-96 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800" /></div>;
+  const hasRuns = runs && runs.length > 0;
+  const hasEvents = events && events.length > 0;
+  if (!hasRuns && !hasEvents) return <EmptyState icon={HistoryIcon} title="Aucun historique" description="Lancez votre première analyse ou importez un journal d'événements pour suivre l'évolution de votre entreprise dans le temps." />;
+  if (!hasRuns) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <HistoryIcon className="h-5 w-5 text-primary" />
+            <h1 className="text-2xl font-bold tracking-tight">Historique</h1>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">Aucune analyse enregistrée pour l'instant. Voici le journal d'événements importé.</p>
+        </div>
+        <EventsSection events={events} />
+      </div>
+    );
+  }
 
   const chartData = runs.slice().reverse().map((r) => ({
     date: new Date(r.run_date).toLocaleDateString("fr-CA", { day: "numeric", month: "short" }),
@@ -124,6 +147,27 @@ export default function Historique() {
             </div>
           ))}
         </div>
+      </div>
+
+      {hasEvents && <EventsSection events={events} />}
+    </div>
+  );
+}
+
+function EventsSection({ events }) {
+  return (
+    <div>
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Journal des événements ({events.length})</h2>
+      <div className="space-y-2">
+        {events.slice(0, 30).map((e) => (
+          <div key={e.id} className="flex items-start justify-between rounded-xl border border-border bg-card p-4">
+            <div>
+              <p className="text-sm font-medium">{e.event_type}{e.impact_area ? ` · ${e.impact_area}` : ""}</p>
+              {e.description && <p className="mt-0.5 text-xs text-muted-foreground">{e.description}</p>}
+            </div>
+            <span className="whitespace-nowrap text-xs text-muted-foreground">{e.date}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
