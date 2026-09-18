@@ -1,5 +1,5 @@
 import { createFixedClientFromRequest as createClientFromRequest } from "../../shared/client.ts";
-import { normalizeRow, isSummaryOrTotalRow } from "../../shared/importUtils.ts";
+import { normalizeRow, isSummaryOrTotalRow, deriveFallbackIdentity } from "../../shared/importUtils.ts";
 import { detectEntityByName, detectEntityByHeaders, detectEntityByFieldOverlap, entiteCompatible, sheetRows, trouverLigneEntetes } from "../../shared/sheetDetect.ts";
 import { fetchDelimitedRows, fetchMatrice } from "../../shared/csvParse.ts";
 import {
@@ -56,26 +56,6 @@ function forceTransactionColumns(plan: PlanImport): PlanImport {
     }),
   };
 }
-
-// Entités où un identifiant/nom individuel est exigé par le schéma mais où
-// de nombreux exports réels n'en fournissent aucun (rollup mensuel par
-// canal, par exemple) : plutôt que rejeter 100% des lignes pour une colonne
-// qui n'a jamais existé dans le fichier, on dérive un identifiant de repli à
-// partir de ce que le mapping a effectivement reconnu.
-const FALLBACK_IDENTITY: Record<string, { id: string; name?: string; from: string[] }> = {
-  Campaign: { id: "campaign_id", name: "campaign_name", from: ["channel", "date"] },
-};
-
-function deriveFallbackIdentity(entityName: string, row: Record<string, any>, index: number): void {
-  const rule = FALLBACK_IDENTITY[entityName];
-  if (!rule) return;
-  if (row[rule.id] && (!rule.name || row[rule.name])) return;
-  const parts = rule.from.map((f) => row[f]).filter((v) => v !== undefined && v !== null && v !== "");
-  const label = parts.length > 0 ? parts.join(" - ") : `${entityName} ${index + 1}`;
-  if (!row[rule.id]) row[rule.id] = `AUTO-${label}`.slice(0, 60);
-  if (rule.name && !row[rule.name]) row[rule.name] = label;
-}
-
 
 /**
  * Plan de lecture d'une feuille : memoire, puis IA, puis regles.
