@@ -11,6 +11,13 @@ import { cn } from "@/lib/utils";
 const formatK = (v) => `${(v / 1000).toFixed(0)}k`;
 const formatMoney = (v) => `${Math.round(v).toLocaleString("fr-CA")} $`;
 
+/**
+ * @param {Object} props
+ * @param {boolean} [props.active]
+ * @param {Array<{name?: string, value?: number, color?: string, fill?: string}>} [props.payload]
+ * @param {string} [props.label]
+ * @param {string} [props.suffix]
+ */
 function ChartTooltip({ active, payload, label, suffix = "$" }) {
   if (!active || !payload || !payload.length) return null;
   return (

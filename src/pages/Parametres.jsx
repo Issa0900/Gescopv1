@@ -326,11 +326,11 @@ export default function Parametres() {
           )}
 
           {activeTab === "objectifs" && (
-            <StrategicGoalsPanel form={form} setForm={setForm} />
+            <StrategicGoalsPanel />
           )}
 
           {activeTab === "kpis" && (
-            <KpiManagementPanel form={form} setForm={setForm} />
+            <KpiManagementPanel />
           )}
 
           {activeTab === "dictionnaire" && (
@@ -338,7 +338,7 @@ export default function Parametres() {
           )}
 
           {activeTab === "comprehension" && (
-            <UnderstandingPanel form={form} setForm={setForm} />
+            <UnderstandingPanel />
           )}
 
           {activeTab === "radar" && (
@@ -350,7 +350,7 @@ export default function Parametres() {
           )}
 
           {activeTab === "utilisateurs" && (
-            <UsersAccessPanel form={form} setForm={setForm} />
+            <UsersAccessPanel />
           )}
 
           {activeTab === "preferences" && (

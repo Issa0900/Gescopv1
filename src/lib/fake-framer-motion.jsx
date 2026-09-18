@@ -58,6 +58,9 @@ export const motion = {
   table: createMotionComponent('table'),
 };
 
+/**
+ * @param {{ children?: React.ReactNode, mode?: 'sync'|'wait'|'popLayout', initial?: boolean }} props
+ */
 export const AnimatePresence = ({ children }) => {
   return <>{children}</>;
 };

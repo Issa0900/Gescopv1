@@ -22,6 +22,12 @@ function formatMonth(m) {
   return monthLabels[mm] || m;
 }
 
+/**
+ * @param {Object} props
+ * @param {boolean} [props.active]
+ * @param {Array<{name?: string, value?: number, color?: string, fill?: string, dataKey?: string}>} [props.payload]
+ * @param {string} [props.label]
+ */
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload || !payload.length) return null;
   return (

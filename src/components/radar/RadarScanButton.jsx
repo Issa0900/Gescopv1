@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Radar as RadarIcon } from "lucide-react";
 
+/**
+ * @param {Object} props
+ * @param {'default'|'destructive'|'outline'|'secondary'|'ghost'|'link'} [props.variant]
+ */
 export default function RadarScanButton({ variant = "default" }) {
   const [scanning, setScanning] = useState(false);
   const { toast } = useToast();
