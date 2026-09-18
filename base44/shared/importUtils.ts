@@ -1483,6 +1483,16 @@ export function normalizeKeys(
         out["amount"] = v;
         continue;
       }
+      // Beaucoup d'exports PME appellent leur identifiant de vente
+      // "transaction_id" (ou équivalent : "V-10002") plutôt que "order_id".
+      // Order.jsonc exige order_id et n'a pas de champ transaction_id : sans
+      // ce repli, chaque ligne d'un tel export était rejetée en bloc pour
+      // "order_id manquant" alors que l'identifiant était bien présent, juste
+      // sous un autre nom.
+      if (alias === "transaction_id" && schemaFields.includes("order_id") && !schemaFields.includes("transaction_id")) {
+        out["order_id"] = v;
+        continue;
+      }
       // Aucune retombée n'a de champ à offrir sur CETTE entité : la colonne
       // est reellement non mappee. On le signale et on n'ecrit PAS out[alias]
       // — avant ce garde-fou, la ligne suivante ecrivait quand meme un champ

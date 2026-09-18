@@ -103,6 +103,22 @@ test("Achats (Purchase) : export au niveau bon de commande, sans ligne produit",
   assert.deepEqual(withDate.missing, []);
 });
 
+test("Ventes (Order) : export PME réel avec \"transaction_id\" au lieu de \"order_id\"", () => {
+  // Cas remonté par un test en conditions réelles : fichier de vente avec des
+  // identifiants "V-10002" sous la colonne "transaction_id". Order.jsonc
+  // exige order_id et n'a pas de champ transaction_id — sans repli, 100% des
+  // lignes de ce type d'export étaient rejetées malgré un identifiant présent.
+  const row = {
+    transaction_id: "V-10002", date: 45658, customer_id: "C-88021",
+    customer_name: "Bouchard, Sarah", product_id: "ACC-B001",
+    quantity: 1, unit_price: 35, unit_cost: 12.5,
+  };
+  const { normalized, missing } = importRow("Order", row);
+  assert.equal(normalized.order_id, "V-10002");
+  assert.deepEqual(missing, []);
+  assert.equal(normalized.date, "2025-01-01", "le numéro de série Excel 45658 doit être converti");
+});
+
 test("Régression : une ligne Achats sans fournisseur reste bloquée (le garde-fou n'est pas devenu laxiste)", () => {
   const { missing } = importRow("Purchase", { date: "2026-01-05", status: "recu" });
   assert.deepEqual(missing, ["supplier_id"]);
