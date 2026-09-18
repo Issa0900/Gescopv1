@@ -2068,6 +2068,98 @@ export function detectEntityByHeaders(headers: string[], companyDictionary?: Rec
   return null;
 }
 
+// construirePrompt/SCHEMA_REPONSE, deplaces depuis importPlan.ts (18 sept
+// 2026) : fonctions pures, sans dependance a XLSX — importPlan.ts les
+// ré-exporte, aucun appelant existant ne change.
+//
+// Phase 5 du chantier "reconnaissance universelle" : la consigne interdisait
+// jusqu'ici tout rapprochement au-dela du nom exact ("mets champ: null
+// plutot que de forcer un rapprochement"), ce qui empechait l'IA de faire le
+// lien evident entre une colonne "transaction_id" et le champ order_id d'une
+// entite qui n'a pas de champ transaction_id — exactement le genre de cas
+// que le rattrapage deterministe doit ensuite deviner sans le contexte de
+// l'IA. La consigne autorise maintenant explicitement ce raisonnement pour
+// les identifiants, sans autoriser l'invention de champs pour le reste.
+export function construirePrompt(
+  echantillon: string,
+  nomFichier: string,
+  entites: string[],
+  // Vocabulaire deja connu de CETTE entreprise (Company.company_dictionary) :
+  // le donner a l'IA en contexte evite qu'elle redecouvre a l'aveugle un mot
+  // deja corrige une fois, et lui montre le format de reponse attendu.
+  companyDictionary?: Record<string, string>,
+): string {
+  const dictEntries = companyDictionary ? Object.entries(companyDictionary) : [];
+  const dictBlock = dictEntries.length > 0
+    ? [
+      "",
+      "Cette entreprise a deja corrige ces correspondances par le passe — reutilise-les telles quelles si tu revois ces intitules (ou un intitule tres proche) :",
+      ...dictEntries.map(([terme, concept]) => `- "${terme}" -> ${concept}`),
+    ]
+    : [];
+  return [
+    "Tu analyses un fichier exporte par une PME (comptabilite, caisse, tableur maison).",
+    "Ta tache est de DECRIRE comment lire ce fichier. Tu ne recopies aucune valeur.",
+    "",
+    `Nom du fichier : ${nomFichier}`,
+    `Types de donnees possibles : ${entites.join(", ")}`,
+    ...dictBlock,
+    "",
+    "Voici les premieres lignes, telles quelles, numerotees a partir de 0 :",
+    "```",
+    echantillon,
+    "```",
+    "",
+    "Reponds en indiquant :",
+    "- entite : le type de donnees, parmi la liste ci-dessus (null si aucun ne convient).",
+    "- ligne_entetes : le numero de la ligne qui contient les intitules de colonnes.",
+    "  Attention, un export commence souvent par un titre de rapport sur plusieurs lignes.",
+    "- lignes_ignorees : les numeros des lignes qui ne sont pas des donnees (totaux, sous-totaux, commentaires).",
+    "- colonnes : pour chaque intitule, le champ vise (ou null si la colonne ne correspond a rien).",
+    "  * convention_date : si la colonne contient des dates ecrites en chiffres, precise JJ/MM ou MM/JJ.",
+    "  * valeurs : si la colonne utilise des codes, donne leur traduction, ex. {\"D\": \"expense\", \"C\": \"income\"}.",
+    "- confiance : haute, moyenne ou faible.",
+    "- explication : une phrase en francais, adressee au proprietaire de l'entreprise,",
+    "  decrivant ce que tu as compris du fichier. Pas de jargon technique.",
+    "",
+    "N'invente jamais un nom de champ : utilise uniquement ceux du type de donnees choisi.",
+    "Si une colonne ne correspond vraiment a rien, mets champ: null plutot que de forcer un rapprochement.",
+    "Exception delibérée : si le type de donnees choisi a un identifiant obligatoire",
+    "(ex. order_id, campaign_id) et qu'aucune colonne ne porte ce nom exact, mais qu'une",
+    "colonne sert clairement de reference/numero unique a chaque ligne (ex. \"transaction_id\",",
+    "\"Ref. Vente\", \"No Bon\"), rapproche-la de cet identifiant plutot que de repondre null —",
+    "c'est le meme champ, seulement nomme differemment par cette entreprise.",
+  ].join("\n");
+}
+
+export const SCHEMA_REPONSE = {
+  type: "object",
+  properties: {
+    entite: { type: ["string", "null"] },
+    ligne_entetes: { type: "integer" },
+    lignes_ignorees: { type: "array", items: { type: "integer" } },
+    colonnes: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          colonne: { type: "string" },
+          champ: { type: ["string", "null"] },
+          convention_date: { type: ["string", "null"], enum: ["JJ/MM", "MM/JJ", null] },
+          valeurs: { type: ["object", "null"], additionalProperties: { type: "string" } },
+        },
+        required: ["colonne"],
+      },
+    },
+    confiance: { type: "string", enum: ["haute", "moyenne", "faible"] },
+    explication: { type: "string" },
+  },
+  required: ["entite", "ligne_entetes", "colonnes"],
+};
+
+/** Signature minimale attendue : permet de tester sans reseau. */
+export type InvocateurLLM = (args: { prompt: string; response_json_schema: any }) => Promise<any>;
+
 export function normalizeRow(
   entityName: string,
   row: Record<string, any>,

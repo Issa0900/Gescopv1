@@ -266,63 +266,13 @@ export function verifierAvecPreuves(plan: PlanImport, matrix: any[][]): PlanImpo
 // 5. L'appel a l'IA
 // ---------------------------------------------------------------------------
 
-export function construirePrompt(echantillon: string, nomFichier: string, entites: string[]): string {
-  return [
-    "Tu analyses un fichier exporte par une PME (comptabilite, caisse, tableur maison).",
-    "Ta tache est de DECRIRE comment lire ce fichier. Tu ne recopies aucune valeur.",
-    "",
-    `Nom du fichier : ${nomFichier}`,
-    `Types de donnees possibles : ${entites.join(", ")}`,
-    "",
-    "Voici les premieres lignes, telles quelles, numerotees a partir de 0 :",
-    "```",
-    echantillon,
-    "```",
-    "",
-    "Reponds en indiquant :",
-    "- entite : le type de donnees, parmi la liste ci-dessus (null si aucun ne convient).",
-    "- ligne_entetes : le numero de la ligne qui contient les intitules de colonnes.",
-    "  Attention, un export commence souvent par un titre de rapport sur plusieurs lignes.",
-    "- lignes_ignorees : les numeros des lignes qui ne sont pas des donnees (totaux, sous-totaux, commentaires).",
-    "- colonnes : pour chaque intitule, le champ vise (ou null si la colonne ne correspond a rien).",
-    "  * convention_date : si la colonne contient des dates ecrites en chiffres, precise JJ/MM ou MM/JJ.",
-    "  * valeurs : si la colonne utilise des codes, donne leur traduction, ex. {\"D\": \"expense\", \"C\": \"income\"}.",
-    "- confiance : haute, moyenne ou faible.",
-    "- explication : une phrase en francais, adressee au proprietaire de l'entreprise,",
-    "  decrivant ce que tu as compris du fichier. Pas de jargon technique.",
-    "",
-    "N'invente jamais un nom de champ : utilise uniquement ceux du type de donnees choisi.",
-    "Si une colonne ne correspond a rien, mets champ: null plutot que de forcer un rapprochement.",
-  ].join("\n");
-}
-
-export const SCHEMA_REPONSE = {
-  type: "object",
-  properties: {
-    entite: { type: ["string", "null"] },
-    ligne_entetes: { type: "integer" },
-    lignes_ignorees: { type: "array", items: { type: "integer" } },
-    colonnes: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          colonne: { type: "string" },
-          champ: { type: ["string", "null"] },
-          convention_date: { type: ["string", "null"], enum: ["JJ/MM", "MM/JJ", null] },
-          valeurs: { type: ["object", "null"], additionalProperties: { type: "string" } },
-        },
-        required: ["colonne"],
-      },
-    },
-    confiance: { type: "string", enum: ["haute", "moyenne", "faible"] },
-    explication: { type: "string" },
-  },
-  required: ["entite", "ligne_entetes", "colonnes"],
-};
-
-/** Signature minimale attendue : permet de tester sans reseau. */
-export type InvocateurLLM = (args: { prompt: string; response_json_schema: any }) => Promise<any>;
+// construirePrompt/SCHEMA_REPONSE deplaces vers importUtils.ts (18 sept
+// 2026) : fonctions pures, aucune dependance a XLSX — les y laisser via
+// l'import de sheetDetect.ts (qui, lui, importe npm:xlsx@0.18.5) empechait
+// de les tester sous le test runner Node du repo, meme probleme deja
+// rencontre avec deriveFallbackIdentity et les fonctions de detection.
+export { construirePrompt, SCHEMA_REPONSE, type InvocateurLLM } from "./importUtils.ts";
+import { construirePrompt, SCHEMA_REPONSE } from "./importUtils.ts";
 
 /**
  * Produit le plan de lecture d'un fichier.
@@ -339,15 +289,16 @@ export async function analyserFichier(
     nomFichier: string;
     entitesPossibles: string[];
     planDeSecours: PlanImport;
+    companyDictionary?: Record<string, string>;
   },
 ): Promise<{ plan: PlanImport; refus: string[]; erreur?: string }> {
-  const { matrix, nomFichier, entitesPossibles, planDeSecours } = options;
+  const { matrix, nomFichier, entitesPossibles, planDeSecours, companyDictionary } = options;
   if (matrix.length === 0) return { plan: planDeSecours, refus: ["fichier vide"] };
 
   let brut: any;
   try {
     brut = await invoquer({
-      prompt: construirePrompt(construireEchantillon(matrix), nomFichier, entitesPossibles),
+      prompt: construirePrompt(construireEchantillon(matrix), nomFichier, entitesPossibles, companyDictionary),
       response_json_schema: SCHEMA_REPONSE,
     });
   } catch (e: any) {

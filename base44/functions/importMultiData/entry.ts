@@ -68,9 +68,9 @@ function forceTransactionColumns(plan: PlanImport): PlanImport {
  */
 async function planPourFeuille(
   base44: any,
-  options: { matrix: any[][]; label: string; nomFichier: string; manual?: string | null },
+  options: { matrix: any[][]; label: string; nomFichier: string; manual?: string | null; companyDictionary?: Record<string, string> },
 ) {
-  const { matrix, label, nomFichier, manual } = options;
+  const { matrix, label, nomFichier, manual, companyDictionary } = options;
   const entetes = (matrix[trouverLigneEntetes(matrix)] || []).map((h: any) => String(h ?? "").trim());
   const signature = signatureFichier(entetes);
 
@@ -94,7 +94,7 @@ async function planPourFeuille(
       response_json_schema: args.response_json_schema,
       model: "gemini_3_8_flash",
     }),
-    { matrix, nomFichier: label, entitesPossibles: Object.keys(ENTITY_SCHEMAS), planDeSecours: secours },
+    { matrix, nomFichier: label, entitesPossibles: Object.keys(ENTITY_SCHEMAS), planDeSecours: secours, companyDictionary },
   );
   const entiteParNom = detectEntityByName(label);
   const entetesNormalisees = entetes.map((h) => String(h).trim());
@@ -387,7 +387,7 @@ export default async function (req: Request) {
             const planValide = plansFournis[label];
             const analyse = planValide
               ? { plan: planValide, signature: signatureFichier(matrix[planValide.ligne_entetes] || []), refus: [], erreur: undefined }
-              : await planPourFeuille(base44, { matrix, label, nomFichier: file_name, manual: entity_override });
+              : await planPourFeuille(base44, { matrix, label, nomFichier: file_name, manual: entity_override, companyDictionary });
             const plan = analyse.plan;
 
             if (analyseSeule) {
