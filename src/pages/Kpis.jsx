@@ -300,15 +300,22 @@ export default function Kpis() {
       // with the business: a refunded order's total was already reversed and
       // must not be counted as revenue.
       const salesOrders = validSalesOrders(orders);
-      const orderRevMonthly = monthlyAggComplete(salesOrders, "date", "total");
-      const orderCntMonthly = monthlyAggComplete(salesOrders, "date", "total", "count");
+      // total_revenue is the field the import pipeline actually populates
+      // (Order.total and Order.total_revenue both mean "revenue" on the
+      // schema) - aggregating "total" alone silently read 0 on such imports.
+      const salesOrdersWithRev = salesOrders.map((o) => ({
+        ...o,
+        _computed_rev: Number(o.total_revenue) || Number(o.total) || 0,
+      }));
+      const orderRevMonthly = monthlyAggComplete(salesOrdersWithRev, "date", "_computed_rev");
+      const orderCntMonthly = monthlyAggComplete(salesOrdersWithRev, "date", "_computed_rev", "count");
       const currOrders = lastVal(orderCntMonthly);
       const prevOrders = prevVal(orderCntMonthly);
       const currOrderRev = lastVal(orderRevMonthly);
       const prevOrderRev = prevVal(orderRevMonthly);
       const currAOV = currOrders > 0 ? currOrderRev / currOrders : 0;
       const prevAOV = prevOrders > 0 ? prevOrderRev / prevOrders : 0;
-      const totalOrderRev = salesOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
+      const totalOrderRev = salesOrdersWithRev.reduce((s, o) => s + o._computed_rev, 0);
       const returns = orders.filter(isRefundedOrder);
       // 0 % only means "no returns" when at least one column could have
       // reported one. If all three are absent from the import, the rate is
@@ -507,9 +514,13 @@ export default function Kpis() {
       ],
       "date", "_amount"
     );
-    const trendOrders = validSalesOrders(orders);
-    const orderRevMonthly = monthlyAggComplete(trendOrders, "date", "total");
-    const orderCntMonthly = monthlyAggComplete(trendOrders, "date", "total", "count");
+    // total_revenue is the field the import pipeline actually populates - see note above.
+    const trendOrders = validSalesOrders(orders).map((o) => ({
+      ...o,
+      _computed_rev: Number(o.total_revenue) || Number(o.total) || 0,
+    }));
+    const orderRevMonthly = monthlyAggComplete(trendOrders, "date", "_computed_rev");
+    const orderCntMonthly = monthlyAggComplete(trendOrders, "date", "_computed_rev", "count");
 
     const months = new Set([
       ...revMonthly.map((m) => m.month),

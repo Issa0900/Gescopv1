@@ -59,6 +59,33 @@
         "proche_rupture"
       ]
     },
+    "warehouse_id": {
+      "type": "string"
+    },
+    "warehouse_name": {
+      "type": "string"
+    },
+    "reserved_qty": {
+      "type": "number"
+    },
+    "in_transit_qty": {
+      "type": "number"
+    },
+    "reorder_qty_eoq": {
+      "type": "number"
+    },
+    "reorder_point": {
+      "type": "number"
+    },
+    "origin_country": {
+      "type": "string"
+    },
+    "customs_code": {
+      "type": "string"
+    },
+    "supplier_id": {
+      "type": "string"
+    },
     "import_id": {
       "type": "string"
     }

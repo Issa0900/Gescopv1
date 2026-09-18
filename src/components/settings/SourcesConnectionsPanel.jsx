@@ -4,8 +4,6 @@ import {
   Database,
   FileSpreadsheet,
   CheckCircle2,
-  AlertCircle,
-  ExternalLink,
   RefreshCw,
   Layers,
   ArrowRight,

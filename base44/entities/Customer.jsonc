@@ -75,6 +75,24 @@
     "churn_risk": {
       "type": "number"
     },
+    "postal_code": {
+      "type": "string"
+    },
+    "loyalty_points": {
+      "type": "number"
+    },
+    "language": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "tax_exemption_number": {
+      "type": "string"
+    },
+    "credit_limit": {
+      "type": "number"
+    },
     "import_id": {
       "type": "string"
     }

@@ -439,25 +439,148 @@ export function planParRegles(
     if (entite === 'Order') {
       if (champ === 'transaction_id') champ = 'order_id';
       if (champ === 'succursale' || champ === 'store') champ = 'location_id';
+      // Order.jsonc expose tax_federal/tax_provincial (montants numériques),
+      // pas les noms de colonnes bruts "taxe_federale_tps"/"taxe_provinciale_tvq_tvh"
+      // que la reconnaissance sémantique proposait tels quels : ces champs
+      // inexistants n'apparaissaient dans aucune option du menu déroulant
+      // (affiché vide) et la valeur n'était jamais écrite en base.
+      if (champ === 'taxe_federale_tps') champ = 'tax_federal';
+      if (champ === 'taxe_provinciale_tvq_tvh') champ = 'tax_provincial';
+      // Order.jsonc a deux champs distincts, gross_profit ($) et gross_margin
+      // (%), mais la reconnaissance semantique n'a qu'un seul concept pour
+      // les deux (finance.grossMargin) et fait atterrir "Profit Brut ($)" sur
+      // gross_margin. Le dedoublonnage anti-ecrasement doit alors arbitrer
+      // entre cette colonne et "Marge Brute %" (qui vise le meme champ, a
+      // raison) : "Marge Brute %" perdait systematiquement. Trancher ici sur
+      // le texte de l'en-tete plutot que sur le concept resolu en amont.
+      {
+        const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+        const mot = (s: string) => new RegExp(`(^|_)${s}(_|$)`).test(normC);
+        if (mot("profit") && !mot("marge") && !mot("margin") && !mot("pct")) champ = 'gross_profit';
+        else if ((mot("marge") || mot("margin")) && champ !== 'gross_profit') champ = 'gross_margin';
+      }
     }
     if (entite === 'Product') {
       if (champ === 'closing_stock' || champ === 'stock_quantity') champ = 'inventory_level';
       if (champ === 'unit_cost') champ = 'purchase_cost';
+      // Repéré sur Nordik_PleinAir [Stocks & Inventaire] (importé comme
+      // Product) : "Qté en Stock" résolvait au nom de champ brut
+      // "qte_en_stock" au lieu de inventory_level (FIELD_ALIASES a bien cet
+      // alias, mais la reconnaissance sémantique le court-circuite avant
+      // qu'il ne soit consulté) ; "Description" résolvait à "description",
+      // un champ qui n'existe pas sur Product (qui utilise product_name).
+      if (champ === 'qte_en_stock' || champ === 'quantity_on_hand') champ = 'inventory_level';
+      if (champ === 'description') champ = 'product_name';
+    }
+    // Inverse du cas Product ci-dessus : Inventory.jsonc n'a pas de champ
+    // "inventory_level" (il utilise closing_stock) ni "valeur_stock_cout_cad"
+    // (il utilise inventory_value). Sans ce repli, la reconnaissance semantique
+    // ou la memoire de mapping pouvait proposer ces noms de champs inexistants :
+    // le menu deroulant de l'UI les affichait vides (aucune option ne
+    // correspond) et la valeur etait perdue au moment d'ecrire en base, alors
+    // que la colonne source contenait bien une quantite ou un montant valide.
+    if (entite === 'Inventory') {
+      if (champ === 'inventory_level' || champ === 'stock_quantity') champ = 'closing_stock';
+      if (champ === 'valeur_stock_cout_cad' || champ === 'valeur_stock_cout' || champ === 'valeur_stock') champ = 'inventory_value';
     }
     if (entite === 'Employee' && (champ === 'store' || champ === 'location_id' || champ === 'succursale')) {
       champ = 'location';
     }
+    // Employee.jsonc n'a pas de champ "category" (héritage d'un concept
+    // générique de l'ontologie) : le département va dans "department".
+    if (entite === 'Employee' && champ === 'category') {
+      champ = 'department';
+    }
     if (entite === 'ExecutiveSummary') {
       const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
-      if (normC.includes("succursale") || normC.includes("store") || normC.includes("location") || normC.includes("ville")) champ = 'location_id';
-      else if (normC.includes("cout") || normC.includes("cost") || normC.includes("charge")) champ = 'total_cost';
-      else if (normC.includes("profit") || normC.includes("benefice")) champ = 'gross_profit';
-      else if (normC.includes("marge") || normC.includes("margin") || normC.includes("pct")) champ = 'gross_margin';
-      else if (normC.includes("vente") || normC.includes("revenue") || normC.includes("ca")) champ = 'total_revenue';
+      // Mot entier délimité par des "_" : `.includes("ca")` matchait
+      // "indiCAteur" ou "communiCAtion", envoyant le NOM d'un KPI (texte) dans
+      // total_revenue (nombre) — chaque ligne échouait alors à l'écriture
+      // ("Input should be a valid number") au lieu d'être simplement ignorée.
+      const mot = (s: string) => new RegExp(`(^|_)${s}(_|$)`).test(normC);
+      // Une colonne "Indicateur"/"Nom du KPI" est un LABEL, jamais une valeur :
+      // aucune heuristique de champ numérique ci-dessous ne doit s'y appliquer,
+      // quel que soit le mot qu'elle contient par ailleurs.
+      const estUnLibelle = mot("indicateur") || mot("kpi") || mot("performance") || mot("label") || mot("nom");
+      if (estUnLibelle) { /* laissé à Ignorer / notes plus bas */ }
+      else if (mot("succursale") || mot("store") || mot("location") || mot("ville")) champ = 'location_id';
+      else if (mot("cout") || mot("cost") || mot("charge")) champ = 'total_cost';
+      else if (mot("profit") || mot("benefice")) champ = 'gross_profit';
+      else if (mot("marge") || mot("margin") || mot("pct")) champ = 'gross_margin';
+      // "vente" seul ne matche pas "Ventes Totales" : le token normalisé est
+      // "ventes" (pluriel), et mot() exige une égalité de token exacte.
+      // Repéré sur Nordik_PleinAir : "Ventes Totales ($)" restait non
+      // rattaché (mappé au nom de champ brut "total" au lieu de
+      // total_revenue) faute de ce pluriel.
+      else if (mot("vente") || mot("ventes") || mot("revenue") || mot("ca")) champ = 'total_revenue';
+    }
+
+    // Filet de sécurité général : la reconnaissance sémantique (étape 1,
+    // ci-dessus) gagne souvent la course avant que FIELD_ALIASES/
+    // ALIAS_CANONIQUES (étape 2) ne soit consultée, laissant `champ` sur le
+    // nom d'en-tête canonicalisé brut ("cout_clic", "qte_en_stock"...) au
+    // lieu du vrai champ du schéma ("cpc", "inventory_level"...) — c'est la
+    // cause commune à la plupart des bugs de colonnes ignorées identifiés
+    // (voir dictionnaire technique, section « Diagnostic des Rejets
+    // d'Ingestion »). Les correctifs ciblés par entité ci-dessus couvrent
+    // les cas déjà repérés ; ce filet rattrape génériquement tout champ final
+    // qui n'existe pas dans le schéma cible mais que ces mêmes tables savent
+    // pourtant traduire. Ne s'active que sur un champ déjà invalide : ne peut
+    // pas dégrader un champ qui résolvait correctement.
+    if (entite && champ) {
+      const schema = getSchema(entite);
+      if (schema && !Object.keys(schema.properties).includes(champ)) {
+        const rescued = FIELD_ALIASES[champ] || ALIAS_CANONIQUES[champ];
+        if (rescued && Object.keys(schema.properties).includes(rescued)) {
+          champ = rescued;
+        }
+      }
     }
 
     return { colonne: c, champ };
   });
+
+  // 3bis. Dédoublonnage des champs cibles : deux colonnes sources ne doivent
+  // jamais écrire sur le même champ. appliquerPlan construit l'objet ligne en
+  // affectant `obj[champ] = valeur` colonne par colonne — un deuxième
+  // affectation au même champ écrase silencieusement la première, sans erreur
+  // ni ligne de quarantaine, et l'utilisateur ne voit jamais qu'une colonne a
+  // disparu. Repéré en testant Clients_CRM (ID_Client ET Nom_Client mappés
+  // tous deux vers customer_id : l'identifiant réel se faisait remplacer par
+  // le nom) et Stocks_MultiEntrepots (Quantite_En_Stock ET Quantite_Disponible
+  // vers inventory_level). La colonne dont l'en-tête ressemble à un
+  // identifiant (contient "id") gagne le champ. Le repli vers un champ "nom"
+  // libre ne s'applique qu'au conflit sur un champ "_id" (le cas customer_id
+  // / customer_name) : pour tout autre champ (une quantité, un montant...),
+  // rediriger vers un champ "nom" du schéma choisi au hasard écrirait une
+  // valeur numérique dans un champ texte sans rapport — la colonne perdante
+  // est alors simplement ignorée plutôt que mal réaffectée.
+  if (entite) {
+    const schemaFields = Object.keys(getSchema(entite)?.properties || {});
+    const claimedBy = new Map<string, { idx: number; looksLikeId: boolean }>();
+    colonnes.forEach((c, idx) => {
+      if (!c.champ) return;
+      const looksLikeId = /\bid\b/i.test(c.colonne);
+      const existing = claimedBy.get(c.champ);
+      if (!existing) {
+        claimedBy.set(c.champ, { idx, looksLikeId });
+        return;
+      }
+      const loserIdx = (looksLikeId && !existing.looksLikeId) ? existing.idx : idx;
+      if (loserIdx === existing.idx) claimedBy.set(c.champ, { idx, looksLikeId });
+      const targetIsIdField = /_id$/.test(c.champ);
+      const nameFieldPrefix = c.champ.replace(/_id$/, "_name");
+      const freeNameField = targetIsIdField && schemaFields.includes(nameFieldPrefix) && !claimedBy.has(nameFieldPrefix)
+        ? nameFieldPrefix
+        : null;
+      if (freeNameField) {
+        colonnes[loserIdx].champ = freeNameField;
+        claimedBy.set(freeNameField, { idx: loserIdx, looksLikeId: false });
+      } else {
+        colonnes[loserIdx].champ = null;
+      }
+    });
+  }
 
   // 4. Calcul du profil de qualité et décision
   const avgConfidence = recognizedCols.size > 0

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BookOpen, Plus, Trash2, CheckCircle2, Sparkles } from "lucide-react";
+import { BookOpen, Plus, Trash2, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 

@@ -2,7 +2,7 @@ import React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Sparkles, MapPin, Globe, Calendar, DollarSign, Languages } from "lucide-react";
+import { Building2, Sparkles } from "lucide-react";
 
 export default function CompanyProfilePanel({ form, setForm }) {
   const handleChange = (field, val) => {

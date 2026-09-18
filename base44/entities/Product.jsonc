@@ -32,6 +32,9 @@
     "supplier_id": {
       "type": "string"
     },
+    "supplier_name": {
+      "type": "string"
+    },
     "purchase_cost": {
       "type": "number"
     },

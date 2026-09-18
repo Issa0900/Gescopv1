@@ -64,9 +64,9 @@ export const FIELD_ALIASES: Record<string, string> = {
   "premiere_commande": "first_purchase_date", "premiere_achat": "first_purchase_date",
   "derniere_commande": "last_purchase_date", "dernier_achat": "last_purchase_date",
   "date_acquisition": "acquisition_date", "date_d_acquisition": "acquisition_date",
-  "id_produit": "product_id", "nom_campagne": "campaign_name",
+  "nom_campagne": "campaign_name",
   "id_concurrent": "competitor_id",
-  "cout_unitaire": "unit_cost", "cout_total": "total_cost",
+  "cout_unitaire": "unit_cost",
   "prix_unitaire": "unit_price", "quantite_vendue": "quantity",
   "marge_brute": "gross_margin", "taux_clic": "ctr",
   "taux_conversion": "conversion_rate", "cout_par_clic": "cpc",
@@ -100,6 +100,7 @@ export function cleCanonique(k: string): string {
 // ecrites avec des espaces ("date d acquisition") et ne matchaient donc jamais
 // une colonne ponctuee ("Date d'acquisition").
 export const ALIAS_CANONIQUES: Record<string, string> = {
+
   "chiffre_d_affaires": "revenue",
   "chiffre_affaire": "revenue",
   "chiffre_affaires": "revenue",
@@ -240,7 +241,6 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "cost_of_goods": "cogs",
   "product_cost_sold": "cogs",
   "marge_brute_en_montant": "gross_profit",
-  "profit_brut": "gross_profit",
   "benefice_brut": "gross_profit",
   "resultat_brut": "gross_profit",
   "gain_brut": "gross_profit",
@@ -683,9 +683,7 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "products": "product_count",
   "id_produit": "product_id",
   "identifiant_produit": "product_id",
-  "code_produit": "product_id",
   "reference_produit": "product_id",
-  "sku": "product_id",
   "code_sku": "product_id",
   "product_id": "product_id",
   "product_code": "product_id",
@@ -696,7 +694,6 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "produit": "product_name",
   "designation": "product_name",
   "libelle_produit": "product_name",
-  "description_produit": "product_name",
   "product_name": "product_name",
   "item_name": "product_name",
   "product_description": "product_name",
@@ -1006,7 +1003,6 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "week": "week",
   "fiscal_week": "week",
   "weekly_period": "week",
-  "id_transaction": "transaction_id",
   "identifiant_transaction": "transaction_id",
   "numero_transaction": "transaction_id",
   "no_transaction": "transaction_id",
@@ -1073,7 +1069,6 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "market_country": "country",
   "magasin": "store",
   "boutique": "store",
-  "succursale": "store",
   "point_de_vente": "store",
   "magasin_physique": "store",
   "store": "store",
@@ -1098,17 +1093,13 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "budget_campagne": "budget",
   "depenses_reelles": "spend",
   "depense_reelle": "spend",
-  "depense": "spend",
-  "depenses": "spend",
   "cout_campagne": "spend",
-  "frais_marketing": "spend",
   "revenu_ventes": "revenue",
   "revenus_ventes": "revenue",
   "chiffre_affaires_campagne": "revenue",
   "ca_genere": "revenue",
   "ventes_generees": "revenue",
   "cout_achat": "unit_cost",
-  "cout_unitaire": "unit_cost",
   "prix_achat": "unit_cost",
   "purchase_cost": "unit_cost",
   "statut_paiement": "payment_status",
@@ -1275,15 +1266,10 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   // Kaggle Superstore / E-Commerce
   "ship_date": "shipping_date",
   "ship_mode": "shipping_method",
-  "customer_name": "customer_id", // Fallback to id or name
+  "customer_name": "customer_id",
   "segment": "customer_type",
-  "country": "country",
-  "city": "city",
-  "state": "region",
   "postal_code": "zip_code",
-  "region": "region",
   "sub_category": "category",
-  "sales": "revenue",
   "profit": "gross_margin",
   "discount": "discount",
   "quantity": "sales_quantity",
@@ -1328,8 +1314,6 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   
   // Kaggle Marketing / Ads
   "campaign_id": "campaign_id",
-  "clicks": "clicks",
-  "impressions": "impressions",
   "cost": "spend",
   "conversions": "conversions",
 
@@ -1338,24 +1322,13 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "tps": "tax_amount",
   "tvq": "tax_amount",
   "taxes": "tax_amount",
-  "rabais": "discount",
   "escompte": "discount",
   "no_facture": "order_id",
-  "date_vente": "date",
   "article": "product_name",
   "qte": "quantity",
-  "succursale": "location_id",
   
   // Finance / Accounting Data (Accounts receivable/payable, Cash flow)
-  "accounts_receivable": "amount", // Contextual mapping for debts
-  "creances": "amount",
-  "comptes_clients": "amount",
-  "accounts_payable": "expense_amount",
-  "comptes_fournisseurs": "expense_amount",
   "encours": "balance",
-  "solde_bancaire": "closing_cash",
-  "available_cash": "closing_cash",
-  "cash_flow": "amount", // General money movement
   
   // Inventory & Supply Chain
   "inventory": "inventory_level",
@@ -1363,26 +1336,19 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "stock_on_hand": "inventory_level",
   "qte_en_stock": "inventory_level",
   "qte_stock": "inventory_level",
-  "quantite_en_stock": "inventory_level",
-  "stock_quantity": "inventory_level",
   "stock_disponible": "inventory_level",
   "seuil_d_alerte": "reorder_point",
   "seuil_alerte": "reorder_point",
-  "seuil_reapprovisionnement": "reorder_point",
-  "point_de_commande": "reorder_point",
-  "reorder_point": "reorder_point",
   "valeur_du_stock_cout": "inventory_value",
   "valeur_stock_cout": "inventory_value",
   "valeur_stock_vente": "inventory_value",
   "valeur_du_stock": "inventory_value",
-  "valeur_stock": "inventory_value",
   "prix_de_vente": "selling_price",
   "prix_vente": "selling_price",
   "ugs": "sku",
   "fournisseur": "supplier_name",
   "supplier": "supplier_name",
   "lead_time": "delivery_time",
-  "cogs": "cogs", // Cost of Goods Sold
   "cout_des_marchandises": "cogs",
   "coutant": "unit_cost",
   
@@ -2300,34 +2266,119 @@ export function normalizeRow(
     }
     if (!r.date) {
       r.date = new Date().toISOString().slice(0, 10);
+    } else if (typeof r.date === "number") {
+      const d = new Date(Math.round((r.date - 25569) * 86400 * 1000));
+      if (!isNaN(d.getTime())) r.date = d.toISOString().slice(0, 10);
+    } else if (typeof r.date === "string" && r.date.includes(" ")) {
+      r.date = r.date.split(" ")[0];
     }
+
+    // Déduction succursale / canal
+    const channelRaw = String(r.channel || "");
+    if (!r.location_id) {
+      if (/l[ée]vis/i.test(channelRaw)) {
+        r.location_id = "Lévis";
+        r.channel = "magasin";
+      } else if (/sainte[- ]foy|ste[- ]foy/i.test(channelRaw)) {
+        r.location_id = "Sainte-Foy";
+        r.channel = "magasin";
+      } else if (/chicoutimi/i.test(channelRaw)) {
+        r.location_id = "Chicoutimi";
+        r.channel = "magasin";
+      } else if (/shopify|web|en[- ]ligne/i.test(channelRaw)) {
+        r.location_id = "Web / E-Commerce";
+        r.channel = "web";
+      } else if (/b2b|grossiste|commercial/i.test(channelRaw)) {
+        r.location_id = "Siège social";
+        r.channel = "b2b";
+      }
+    }
+    if (!r.succursale && r.location_id) r.succursale = r.location_id;
+
+    // Prix, remises et sous-total HT
     const qty = parseNumber(r.quantity) || 1;
-    const price = parseNumber(r.unit_price) || 0;
-    const cost = parseNumber(r.unit_cost) || 0;
-    if (r.total_revenue == null || r.total_revenue === "") {
-      if (price > 0) r.total_revenue = Math.round(qty * price * 100) / 100;
+    const discount = parseNumber(r.discount) || 0;
+    const grossPrice = parseNumber(r.price);
+    let netPrice = parseNumber(r.unit_price);
+
+    if ((netPrice == null || netPrice === 0) && grossPrice != null && grossPrice > 0) {
+      netPrice = Math.round(grossPrice * (1 - discount) * 100) / 100;
+      r.unit_price = netPrice;
     }
+    if ((grossPrice == null || grossPrice === 0) && netPrice != null && netPrice > 0) {
+      r.price = discount > 0 ? Math.round((netPrice / (1 - discount)) * 100) / 100 : netPrice;
+    }
+    const unitP = netPrice || grossPrice || 0;
+
+    if (r.subtotal == null || r.subtotal === "") {
+      r.subtotal = Math.round(qty * unitP * 100) / 100;
+    }
+    const subtot = parseNumber(r.subtotal) || 0;
+
+    // Calcul automatique fiscalité pancanadienne (TPS + TVQ / TVH / PST)
+    const isExempt = /wendake|s[ée]paq/i.test(String(r.customer_name || "")) ||
+      r.customer_id === "CL-00623" || r.customer_id === "CL-00945";
+
+    if (r.tax_federal == null || r.tax_federal === "") {
+      r.tax_federal = isExempt ? 0 : Math.round(subtot * 0.05 * 100) / 100;
+    }
+
+    if (r.tax_provincial == null || r.tax_provincial === "") {
+      if (isExempt) {
+        r.tax_provincial = 0;
+      } else {
+        const prov = String(r.province || "QC").toUpperCase().trim();
+        if (prov === "QC") {
+          r.tax_provincial = Math.round(subtot * 0.09975 * 100) / 100;
+        } else if (prov === "ON") {
+          r.tax_provincial = Math.round(subtot * 0.08 * 100) / 100;
+        } else if (["NB", "NS", "NL", "PE"].includes(prov)) {
+          r.tax_provincial = Math.round(subtot * 0.10 * 100) / 100;
+        } else if (["BC", "MB"].includes(prov)) {
+          r.tax_provincial = Math.round(subtot * 0.07 * 100) / 100;
+        } else if (prov === "SK") {
+          r.tax_provincial = Math.round(subtot * 0.06 * 100) / 100;
+        } else {
+          r.tax_provincial = 0;
+        }
+      }
+    }
+
+    if (r.tax == null || r.tax === "") {
+      const fedTax = parseNumber(r.tax_federal) || 0;
+      const provTax = parseNumber(r.tax_provincial) || 0;
+      r.tax = Math.round((fedTax + provTax) * 100) / 100;
+    }
+
+    if (r.total == null || r.total === "") {
+      r.total = Math.round((subtot + (parseNumber(r.tax) || 0)) * 100) / 100;
+    }
+
+    if (r.total_revenue == null || r.total_revenue === "") {
+      r.total_revenue = subtot;
+    }
+    const cost = parseNumber(r.unit_cost) || 0;
     if (r.total_cost == null || r.total_cost === "") {
       if (cost > 0) r.total_cost = Math.round(qty * cost * 100) / 100;
     }
     if (r.gross_profit == null || r.gross_profit === "") {
-      const totRev = parseNumber(r.total_revenue);
-      const totCost = parseNumber(r.total_cost);
-      if (totRev != null && totCost != null) r.gross_profit = Math.round((totRev - totCost) * 100) / 100;
+      const totRev = parseNumber(r.total_revenue) || 0;
+      const totCost = parseNumber(r.total_cost) || 0;
+      r.gross_profit = Math.round((totRev - totCost) * 100) / 100;
     }
     if (r.gross_margin == null || r.gross_margin === "") {
-      const totRev = parseNumber(r.total_revenue);
-      const profit = parseNumber(r.gross_profit);
-      if (totRev && profit != null) r.gross_margin = Math.round((profit / totRev) * 10000) / 100;
+      const totRev = parseNumber(r.total_revenue) || 0;
+      const profit = parseNumber(r.gross_profit) || 0;
+      if (totRev > 0) r.gross_margin = Math.round((profit / totRev) * 10000) / 100;
     }
   }
 
   // --- EXECUTIVE SUMMARY RESCUE HOOKS ---
   if (entityName === "ExecutiveSummary") {
     if (!r.location_id) {
-      r.location_id = r.succursale || r.store || r.location || r.ville || r.site || r.id;
+      r.location_id = r.succursale || r.store || r.location || r.ville || r.site || "SIEGE";
     }
-    if (!r.summary_id && r.location_id) {
+    if (!r.summary_id) {
       r.summary_id = `SUM-${stripAccents(String(r.location_id)).toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
     }
     const rev = parseNumber(r.total_revenue);
@@ -2343,6 +2394,31 @@ export function normalizeRow(
 
   // --- EMPLOYEE RESCUE HOOKS ---
   if (entityName === "Employee") {
+    const sal = parseNumber(r.annual_salary) || 0;
+    if (sal > 0) {
+      if (r.total_social_charges == null || r.total_social_charges === "") {
+        const rrq = parseNumber(r.cpp_employer) || 0;
+        const rqap = parseNumber(r.qpip_employer) || 0;
+        const cnesst = parseNumber(r.cnesst) || 0;
+        const fss = parseNumber(r.fss_qc) || 0;
+        const assurance = parseNumber(r.group_insurance) || 0;
+        const reer = parseNumber(r.rrsp_employer) || 0;
+        const totalRate = rrq + rqap + cnesst + fss + assurance + reer;
+        if (totalRate > 0) {
+          r.total_social_charges = Math.round(sal * totalRate * 100) / 100;
+        }
+      }
+      if (r.total_employer_cost == null || r.total_employer_cost === "") {
+        const charges = parseNumber(r.total_social_charges) || 0;
+        r.total_employer_cost = Math.round((sal + charges) * 100) / 100;
+      }
+    }
+    if (r.seniority_years == null && r.hire_date) {
+      const hireY = new Date(r.hire_date).getFullYear();
+      if (!isNaN(hireY)) {
+        r.seniority_years = Math.max(0, 2026 - hireY);
+      }
+    }
     const deptRaw = String(r.department || "").trim();
     const allowedDepts = ["direction", "ventes", "marketing", "logistique", "administration", "service_client", "atelier"];
     const deptNorm = stripAccents(deptRaw.toLowerCase());
@@ -2380,6 +2456,46 @@ export function normalizeRow(
     }
     if (r.purchase_cost == null && r.unit_cost != null) {
       r.purchase_cost = r.unit_cost;
+    }
+    if (r.gross_margin == null || r.gross_margin === "") {
+      const price = parseNumber(r.selling_price);
+      const cost = parseNumber(r.purchase_cost);
+      if (price && cost != null) {
+        r.gross_margin = Math.round(((price - cost) / price) * 10000) / 100;
+      }
+    }
+  }
+
+  // --- INVENTORY RESCUE HOOKS ---
+  if (entityName === "Inventory") {
+    if (r.closing_stock == null && r.inventory_level != null) {
+      r.closing_stock = r.inventory_level;
+    }
+    const closing = parseNumber(r.closing_stock) || 0;
+    const cost = parseNumber(r.unit_cost) || parseNumber(r.purchase_cost) || 0;
+    if (r.inventory_value == null || r.inventory_value === "") {
+      if (closing > 0 && cost > 0) {
+        r.inventory_value = Math.round(closing * cost * 100) / 100;
+      }
+    }
+  }
+
+  // --- ASSET RESCUE HOOKS ---
+  if (entityName === "Asset") {
+    if (!r.asset_id && r.description) {
+      r.asset_id = `AST-${stripAccents(String(r.description)).toUpperCase().replace(/[^A-Z0-9]/g, "_").slice(0, 20)}`;
+    }
+    if (r.net_book_value == null && r.initial_cost != null && r.accumulated_depreciation != null) {
+      const initial = parseNumber(r.initial_cost) || 0;
+      const accum = parseNumber(r.accumulated_depreciation) || 0;
+      r.net_book_value = Math.max(0, initial - accum);
+    }
+    if (!r.location_id) {
+      const text = `${r.description || ""} ${r.historical_comment || ""}`;
+      if (/l[ée]vis/i.test(text)) r.location_id = "Lévis";
+      else if (/sainte[- ]foy|ste[- ]foy/i.test(text)) r.location_id = "Sainte-Foy";
+      else if (/b[ée]cancour/i.test(text)) r.location_id = "Bécancour";
+      else r.location_id = "Siège social";
     }
   }
 

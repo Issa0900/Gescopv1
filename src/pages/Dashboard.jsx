@@ -208,7 +208,8 @@ export default function Dashboard() {
     
     // Fallback temporaire pour les statistiques non couvertes
     const orderCount = fOrders.length;
-    const orderRevenue = fOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
+    // total_revenue is the field the import pipeline actually populates.
+    const orderRevenue = fOrders.reduce((s, o) => s + (Number(o.total_revenue) || Number(o.total) || 0), 0);
 
     // Full monthly data (ALL records, not period-filtered) for charts and trends
     const financialMonthly = financialMonthlySeries(transactions || [], expenseRecords || []);

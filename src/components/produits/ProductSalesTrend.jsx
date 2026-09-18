@@ -48,7 +48,8 @@ export default function ProductSalesTrend({ orders }) {
       if (!m || m === cm) return;
       if (!map[m]) map[m] = { month: m, quantite: 0, revenu: 0, commandes: 0 };
       map[m].quantite += Number(o.quantity) || 0;
-      map[m].revenu += Number(o.total) || 0;
+      // total_revenue is the field the import pipeline actually populates.
+      map[m].revenu += Number(o.total_revenue) || Number(o.total) || 0;
       map[m].commandes += 1;
     });
     return Object.values(map)

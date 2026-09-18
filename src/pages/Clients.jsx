@@ -68,12 +68,18 @@ export default function Clients() {
   // overstated concentration, top-client ranking and every client's own CA.
   const revByCustomer = {};
   const ordersByCustomer = {};
+  const lastOrderByCustomer = {};
   validSalesOrders(orders).forEach((o) => {
     const cid = o.customer_id;
     if (!cid) return;
-    revByCustomer[cid] = (revByCustomer[cid] || 0) + (Number(o.total) || 0);
+    // total_revenue is the field the import pipeline actually populates.
+    revByCustomer[cid] = (revByCustomer[cid] || 0) + (Number(o.total_revenue) || Number(o.total) || 0);
     ordersByCustomer[cid] = (ordersByCustomer[cid] || 0) + 1;
+    if (o.date && (!lastOrderByCustomer[cid] || o.date > lastOrderByCustomer[cid])) {
+      lastOrderByCustomer[cid] = o.date;
+    }
   });
+  const todayKey = new Date().toISOString().slice(0, 10);
   const enriched = customers.map((c) => ({
     ...c,
     _total_revenue: revByCustomer[c.customer_id] || 0,
@@ -81,6 +87,10 @@ export default function Clients() {
     _aov: (ordersByCustomer[c.customer_id] || 0) > 0
       ? (revByCustomer[c.customer_id] || 0) / ordersByCustomer[c.customer_id]
       : 0,
+    _last_order_date: lastOrderByCustomer[c.customer_id] || null,
+    _recency_days: lastOrderByCustomer[c.customer_id]
+      ? Math.round((new Date(todayKey).getTime() - new Date(lastOrderByCustomer[c.customer_id]).getTime()) / 86400000)
+      : null,
     // churn_risk is imported as a 0–1 ratio; displaying it raw showed "1%" for
     // a client with a 70% departure risk.
     // null when the column is absent - rendered as « - ». Showing 0 % on every
@@ -101,6 +111,11 @@ export default function Clients() {
   const churnRate = churn.rate === null ? null : Math.round(churn.rate);
   // "0 client à risque" is only meaningful if the risk column was imported.
   const hasChurnRisk = columnPresent(customers, "churn_risk");
+  // Optional columns: shown only when at least one customer actually
+  // carries them, so an import without postal codes/loyalty points doesn't
+  // get a table full of empty dashes.
+  const hasPostalCode = columnPresent(customers, "postal_code");
+  const hasLoyaltyPoints = columnPresent(customers, "loyalty_points");
   const totalRevenue = enriched.reduce((s, c) => s + (c._total_revenue || 0), 0);
   const sorted = [...enriched].sort((a, b) => (b._total_revenue || 0) - (a._total_revenue || 0));
   const top5Revenue = sorted.slice(0, 5).reduce((s, c) => s + (c._total_revenue || 0), 0);
@@ -124,6 +139,39 @@ export default function Clients() {
     name: `${c.first_name || ""} ${c.last_name || ""}`.trim() || c.customer_id,
     revenue: Math.round(c._total_revenue || 0),
   }));
+
+  // === Scoring RFM (Récence, Fréquence, Montant) ===
+  // Calculable dès qu'il y a des commandes datées - aucune nouvelle colonne
+  // requise. Segments définis selon le guide fourni : Champions (achète
+  // souvent, récemment, gros montant), Fidèles à réactiver (achetait
+  // souvent mais plus depuis 180j+), Comptes à risque financier (gros
+  // montant mais statut compromis ou crédit saturé).
+  const buyers = enriched.filter((c) => c._total_orders > 0);
+  const hasRfm = buyers.length > 0;
+  let rfm = null;
+  if (hasRfm) {
+    const revenues = buyers.map((c) => c._total_revenue).sort((a, b) => a - b);
+    const p75Revenue = revenues[Math.floor(revenues.length * 0.75)] ?? 0;
+    const medianFrequency = (() => {
+      const freqs = buyers.map((c) => c._total_orders).sort((a, b) => a - b);
+      return freqs[Math.floor(freqs.length / 2)] ?? 1;
+    })();
+    const champions = buyers.filter((c) =>
+      c._recency_days !== null && c._recency_days <= 60
+      && c._total_orders >= Math.max(2, medianFrequency)
+      && c._total_revenue >= p75Revenue
+    );
+    const toReactivate = buyers.filter((c) =>
+      c._total_orders >= Math.max(2, medianFrequency)
+      && c._recency_days !== null && c._recency_days > 180
+    );
+    const atRisk = buyers.filter((c) =>
+      c._total_revenue >= (revenues[Math.floor(revenues.length * 0.5)] ?? 0)
+      && (c.status === "inactif" || c.status === "perdu"
+        || (c.credit_limit > 0 && c._total_revenue >= c.credit_limit * 0.8))
+    );
+    rfm = { champions, toReactivate, atRisk };
+  }
 
   return (
     <div className="space-y-8">
@@ -188,12 +236,38 @@ export default function Clients() {
         </div>
       </div>
 
+      {hasRfm && (
+        <div className="rounded-xl border border-border bg-card p-6">
+          <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Scoring RFM (Récence, Fréquence, Montant)</h2>
+          <p className="mb-4 text-xs text-muted-foreground">Segmentation calculée sur l'historique de commandes.</p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+              <p className="text-xs font-medium uppercase text-emerald-700">Champions</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-700">{rfm.champions.length}</p>
+              <p className="mt-1 text-xs text-emerald-700/80">Achats récents (≤60j), fréquents, panier élevé — priorité B2B/revendeurs</p>
+            </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <p className="text-xs font-medium uppercase text-amber-700">Fidèles à réactiver</p>
+              <p className="mt-1 text-2xl font-bold text-amber-700">{rfm.toReactivate.length}</p>
+              <p className="mt-1 text-xs text-amber-700/80">Achetaient souvent, aucune commande depuis plus de 180 jours</p>
+            </div>
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+              <p className="text-xs font-medium uppercase text-red-700">Comptes à risque financier</p>
+              <p className="mt-1 text-2xl font-bold text-red-700">{rfm.atRisk.length}</p>
+              <p className="mt-1 text-xs text-red-700/80">CA élevé mais statut compromis ou crédit saturé (&gt;80%)</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full min-w-[700px] text-sm">
           <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
             <tr>
               <th className="px-4 py-3 font-medium">Client</th>
               <th className="px-4 py-3 font-medium">Segment</th>
+              {hasPostalCode && <th className="px-4 py-3 font-medium">Code postal</th>}
+              {hasLoyaltyPoints && <th className="px-4 py-3 font-medium">Points fidélité</th>}
               <th className="px-4 py-3 font-medium">Commandes</th>
               <th className="px-4 py-3 font-medium">CA total</th>
               <th className="px-4 py-3 font-medium">Panier moyen</th>
@@ -211,6 +285,8 @@ export default function Clients() {
                     {segmentLabels[c.segment] || c.segment || "-"}
                   </span>
                 </td>
+                {hasPostalCode && <td className="px-4 py-3">{c.postal_code || "-"}</td>}
+                {hasLoyaltyPoints && <td className="px-4 py-3">{c.loyalty_points != null ? c.loyalty_points.toLocaleString() : "-"}</td>}
                 <td className="px-4 py-3">{c._total_orders}</td>
                 <td className="px-4 py-3 font-medium">{Math.round(c._total_revenue || 0).toLocaleString()} $</td>
                 <td className="px-4 py-3">{Math.round(c._aov || 0).toLocaleString()} $</td>

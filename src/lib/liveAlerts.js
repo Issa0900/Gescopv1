@@ -230,14 +230,15 @@ export function computeLiveAlerts(data) {
     const revenueByProduct = {};
     salesOrders.forEach(o => {
       const pid = o.product_id;
-      if (pid) revenueByProduct[pid] = (revenueByProduct[pid] || 0) + (Number(o.total) || 0);
+      // total_revenue is the field the import pipeline actually populates.
+      if (pid) revenueByProduct[pid] = (revenueByProduct[pid] || 0) + (Number(o.total_revenue) || Number(o.total) || 0);
     });
     // Trier les produits en rupture par leur revenu historique
     const rupturesWithRev = ruptures.map(r => ({ ...r, rev: revenueByProduct[r.product_id] || 0 }));
     rupturesWithRev.sort((a, b) => b.rev - a.rev);
 
     // Si le produit en rupture générait des revenus significatifs (> 5% du revenu total ou juste un top 5 absolu)
-    const totalOrderRev = salesOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    const totalOrderRev = salesOrders.reduce((sum, o) => sum + (Number(o.total_revenue) || Number(o.total) || 0), 0);
     if (totalOrderRev > 0 && rupturesWithRev[0].rev > (totalOrderRev * 0.02)) {
       out.push(
         alert(

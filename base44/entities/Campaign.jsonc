@@ -63,6 +63,9 @@
     "roas": {
       "type": "number"
     },
+    "cpc": {
+      "type": "number"
+    },
     "status": {
       "type": "string",
       "enum": [

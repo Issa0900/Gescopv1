@@ -1,0 +1,19 @@
+{
+  "name": "Asset",
+  "plural": "Assets",
+  "fields": [
+    { "name": "asset_id", "type": "string" },
+    { "name": "description", "type": "string" },
+    { "name": "acquisition_date", "type": "date" },
+    { "name": "dpa_class", "type": "string" },
+    { "name": "dpa_rate", "type": "number" },
+    { "name": "initial_cost", "type": "number" },
+    { "name": "accumulated_depreciation", "type": "number" },
+    { "name": "net_book_value", "type": "number" },
+    { "name": "location_id", "type": "string" },
+    { "name": "historical_comment", "type": "string" },
+    { "name": "import_id", "type": "string" },
+    { "name": "fingerprint", "type": "string" },
+    { "name": "original_data", "type": "string" }
+  ]
+}

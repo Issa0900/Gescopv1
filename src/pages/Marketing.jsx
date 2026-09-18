@@ -9,6 +9,7 @@ import {
   LineChart, Line,
 } from "recharts";
 import { fetchAll } from "@/lib/fetchAll";
+import { columnPresent } from "@/lib/metrics";
 
 const num = (value) => Number(value) || 0;
 
@@ -77,6 +78,9 @@ export default function Marketing() {
   // Coverage of the daily records, which drive the monthly trend: campaigns
   // carry no dates in the import, so only dated daily rows can be trended.
   const dailyCampaigns = new Set((daily || []).map((d) => d.campaign_id).filter(Boolean)).size;
+  // Shown only when at least one campaign actually carries a CPC, so an
+  // import without it doesn't get a column full of dashes.
+  const hasCpc = columnPresent(campaigns, "cpc");
 
   // Acquisitions measured on the customer file. The current month is excluded:
   // it is partial and would read as a collapse in acquisition.
@@ -221,6 +225,7 @@ export default function Marketing() {
               <th className="px-4 py-3 font-medium">Revenus</th>
               <th className="px-4 py-3 font-medium">ROAS</th>
               <th className="px-4 py-3 font-medium">CAC</th>
+              {hasCpc && <th className="px-4 py-3 font-medium">CPC</th>}
               <th className="px-4 py-3 font-medium">Conversions</th>
               <th className="px-4 py-3 font-medium">Statut</th>
             </tr>
@@ -246,6 +251,7 @@ export default function Marketing() {
                     <span className={Number(roas) >= 2 ? "text-emerald-600 font-medium" : Number(roas) < 1 ? "text-red-600 font-medium" : ""}>{roas}</span>
                   </td>
                   <td className="px-4 py-3">{cac === "-" ? "-" : `${cac} $`}</td>
+                  {hasCpc && <td className="px-4 py-3">{c.cpc != null ? `${Number(c.cpc).toFixed(2)} $` : "-"}</td>}
                   <td className="px-4 py-3">{conversions}</td>
                   <td className="px-4 py-3">
                     <span className={c.status === "active" ? "text-emerald-600" : c.status === "terminee" ? "text-muted-foreground" : "text-amber-600"}>

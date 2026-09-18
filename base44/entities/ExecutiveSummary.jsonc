@@ -40,9 +40,7 @@
       "type": "string"
     }
   },
-  "required": [
-    "location_id"
-  ],
+  "required": [],
   "rls": {
     "read": {
       "created_by_id": "{{user.id}}"

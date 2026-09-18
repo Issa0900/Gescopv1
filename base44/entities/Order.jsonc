@@ -37,6 +37,9 @@
     "quantity": {
       "type": "number"
     },
+    "price": {
+      "type": "number"
+    },
     "unit_price": {
       "type": "number"
     },
@@ -115,6 +118,15 @@
     },
     "region": {
       "type": "string"
+    },
+    "province": {
+      "type": "string"
+    },
+    "tax_federal": {
+      "type": "number"
+    },
+    "tax_provincial": {
+      "type": "number"
     },
     "location_id": {
       "type": "string"

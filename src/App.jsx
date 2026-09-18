@@ -42,6 +42,8 @@ const Tresorerie = lazy(() => import('@/pages/Tresorerie'));
 const Finance = lazy(() => import('@/pages/Finance'));
 const RessourcesHumaines = lazy(() => import('@/pages/RessourcesHumaines'));
 const Achats = lazy(() => import('@/pages/Achats'));
+const Immobilisations = lazy(() => import('@/pages/Immobilisations'));
+const Succursales = lazy(() => import('@/pages/Succursales'));
 const Audit = lazy(() => import('@/pages/Audit'));
 
 const AuthenticatedApp = () => {
@@ -96,6 +98,8 @@ const AuthenticatedApp = () => {
           <Route path="/marketing" element={<Marketing />} />
           <Route path="/rh" element={<RessourcesHumaines />} />
           <Route path="/achats" element={<Achats />} />
+          <Route path="/immobilisations" element={<Immobilisations />} />
+          <Route path="/succursales" element={<Succursales />} />
           <Route path="/tresorerie" element={<Tresorerie />} />
           <Route path="/finance" element={<Finance />} />
           <Route path="/kpis" element={<Kpis />} />

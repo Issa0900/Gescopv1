@@ -5,12 +5,12 @@ import { base44 } from "@/api/base44Client";
 import EmptyState from "@/components/EmptyState";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
-import { Users, Banknote, Upload, PieChart, TrendingUp, Building2, UserCircle, Briefcase } from "lucide-react";
+import { Users, Banknote, Upload, PieChart, TrendingUp, Building2, UserCircle, Briefcase, Percent } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { motion } from "@/lib/fake-framer-motion.jsx";
 import DataErrorState from "@/components/DataErrorState";
 import { fetchAll } from "@/lib/fetchAll";
-import { validSalesOrders } from "@/lib/metrics";
+import { validSalesOrders, columnPresent } from "@/lib/metrics";
 
 function formatCurrency(val) {
   if (val === null || val === undefined) return "-";
@@ -64,7 +64,8 @@ export default function RessourcesHumaines() {
     // "CA par employé" / "Poids sur CA" don't count revenue that was reversed.
     validSalesOrders(data.orders).forEach((o) => {
       const month = String(o.date || "").slice(0, 7);
-      const total = Number(o.total);
+      // total_revenue is the field the import pipeline actually populates.
+      const total = Number(o.total_revenue) || Number(o.total);
       if (month && Number.isFinite(total)) add(o, month, "total_revenue", Math.max(0, total));
     });
     const rows = Object.values(byMonth).sort((a, b) => a.date.localeCompare(b.date));
@@ -109,8 +110,15 @@ export default function RessourcesHumaines() {
     const revPerEmp = headcount > 0 ? (totalRev / headcount) : 0;
     const ratio = totalRev > 0 ? (totalPayroll / totalRev) : 0;
 
-    return { 
-      metrics: { headcount, totalPayroll, revPerEmp, ratio, totalRev },
+    // Shown only when at least one employee actually carries a commission
+    // rate, so a roster imported without one doesn't get a stat card of "0%".
+    const withCommission = activeEmployees.filter((e) => e.commission_rate !== null && e.commission_rate !== undefined && e.commission_rate !== "");
+    const avgCommission = withCommission.length > 0
+      ? withCommission.reduce((s, e) => s + (Number(e.commission_rate) || 0), 0) / withCommission.length
+      : null;
+
+    return {
+      metrics: { headcount, totalPayroll, revPerEmp, ratio, totalRev, avgCommission },
       distribution: dist
     };
   }, [data, timeSeries]);
@@ -174,12 +182,20 @@ export default function RessourcesHumaines() {
           icon={TrendingUp} 
           accent="bg-emerald-100 text-emerald-600" 
         />
-        <StatCard 
-          label="Poids sur CA" 
-          value={`${(metrics.ratio * 100).toFixed(1)}%`} 
-          icon={PieChart} 
-          accent="bg-purple-100 text-purple-600" 
+        <StatCard
+          label="Poids sur CA"
+          value={`${(metrics.ratio * 100).toFixed(1)}%`}
+          icon={PieChart}
+          accent="bg-purple-100 text-purple-600"
         />
+        {metrics.avgCommission !== null && (
+          <StatCard
+            label="Taux de commission moyen"
+            value={`${(metrics.avgCommission <= 1 ? metrics.avgCommission * 100 : metrics.avgCommission).toFixed(1)}%`}
+            icon={Percent}
+            accent="bg-amber-100 text-amber-600"
+          />
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -273,6 +289,9 @@ export default function RessourcesHumaines() {
                 <th className="px-6 py-4 font-medium">Département</th>
                 <th className="px-6 py-4 font-medium">Rôle</th>
                 <th className="px-6 py-4 font-medium">Contrat</th>
+                {columnPresent(data.employees, "commission_rate") && (
+                  <th className="px-6 py-4 font-medium">Commission</th>
+                )}
                 <th className="px-6 py-4 font-medium text-right">Statut</th>
               </tr>
             </thead>
@@ -300,6 +319,13 @@ export default function RessourcesHumaines() {
                       {emp.employment_type ? String(emp.employment_type).replace('_', ' ') : "-"}
                     </div>
                   </td>
+                  {columnPresent(data.employees, "commission_rate") && (
+                    <td className="px-6 py-4 text-slate-600">
+                      {emp.commission_rate != null
+                        ? `${(emp.commission_rate <= 1 ? emp.commission_rate * 100 : emp.commission_rate).toFixed(1)}%`
+                        : "-"}
+                    </td>
+                  )}
                   <td className="px-6 py-4 text-right">
                     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
                       emp.status === 'actif' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20' :
@@ -315,7 +341,7 @@ export default function RessourcesHumaines() {
               ))}
               {data.employees.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
+                  <td colSpan={columnPresent(data.employees, "commission_rate") ? 6 : 5} className="px-6 py-12 text-center">
                     <UserCircle className="mx-auto h-12 w-12 text-slate-200 mb-3" />
                     <p className="text-muted-foreground">Aucun employé enregistré dans l'annuaire.</p>
                   </td>

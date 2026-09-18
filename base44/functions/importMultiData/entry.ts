@@ -87,7 +87,13 @@ async function planPourFeuille(
   } catch { /* la memoire est un confort, jamais un prerequis */ }
 
   // 2. Analyse par l'IA, filet deterministe derriere.
-  const secours = planParRegles(matrix, nomFichier, manual || null);
+  // `label` (nom de la feuille, ex. "Sommaire Exécutif") et non `nomFichier`
+  // (nom du classeur entier, ex. "Entreprise_Simulation_50Ans_Canada_QC.xlsx") :
+  // la classification par nom ("sommaire", "executif"...) dans planParRegles
+  // ne matchait jamais rien tant qu'elle recevait le nom du fichier, faisant
+  // manquer la detection de type meme quand la feuille s'appelait explicitement
+  // "Sommaire Exécutif".
+  const secours = planParRegles(matrix, label, manual || null);
   const res = await analyserFichier(
     (args) => base44.asServiceRole.integrations.Core.InvokeLLM({
       prompt: args.prompt,

@@ -100,6 +100,7 @@ export const DOMAINS = Object.freeze({
   RH: "rh",
   TRESORERIE: "tresorerie",
   CLIENTS: "clients",
+  ACHATS: "achats",
 });
 
 /**

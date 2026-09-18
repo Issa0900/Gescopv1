@@ -21,12 +21,10 @@ import {
   ExternalLink,
   Sparkles,
   ShieldAlert,
-  ArrowUpRight,
   Info,
   Calendar,
   Layers,
   Compass,
-  CheckCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 

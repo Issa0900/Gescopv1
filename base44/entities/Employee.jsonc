@@ -49,6 +49,9 @@
     "hourly_rate": {
       "type": "number"
     },
+    "commission_rate": {
+      "type": "number"
+    },
     "weekly_hours": {
       "type": "number"
     },
@@ -78,6 +81,36 @@
         "conge",
         "essai"
       ]
+    },
+    "union_status": {
+      "type": "string"
+    },
+    "cpp_employer": {
+      "type": "number"
+    },
+    "qpip_employer": {
+      "type": "number"
+    },
+    "cnesst": {
+      "type": "number"
+    },
+    "fss_qc": {
+      "type": "number"
+    },
+    "group_insurance": {
+      "type": "number"
+    },
+    "rrsp_employer": {
+      "type": "number"
+    },
+    "total_social_charges": {
+      "type": "number"
+    },
+    "total_employer_cost": {
+      "type": "number"
+    },
+    "seniority_years": {
+      "type": "number"
     },
     "import_id": {
       "type": "string"

@@ -8,9 +8,7 @@ import {
   Bell,
   ShieldCheck,
   FileLock2,
-  LogOut,
-  Moon,
-  Sun
+  LogOut
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";

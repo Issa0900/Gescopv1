@@ -11,7 +11,7 @@ import { useCompany } from "@/hooks/useCompany";
 import { getStockAlertSettings, isStockAlert, computeStockAlerts } from "@/lib/stockAlerts";
 import { latestByKey, currentMonthKey } from "@/lib/periods";
 import { fetchAll } from "@/lib/fetchAll";
-import { validSalesOrders } from "@/lib/metrics";
+import { validSalesOrders, columnPresent } from "@/lib/metrics";
 import DataErrorState from "@/components/DataErrorState";
 import { Package, AlertTriangle, Boxes, DollarSign } from "lucide-react";
 import {
@@ -48,6 +48,36 @@ function formatMonthLabel(m) {
   return monthLabels[mm] || m;
 }
 
+// Product and Inventory are imported as two separate entities, and a stock
+// export that never had a distinct "catalogue" sheet (SKU + description +
+// price only, no dedicated Product rows) lands entirely in Inventory. Without
+// this fallback the page showed "Aucun produit" for such a company even
+// though its stock — and every field this page needs (cost, price, margin,
+// reorder point) — was sitting right there in Inventory, one row per product
+// per date.
+function deriveProductsFromInventory(inventory) {
+  const latest = latestByKey(inventory || [], "product_id", "date");
+  return latest
+    .filter((i) => i.product_id)
+    .map((i) => {
+      const cost = Number(i.unit_cost) || 0;
+      const price = Number(i.selling_price) || 0;
+      return {
+        id: i.id,
+        product_id: i.product_id,
+        product_name: i.product_name || i.product_id,
+        category: i.category || null,
+        supplier_id: i.supplier_id || null,
+        purchase_cost: cost,
+        selling_price: price,
+        gross_margin: price > 0 ? ((price - cost) / price) * 100 : 0,
+        inventory_level: i.closing_stock != null ? Number(i.closing_stock) : null,
+        reorder_point: i.reorder_point != null ? Number(i.reorder_point) : null,
+        status: i.stock_status || null,
+      };
+    });
+}
+
 export default function Produits() {
   const [filters, setFilters] = useState({ search: "", category: "all", status: "all" });
   const { company, refetch: refetchCompany } = useCompany();
@@ -65,7 +95,7 @@ export default function Produits() {
     && (draft.threshold !== savedSettings.threshold
       || draft.useReorderPoint !== savedSettings.useReorderPoint
       || draft.dormantMonths !== savedSettings.dormantMonths);
-  const { data: products, isLoading: lp, isError: productsError, refetch: refetchProducts } = useQuery({
+  const { data: productsRaw, isLoading: lp, isError: productsError, refetch: refetchProducts } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
       const rows = await fetchAll(base44.entities.Product);
@@ -101,6 +131,9 @@ export default function Produits() {
       />
     );
   }
+  const usingInventoryFallback = !(productsRaw && productsRaw.length > 0);
+  const products = usingInventoryFallback ? deriveProductsFromInventory(inventory) : productsRaw;
+
   if (!products || products.length === 0) {
     return (
       <EmptyState
@@ -112,6 +145,9 @@ export default function Produits() {
   }
 
   const total = products.length;
+  // Shown only when at least one product actually carries a supplier, so an
+  // import without one doesn't get a column full of dashes.
+  const hasSupplier = columnPresent(products, "supplier_id") || columnPresent(products, "supplier_name");
   const lowMargin = products.filter((p) => (p.gross_margin || 0) < 15);
   const avgMargin = total > 0
     ? products.reduce((s, p) => s + (Number(p.gross_margin) || 0), 0) / total
@@ -151,6 +187,28 @@ export default function Produits() {
   const completeMonths = Array.from(
     new Set((orders || []).map((o) => (o.date || "").slice(0, 7)).filter(Boolean)),
   ).filter((m) => m !== cm).sort();
+  // === Analyse saisonnière ===
+  // Regroupe le CA par mois calendaire (jan-déc, cumulé sur toutes les
+  // années présentes) pour révéler des cycles récurrents (ex. pic hiver vs
+  // été) indépendamment de la catégorie précise du catalogue - fonctionne
+  // sur n'importe quel jeu de données, pas seulement plein-air/QC.
+  const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+  const revenueByCalendarMonth = Array(12).fill(0);
+  validSalesOrders(orders).forEach((o) => {
+    if (!o.date) return;
+    const monthIdx = Number(o.date.slice(5, 7)) - 1;
+    if (monthIdx < 0 || monthIdx > 11) return;
+    revenueByCalendarMonth[monthIdx] += Number(o.total_revenue) || Number(o.total) || 0;
+  });
+  const hasSeasonality = revenueByCalendarMonth.some((v) => v > 0);
+  const seasonalityData = monthNames.map((name, i) => ({ mois: name, revenu: Math.round(revenueByCalendarMonth[i]) }));
+  const avgMonthlyRevenue = hasSeasonality ? revenueByCalendarMonth.reduce((s, v) => s + v, 0) / 12 : 0;
+  const peakMonths = seasonalityData
+    .filter((m) => m.revenu > avgMonthlyRevenue * 1.15)
+    .sort((a, b) => b.revenu - a.revenu)
+    .slice(0, 3)
+    .map((m) => m.mois);
+
   const windowMonths = new Set(completeMonths.slice(-3));
   const windowLabel = windowMonths.size > 0
     ? `${formatMonthLabel(completeMonths.slice(-3)[0])} → ${formatMonthLabel(completeMonths[completeMonths.length - 1])}`
@@ -166,7 +224,9 @@ export default function Produits() {
     const pid = o.product_id;
     if (!pid) return;
     const qty = Number(o.quantity) || 0;
-    const rev = Number(o.total) || 0;
+    // total_revenue is the field the import pipeline actually populates
+    // (see domainScores.js) - total alone silently read 0 for every order.
+    const rev = Number(o.total_revenue) || Number(o.total) || 0;
     totalSalesByProduct[pid] = (totalSalesByProduct[pid] || 0) + qty;
     totalRevByProduct[pid] = (totalRevByProduct[pid] || 0) + rev;
     if (windowMonths.size > 0 && !windowMonths.has(m)) return;
@@ -239,6 +299,11 @@ export default function Produits() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Produits & Inventaire</h1>
         <p className="mt-1 text-muted-foreground">Performance produits, marges, rotation de stock et alertes d'inventaire.</p>
+        {usingInventoryFallback && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Aucune donnée de catalogue produit importée : cette liste et les marges sont dérivées de vos données de stock (inventaire).
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -281,6 +346,29 @@ export default function Produits() {
         <p className="mb-4 text-xs text-muted-foreground">Quantité vendue (axe gauche) - revenu $ (axe droit) · 12 derniers mois</p>
         <ProductSalesTrend orders={orders} />
       </div>
+
+      {hasSeasonality && (
+        <div className="rounded-xl border border-border bg-card p-6">
+          <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Analyse saisonnière</h2>
+          <p className="mb-4 text-xs text-muted-foreground">
+            CA cumulé par mois calendaire (toutes années confondues)
+            {peakMonths.length > 0 ? ` · pics : ${peakMonths.join(", ")}` : ""}
+          </p>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={seasonalityData} margin={{ left: 10, right: 10 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="mois" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(v) => `${v.toLocaleString()} $`} />
+              <Bar dataKey="revenu" radius={[4, 4, 0, 0]}>
+                {seasonalityData.map((m, i) => (
+                  <Cell key={i} fill={m.revenu > avgMonthlyRevenue * 1.15 ? "#3b82f6" : "#cbd5e1"} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6">
@@ -359,6 +447,7 @@ export default function Produits() {
             <tr>
               <th className="px-4 py-3 font-medium">Produit</th>
               <th className="px-4 py-3 font-medium">Catégorie</th>
+              {hasSupplier && <th className="px-4 py-3 font-medium">Fournisseur</th>}
               <th className="px-4 py-3 font-medium">Coût</th>
               <th className="px-4 py-3 font-medium">Prix vente</th>
               <th className="px-4 py-3 font-medium">Marge</th>
@@ -374,6 +463,7 @@ export default function Produits() {
               <tr key={p.id} className="hover:bg-muted/30">
                 <td className="max-w-[180px] truncate px-4 py-3 font-medium" title={p.product_name}>{p.product_name || p.product_id}</td>
                 <td className="px-4 py-3 text-muted-foreground">{p.category || "-"}</td>
+                {hasSupplier && <td className="px-4 py-3 text-muted-foreground">{p.supplier_name || p.supplier_id || "-"}</td>}
                 <td className="px-4 py-3">{Math.round(p.purchase_cost || 0)} $</td>
                 <td className="px-4 py-3">{Math.round(p.selling_price || 0)} $</td>
                 <td className="px-4 py-3">

@@ -19,7 +19,6 @@ import {
   Shield,
   Sliders,
   Save,
-  Check,
   CheckCircle2,
   Sparkles
 } from "lucide-react";

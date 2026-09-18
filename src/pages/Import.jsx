@@ -28,6 +28,8 @@ const acceptedTypes = ".csv,.xlsx,.xls,.tsv,.pdf";
 const ENTITY_OPTIONS = [
   { value: "Transaction", label: "Transactions (revenus/dépenses)" },
   { value: "Order", label: "Commandes (orders)" },
+  { value: "ExecutiveSummary", label: "Sommaire exécutif" },
+  { value: "Asset", label: "Immobilisations (actifs)" },
   { value: "Customer", label: "Clients (customers)" },
   { value: "Product", label: "Produits (products)" },
   { value: "Inventory", label: "Stocks (inventory)" },
