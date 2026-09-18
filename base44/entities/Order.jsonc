@@ -79,6 +79,9 @@
     "employee_id": {
       "type": "string"
     },
+    "employee_name": {
+      "type": "string"
+    },
     "department": {
       "type": "string"
     },

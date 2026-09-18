@@ -5,6 +5,12 @@
     "customer_id": {
       "type": "string"
     },
+    "full_name": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
     "first_name": {
       "type": "string"
     },
@@ -18,6 +24,9 @@
       "type": "string"
     },
     "region": {
+      "type": "string"
+    },
+    "province": {
       "type": "string"
     },
     "customer_type": {

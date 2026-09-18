@@ -24,7 +24,13 @@
     "total_revenue": {
       "type": "number"
     },
+    "total": {
+      "type": "number"
+    },
     "total_cost": {
+      "type": "number"
+    },
+    "cost": {
       "type": "number"
     },
     "gross_profit": {
@@ -33,8 +39,20 @@
     "gross_margin": {
       "type": "number"
     },
+    "gross_margin_rate": {
+      "type": "number"
+    },
     "total_orders": {
       "type": "number"
+    },
+    "indicator_name": {
+      "type": "string"
+    },
+    "metric_value": {
+      "type": "string"
+    },
+    "unit_formula": {
+      "type": "string"
     },
     "notes": {
       "type": "string"

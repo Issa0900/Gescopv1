@@ -20,7 +20,7 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
       order_id: S, customer_id: S, customer_name: S, date: D,
       channel: E("shopify", "boutique", "b2b", "instagram", "web", "en_ligne", "magasin", "autre"),
       product_id: S, product_name: S, quantity: N, price: N, unit_price: N, unit_cost: N, category: S, subtotal: N, discount: N, tax: N,
-      shipping: N, total: N, cost: N, total_revenue: N, total_cost: N, gross_margin: N, gross_profit: N, employee_id: S,
+      shipping: N, total: N, cost: N, total_revenue: N, total_cost: N, gross_margin: N, gross_profit: N, employee_id: S, employee_name: S,
       department: S, payment_method: S, location_id: S, succursale: S, store: S,
       payment_status: E("paye", "en_attente", "echoue", "rembourse"),
       fulfillment_status: E("expedie", "en_preparation", "livre", "annule", "retourne"),
@@ -32,7 +32,7 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
   },
   Customer: {
     properties: {
-      customer_id: S, first_name: S, last_name: S, email: S, city: S, region: S,
+      customer_id: S, full_name: S, name: S, first_name: S, last_name: S, email: S, city: S, region: S, province: S,
       customer_type: E("particulier", "entreprise", "b2b"),
       acquisition_date: D, first_purchase_date: D, last_purchase_date: D,
       total_orders: N, total_revenue: N, average_order_value: N,
@@ -58,11 +58,12 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
   Inventory: {
     properties: {
       inventory_id: S, date: D, product_id: S, product_name: S, category: S, opening_stock: N, purchases: N,
-      units_sold: N, returns: N, damaged: N, closing_stock: N, inventory_value: N,
+      units_sold: N, returns: N, damaged: N, closing_stock: N, qte_en_stock: N, inventory_level: N, quantite_disponible: N, available_qty: N, inventory_value: N,
+      selling_inventory_value: N, valeur_stock_vente: N,
       days_in_inventory: N, unit_cost: N, selling_price: N,
       stock_status: E("optimal", "rupture", "surstock", "dormant", "faible", "proche_rupture"),
       warehouse_id: S, warehouse_name: S, reserved_qty: N, in_transit_qty: N,
-      reorder_qty_eoq: N, reorder_point: N, origin_country: S, customs_code: S, supplier_id: S,
+      reorder_qty_eoq: N, reorder_point: N, origin_country: S, customs_code: S, supplier_id: S, supplier_name: S,
       import_id: S, fingerprint: S, original_data: S,
     },
     required: ["product_id"],
@@ -113,7 +114,7 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
         "affiliation", "influenceurs", "sms", "print", "autre"
       ),
       start_date: D, end_date: D, budget: N, spend: N, impressions: N, clicks: N,
-      conversions: N, revenue: N, new_customers: N, cac: N, roas: N, cpc: N,
+      conversions: N, revenue: N, new_customers: N, cac: N, roas: N, cpc: N, cout_clic: N, cost_per_click: N,
       status: E("active", "terminee", "pause", "planifiee"),
       import_id: S, fingerprint: S, original_data: S,
     },
@@ -206,7 +207,8 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
   ExecutiveSummary: {
     properties: {
       summary_id: S, location_id: S, succursale: S, store: S, period: S, date: D,
-      total_revenue: N, total_cost: N, gross_profit: N, gross_margin: N, total_orders: N,
+      total_revenue: N, total: N, total_cost: N, cost: N, gross_profit: N, gross_margin: N, gross_margin_rate: N, total_orders: N,
+      indicator_name: S, metric_value: S, unit_formula: S,
       notes: S, import_id: S, fingerprint: S, original_data: S,
     },
     // Un sommaire exécutif consolidé (toute l'entreprise, pas de ventilation

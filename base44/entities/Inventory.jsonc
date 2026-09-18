@@ -30,7 +30,25 @@
     "closing_stock": {
       "type": "number"
     },
+    "qte_en_stock": {
+      "type": "number"
+    },
+    "inventory_level": {
+      "type": "number"
+    },
+    "available_qty": {
+      "type": "number"
+    },
+    "quantite_disponible": {
+      "type": "number"
+    },
     "inventory_value": {
+      "type": "number"
+    },
+    "selling_inventory_value": {
+      "type": "number"
+    },
+    "valeur_stock_vente": {
       "type": "number"
     },
     "days_in_inventory": {
@@ -84,6 +102,9 @@
       "type": "string"
     },
     "supplier_id": {
+      "type": "string"
+    },
+    "supplier_name": {
       "type": "string"
     },
     "import_id": {
