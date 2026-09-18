@@ -33,6 +33,11 @@ const labels = {
   neutre: "Neutre",
 };
 
+/**
+ * @param {Object} props
+ * @param {string} props.level
+ * @param {string} [props.className]
+ */
 export default function PriorityBadge({ level, className }) {
   const key = (level || "").toLowerCase();
   return (

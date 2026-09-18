@@ -17,6 +17,8 @@
 import { GRAIN_TYPES } from "./semanticTypes.js";
 import { createFieldSemantic } from "./fieldSemantic.js";
 
+/** @typedef {import('./fieldSemantic.js').FieldSemantic} FieldSemantic */
+
 // ─────────────────────────────────────────────────────────────────────────────
 // RAW FIELD DEFINITIONS
 // ─────────────────────────────────────────────────────────────────────────────

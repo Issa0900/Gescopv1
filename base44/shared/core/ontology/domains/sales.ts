@@ -35,11 +35,6 @@ export const SALES_CONCEPTS: Record<string, CanonicalConcept> = {
         "net sales amount", "sales revenue net", "net billings", "net sales revenue",
         "revenue", "revenues", "sales", "turnover", "total sales", "sales total", "sales revenue"
       ],
-      es: ["ingresos netos", "ventas netas", "facturacion neta"],
-      pt: ["receita liquida", "vendas liquidas", "faturamento liquido"],
-      de: ["nettoumsatz", "nettoerlos", "nettoumsatzerlose", "umsatz netto"],
-      it: ["ricavi netti", "fatturato netto", "vendite nette"],
-      nl: ["netto omzet", "netto-omzet", "netto opbrengst"],
       es: ["ingresos netos", "ventas netas", "facturacion neta", "ingresos", "ventas"],
       pt: ["receita liquida", "vendas liquidas", "faturamento liquido", "receita", "vendas"],
       de: ["nettoumsatz", "nettoerlos", "nettoumsatzerlose", "umsatz netto", "umsatz", "erlose"],

@@ -27,6 +27,28 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * @typedef {Object} FieldSemantic
+ * @property {string} source
+ * @property {string} field
+ * @property {string} canonicalKey
+ * @property {string} semanticType
+ * @property {string} economicRole
+ * @property {string} dataType
+ * @property {string} temporalType
+ * @property {string} aggregation
+ * @property {boolean} isAdditive
+ * @property {boolean} isComparable
+ * @property {string|null} domain
+ * @property {string} direction
+ * @property {{fr: string, en: string}} label
+ * @property {string|null} unit
+ * @property {string|null} currencyCode
+ * @property {string} grain
+ * @property {number} confidence
+ * @property {string} status
+ */
+
+/**
  * Creates a complete semantic descriptor for a data field.
  *
  * @param {Object} params
