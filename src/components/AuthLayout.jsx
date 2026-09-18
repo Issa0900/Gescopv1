@@ -1,6 +1,14 @@
 import React from "react";
 import { Sparkles, ShieldCheck, TrendingUp, Brain } from "lucide-react";
 
+/**
+ * @param {Object} props
+ * @param {React.ElementType} props.icon
+ * @param {string} props.title
+ * @param {string} [props.subtitle]
+ * @param {React.ReactNode} [props.footer]
+ * @param {React.ReactNode} props.children
+ */
 export default function AuthLayout({ icon: Icon, title, subtitle, footer, children }) {
   return (
     <div className="min-h-screen flex bg-background">

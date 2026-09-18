@@ -52,12 +52,27 @@ export default function Alertes() {
 
   const markRead = async (id) => {
     await base44.entities.Alert.update(id, { status: "lue" });
-    qc.invalidateQueries(["alerts-all"]);
-    qc.invalidateQueries(["alerts-unread"]);
+    qc.invalidateQueries({ queryKey: ["alerts-all"] });
+    qc.invalidateQueries({ queryKey: ["alerts-unread"] });
   };
 
+  /**
+   * @typedef {Object} AlertItem
+   * @property {string} id
+   * @property {string} level
+   * @property {string} [category]
+   * @property {string} title
+   * @property {string} [message]
+   * @property {boolean} [live]
+   * @property {string} status
+   * @property {string} [created_date]
+   * @property {boolean} [isExternal]
+   * @property {boolean} [isAnomaly]
+   */
+
+  /** @type {AlertItem[]} */
   const alerts = React.useMemo(() => {
-    const list = [...(live || []), ...(stored || [])];
+    const list = /** @type {AlertItem[]} */ ([...(live || []), ...(stored || [])]);
     
     const externals = (observations || [])
       .filter((o) => o.observation_type === "external")
@@ -170,7 +185,7 @@ export default function Alertes() {
                       status: "a_faire",
                     });
                     toast({ title: "Action créée", description: "La tâche a été ajoutée à votre liste." });
-                    qc.invalidateQueries(["tasks"]);
+                    qc.invalidateQueries({ queryKey: ["tasks"] });
                   } catch(e) {
                     toast({ title: "Erreur", variant: "destructive" });
                   }

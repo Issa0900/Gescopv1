@@ -36,12 +36,12 @@ export default function Risques() {
     });
     if (type === "risk") {
       await base44.entities.Risk.update(item.id, { status: "attenuation" });
-      qc.invalidateQueries(["risks-all"]);
+      qc.invalidateQueries({ queryKey: ["risks-all"] });
     } else {
       await base44.entities.Opportunity.update(item.id, { status: "en_cours" });
-      qc.invalidateQueries(["opportunities-all"]);
+      qc.invalidateQueries({ queryKey: ["opportunities-all"] });
     }
-    qc.invalidateQueries(["tasks"]);
+    qc.invalidateQueries({ queryKey: ["tasks"] });
   };
 
   const scoreColor = (score) =>

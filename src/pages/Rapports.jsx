@@ -63,7 +63,7 @@ export default function Rapports() {
         toast({ title: data.error, variant: "destructive" });
       } else {
         toast({ title: "Rapport généré" });
-        qc.invalidateQueries(["reports"]);
+        qc.invalidateQueries({ queryKey: ["reports"] });
         setSelected(data.report);
       }
     } catch (e) {
@@ -104,7 +104,7 @@ export default function Rapports() {
 
   const remove = async (id) => {
     await base44.entities.Report.delete(id);
-    qc.invalidateQueries(["reports"]);
+    qc.invalidateQueries({ queryKey: ["reports"] });
     if (selected?.id === id) setSelected(null);
   };
 
