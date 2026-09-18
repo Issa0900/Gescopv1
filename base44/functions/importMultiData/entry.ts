@@ -2,6 +2,7 @@ import { createFixedClientFromRequest as createClientFromRequest } from "../../s
 import { normalizeRow, isSummaryOrTotalRow } from "../../shared/importUtils.ts";
 import { detectEntityByName, detectEntityByHeaders, detectEntityByFieldOverlap, entiteCompatible, sheetRows, trouverLigneEntetes } from "../../shared/sheetDetect.ts";
 import { fetchDelimitedRows, fetchMatrice } from "../../shared/csvParse.ts";
+import { fetchExternalFile } from "../../shared/safeFetch.ts";
 import {
   analyserFichier, appliquerPlan, planParRegles, signatureFichier,
   construireEchantillon, type PlanImport,
@@ -352,7 +353,7 @@ export default async function (req: Request) {
         try {
           const feuilles: { label: string; nomFeuille: string; matrix: any[][] }[] = [];
           if (["xlsx", "xls"].includes(ext)) {
-            const ab = await (await fetch(file_url)).arrayBuffer();
+            const ab = await (await fetchExternalFile(file_url)).arrayBuffer();
             const wb = XLSX.read(new Uint8Array(ab), { type: "array" });
             for (const sheetName of wb.SheetNames) {
               feuilles.push({ label: `${file_name} [${sheetName}]`, nomFeuille: sheetName, matrix: matriceDeFeuille(wb.Sheets[sheetName]) });

@@ -56,12 +56,13 @@ function faireClient(options: { memoire?: any[]; appelsIA: string[]; ecritures: 
 
 function poser(client: any) { (globalThis as any).__BASE44_STUB = client; }
 const requete = (corps: any) => new Request("https://x/import", { method: "POST", body: JSON.stringify(corps) });
+const URL_FICHIER = "https://storage.exemple.test/grand-livre.csv";
 
 (async () => {
   console.log("===== 1. Mode analyse : on lit, on n'ecrit rien =====");
   let appelsIA: string[] = []; let ecritures: any[] = [];
   poser(faireClient({ appelsIA, ecritures }));
-  let rep = await handler(requete({ files: [{ file_url: "u", file_name: "grand-livre.csv" }], mode: "analyser" }));
+  let rep = await handler(requete({ files: [{ file_url: URL_FICHIER, file_name: "grand-livre.csv" }], mode: "analyser" }));
   let data = await rep.json();
   const a = data.results[0];
   console.log("      plan :", JSON.stringify({ entite: a.plan?.entite, ligne_entetes: a.plan?.ligne_entetes, ignorees: a.plan?.lignes_ignorees }));
@@ -80,7 +81,7 @@ const requete = (corps: any) => new Request("https://x/import", { method: "POST"
   appelsIA = []; ecritures = [];
   poser(faireClient({ appelsIA, ecritures }));
   rep = await handler(requete({
-    files: [{ file_url: "u", file_name: "grand-livre.csv" }],
+    files: [{ file_url: URL_FICHIER, file_name: "grand-livre.csv" }],
     plans: { "grand-livre.csv": a.plan },
   }));
   data = await rep.json();
@@ -97,7 +98,7 @@ const requete = (corps: any) => new Request("https://x/import", { method: "POST"
     appelsIA, ecritures,
     memoire: [{ plan_signature: a.signature, plan_confirmed: true, read_plan: a.plan }],
   }));
-  rep = await handler(requete({ files: [{ file_url: "u", file_name: "grand-livre.csv" }], mode: "analyser" }));
+  rep = await handler(requete({ files: [{ file_url: URL_FICHIER, file_name: "grand-livre.csv" }], mode: "analyser" }));
   data = await rep.json();
   v(appelsIA.length === 0, "empreinte reconnue : l'IA n'est pas rappelee");
   v(data.results[0].plan?.origine === "memoire", "le plan vient de la memoire");
@@ -108,7 +109,7 @@ const requete = (corps: any) => new Request("https://x/import", { method: "POST"
   const clientCasse: any = faireClient({ appelsIA, ecritures });
   clientCasse.asServiceRole.integrations.Core.InvokeLLM = async () => { throw new Error("503"); };
   poser(clientCasse);
-  rep = await handler(requete({ files: [{ file_url: "u", file_name: "grand-livre.csv" }], mode: "analyser" }));
+  rep = await handler(requete({ files: [{ file_url: URL_FICHIER, file_name: "grand-livre.csv" }], mode: "analyser" }));
   data = await rep.json();
   v(data.results[0].plan?.origine === "regles", "repli sur les regles deterministes");
   v(String(data.results[0].analyse_erreur || "").includes("indisponible"), "la panne est dite, pas masquee");
@@ -119,13 +120,13 @@ const requete = (corps: any) => new Request("https://x/import", { method: "POST"
   // L'IA se trompe d'une ligne : plus aucun intitule ne correspond.
   clientDecale.asServiceRole.integrations.Core.InvokeLLM = async () => ({ ...REPONSE_IA, ligne_entetes: 3 });
   poser(clientDecale);
-  rep = await handler(requete({ files: [{ file_url: "u", file_name: "grand-livre.csv" }], mode: "analyser" }));
+  rep = await handler(requete({ files: [{ file_url: URL_FICHIER, file_name: "grand-livre.csv" }], mode: "analyser" }));
   data = await rep.json();
   v(data.results[0].apercu?.length > 0, "l'apercu n'est pas vide : le filet a joue");
 
   appelsIA = []; ecritures = [];
   poser(clientDecale);
-  rep = await handler(requete({ files: [{ file_url: "u", file_name: "grand-livre.csv" }] }));
+  rep = await handler(requete({ files: [{ file_url: URL_FICHIER, file_name: "grand-livre.csv" }] }));
   data = await rep.json();
   console.log("      resultat :", JSON.stringify({
     rows_read: data.results[0].rows_read, rows: data.results[0].rows,
