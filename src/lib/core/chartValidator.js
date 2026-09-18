@@ -16,7 +16,7 @@ import { getSemanticType } from "./semanticTypes";
  * @param {Object} params
  * @param {string} params.chartType - 'composition' (pie, stacked), 'comparison' (bar, line), etc.
  * @param {string[]} params.kpiIds - The IDs of the KPIs or measures to plot
- * @param {Map<string, Object>} params.fieldSemantics - Resolved semantics, if plotting raw fields
+ * @param {Map<string, Object>} [params.fieldSemantics] - Resolved semantics, if plotting raw fields
  * @returns {Object} Validation result with { valid, reason, suggestion }
  */
 export function validateChartConfig({ chartType, kpiIds = [], fieldSemantics = new Map() }) {

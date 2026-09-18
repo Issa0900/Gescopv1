@@ -11,6 +11,15 @@ const priorityStyles = {
 };
 const priorityLabels = { urgente: "Priorité urgente", elevee: "Priorité élevée", moyenne: "Priorité moyenne", faible: "Priorité faible" };
 
+/**
+ * @param {Object} props
+ * @param {string} props.title
+ * @param {string} [props.impact]
+ * @param {string} [props.timeEstimate]
+ * @param {string} [props.priority]
+ * @param {() => void} [props.onExamine]
+ * @param {() => void} [props.onApprove]
+ */
 export default function ActionCard({ title, impact, timeEstimate, priority, onExamine, onApprove }) {
   return (
     <div className="animate-slide-up flex flex-col rounded-2xl border border-border bg-card p-5 transition-shadow hover:shadow-md">

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { cn } from "@/lib/utils";
 
+/** @type {Array<{key: string, label: string, format: 'currency'|'percent'|'count'}>} */
 const metrics = [
   { key: "revenue", label: "Chiffre d'affaires", format: "currency" },
   { key: "margin", label: "Marge", format: "percent" },

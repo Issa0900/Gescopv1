@@ -42,6 +42,12 @@ function SkeletonCard() {
   );
 }
 
+/**
+ * @param {Object} props
+ * @param {Object} props.monthlyData
+ * @param {boolean} [props.isLoading]
+ * @param {Array<Object>} props.dimensions
+ */
 export default function KpiOverview({ monthlyData, isLoading, dimensions }) {
   const [view, setView] = useState("combined");
 

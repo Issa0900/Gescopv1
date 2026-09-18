@@ -270,7 +270,7 @@ export default function Previsions() {
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
             <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-            <Tooltip formatter={(v) => (v != null ? `${Math.round(v).toLocaleString("fr-CA")} $` : "-")} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+            <Tooltip formatter={(v) => (v != null ? `${Math.round(Number(v)).toLocaleString("fr-CA")} $` : "-")} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
             <Area dataKey="range" stroke="none" fill="rgba(59, 130, 246, 0.1)" />
             <Line dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} connectNulls={false} />
             <Line dataKey="forecast" stroke="rgba(59, 130, 246, 0.6)" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />

@@ -10,6 +10,12 @@ const steps = [
   { icon: Database, label: "Enregistrement", hint: "Rattachement à vos indicateurs" },
 ];
 
+/**
+ * @param {Object} props
+ * @param {'uploading'|'analyzing'|'processing'} props.phase
+ * @param {number} [props.totalRows]
+ * @param {number} [props.processedRows]
+ */
 export default function ImportProgress({ phase, totalRows, processedRows }) {
   // phase: "uploading" | "analyzing" | "processing"
   const [step, setStep] = useState(0);

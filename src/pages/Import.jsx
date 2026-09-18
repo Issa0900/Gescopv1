@@ -82,7 +82,7 @@ export default function ImportPage() {
     try {
       const uploadedFiles = [];
       for (const file of files) {
-        const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+        const { file_url } = await base44.integrations.Core.UploadFile({ file });
         uploadedFiles.push({ file_url, file_name: file.name });
       }
       setUploading(false);

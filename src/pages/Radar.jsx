@@ -62,7 +62,7 @@ export default function Radar() {
   // Moteur de croisement des signaux (Spec Section 14 & 23)
   const crossSignalInsights = useMemo(() => {
     return generateCrossSignalInsights({
-      externalSignals: signals,
+      externalSignals: /** @type {import("../../base44/shared/core/radar/types.ts").RadarSignal[]} */ (signals),
       internalMetrics: {},
       companyName: company?.name || "votre entreprise",
     });

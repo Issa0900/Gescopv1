@@ -2,6 +2,14 @@ import React from "react";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 
+/**
+ * @param {Object} props
+ * @param {string} props.metric
+ * @param {string} props.value
+ * @param {number} [props.probability]
+ * @param {string} [props.risk]
+ * @param {Array<Object>} [props.chartData]
+ */
 export default function ForecastCard({ metric, value, probability, risk, chartData }) {
   const showProb = probability != null;
   const showRisk = risk != null;
