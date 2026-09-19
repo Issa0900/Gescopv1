@@ -69,21 +69,15 @@ export const KPI_REGISTRY = Object.freeze({
     semanticType: "expense",
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: true,
-    // "expense" was never a real canonicalKey (nothing maps to it) — removed
-    // rather than guessed at, since calculate() already treats a missing
-    // piece as 0 and the other two (Expense.amount, Transaction context)
-    // cover the real sources.
-    dependencies: ["expense_amount", "operating_expense"],
-    // Same class of bug as total_revenue: expense_amount (Transaction rows)
-    // and operating_expense (the separate Expense entity) are two different
-    // sources, not alternative readings of the same one — a company can
-    // have both real Expense records AND a few manual expense-type
-    // Transaction rows. The old `if (deps.expense_amount) return ...`
-    // silently dropped operating_expense the moment any Transaction expense
-    // existed, however small.
+    dependencies: ["expense_amount", "operating_expense", "cogs"],
     calculate: (deps) => {
-      if (deps.expense_amount == null && deps.operating_expense == null) return null;
-      return (deps.expense_amount || 0) + (deps.operating_expense || 0);
+      const hasDirect = deps.expense_amount != null || deps.operating_expense != null;
+      const hasCogs = deps.cogs != null;
+      if (!hasDirect && !hasCogs) return null;
+      if (deps.expense_amount != null) {
+        return (deps.expense_amount || 0) + (deps.operating_expense || 0);
+      }
+      return (deps.operating_expense || 0) + (deps.cogs || 0);
     }
   },
 
@@ -95,16 +89,13 @@ export const KPI_REGISTRY = Object.freeze({
     semanticType: "payroll_cost",
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: true,
-    // The raw field's own canonicalKey used to be "payroll_total" too - same
-    // string as this KPI's own id, which made the dependency resolve back to
-    // THIS kpi (getKpiDefinition found itself) instead of the Payroll.total_cost
-    // field, so it always came back 0 rather than the real payroll sum.
-    dependencies: ["payroll_total_cost"],
-    // `|| 0` masquait une masse salariale absente (aucun Payroll importé) en
-    // un zero mesuré : rh_expense_ratio et revenue_per_employee en héritaient
-    // sans jamais passer par KPI_STATUS.NOT_MEASURED. Une absence reste
-    // absente jusqu'à kpiEngine, qui sait déjà la traiter.
-    calculate: (deps) => (deps.payroll_total_cost == null ? null : deps.payroll_total_cost),
+    dependencies: ["payroll_total_cost", "employee_employer_cost", "employee_salary"],
+    calculate: (deps) => {
+      if (deps.payroll_total_cost != null) return deps.payroll_total_cost;
+      if (deps.employee_employer_cost != null) return deps.employee_employer_cost;
+      if (deps.employee_salary != null) return deps.employee_salary;
+      return null;
+    },
   },
 
   employee_count_raw: {
@@ -500,10 +491,11 @@ export const KPI_REGISTRY = Object.freeze({
     // (whole-company revenue) would also be the wrong numerator for ROAS
     // even if "budget" did resolve: ROAS is revenue attributed to the ad
     // spend, not every dollar the business made.
-    dependencies: ["campaign_revenue", "marketing_spend"],
+    dependencies: ["campaign_revenue", "marketing_spend", "campaign_budget"],
     calculate: (deps) => {
-      if (!deps.marketing_spend || deps.campaign_revenue == null) return null;
-      return deps.campaign_revenue / deps.marketing_spend;
+      const spend = deps.marketing_spend || deps.campaign_budget;
+      if (!spend || deps.campaign_revenue == null) return null;
+      return deps.campaign_revenue / spend;
     },
   },
 
@@ -516,12 +508,11 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RATIO,
     dataType: DATA_TYPES.PERCENTAGE,
     isAdditive: false,
-    // Same correction as roas above: campaign_revenue/marketing_spend are
-    // the real canonical keys for this figure, not total_revenue/budget.
-    dependencies: ["campaign_revenue", "marketing_spend"],
+    dependencies: ["campaign_revenue", "marketing_spend", "campaign_budget"],
     calculate: (deps) => {
-      if (!deps.marketing_spend || deps.campaign_revenue == null) return null;
-      return ((deps.campaign_revenue - deps.marketing_spend) / deps.marketing_spend) * 100;
+      const spend = deps.marketing_spend || deps.campaign_budget;
+      if (!spend || deps.campaign_revenue == null) return null;
+      return ((deps.campaign_revenue - spend) / spend) * 100;
     },
   },
 

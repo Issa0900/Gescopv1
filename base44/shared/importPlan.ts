@@ -201,6 +201,16 @@ export function validerPlan(brut: any, matrix: any[][]): { plan: PlanImport | nu
         champ = "role";
       } else if (entite === "Employee" && champ === "taux_commission" && champsConnus.includes("commission_rate")) {
         champ = "commission_rate";
+      } else if (entite === "Asset" && (champ === "amortissement_cumule" || champ === "amortissement_cumule_cad") && champsConnus.includes("accumulated_depreciation")) {
+        champ = "accumulated_depreciation";
+      } else if (entite === "Asset" && (champ === "cout_acquisition_initial" || champ === "cout_acquisition_initial_cad") && champsConnus.includes("initial_cost")) {
+        champ = "initial_cost";
+      } else if (entite === "Asset" && (champ === "valeur_nette_comptable" || champ === "valeur_nette_comptable_cad" || champ === "vnc") && champsConnus.includes("net_book_value")) {
+        champ = "net_book_value";
+      } else if (entite === "Asset" && (champ === "classe_dpa" || champ === "classe_dpa_fiscale") && champsConnus.includes("dpa_class")) {
+        champ = "dpa_class";
+      } else if (entite === "Asset" && (champ === "taux_amortissement_dpa" || champ === "taux_dpa") && champsConnus.includes("dpa_rate")) {
+        champ = "dpa_rate";
       } else {
         refus.push(`champ inconnu ignore : ${c.colonne} -> ${champ}`);
         champ = null;
@@ -540,11 +550,15 @@ export function planParRegles(
     if (entite === 'Asset') {
       const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
       const mot = (s: string) => new RegExp(`(^|_)${s}(_|$)`).test(normC);
-      if (mot("immobilisation") || mot("actif_id") || (mot("id") && mot("actif"))) champ = 'asset_id';
-      else if (mot("description") || mot("actif")) champ = 'description';
+      if (mot("cumule") || mot("accumule") || (mot("amortissement") && (mot("cumul") || !mot("taux")))) champ = 'accumulated_depreciation';
+      else if (mot("taux") || (mot("dpa") && mot("taux")) || (mot("amortissement") && mot("taux"))) champ = 'dpa_rate';
+      else if (mot("initial") || (mot("cout") && mot("acquisition")) || (mot("valeur") && mot("acquisition"))) champ = 'initial_cost';
+      else if (mot("nette") || mot("comptable") || mot("vnc")) champ = 'net_book_value';
       else if (mot("classe") || (mot("dpa") && mot("classe"))) champ = 'dpa_class';
-      else if (mot("taux") || mot("amortissement") || (mot("dpa") && mot("taux"))) champ = 'dpa_rate';
       else if (mot("commentaire") || mot("historique")) champ = 'historical_comment';
+      else if (mot("succursale") || mot("store") || mot("magasin") || mot("location")) champ = 'location_id';
+      else if (mot("immobilisation") || mot("actif_id") || (mot("id") && mot("actif"))) champ = 'asset_id';
+      else if (mot("description") || (mot("actif") && !mot("id") && !mot("valeur"))) champ = 'description';
     }
 
     // Filet de sécurité général : la reconnaissance sémantique (étape 1,

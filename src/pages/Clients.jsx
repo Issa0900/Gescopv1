@@ -80,26 +80,25 @@ export default function Clients() {
     }
   });
   const todayKey = new Date().toISOString().slice(0, 10);
-  const enriched = customers.map((c) => ({
-    ...c,
-    _total_revenue: revByCustomer[c.customer_id] || 0,
-    _total_orders: ordersByCustomer[c.customer_id] || 0,
-    _aov: (ordersByCustomer[c.customer_id] || 0) > 0
-      ? (revByCustomer[c.customer_id] || 0) / ordersByCustomer[c.customer_id]
-      : 0,
-    _last_order_date: lastOrderByCustomer[c.customer_id] || null,
-    _recency_days: lastOrderByCustomer[c.customer_id]
-      ? Math.round((new Date(todayKey).getTime() - new Date(lastOrderByCustomer[c.customer_id]).getTime()) / 86400000)
-      : null,
-    // churn_risk is imported as a 0–1 ratio; displaying it raw showed "1%" for
-    // a client with a 70% departure risk.
-    // null when the column is absent - rendered as « - ». Showing 0 % on every
-    // client would read as "nobody is at risk", which is not what an empty
-    // column says.
-    _churnPct: c.churn_risk === null || c.churn_risk === undefined || c.churn_risk === ""
-      ? null
-      : Math.round(Number(c.churn_risk) <= 1 ? Number(c.churn_risk) * 100 : Number(c.churn_risk)),
-  }));
+  const enriched = customers.map((c) => {
+    const custRev = revByCustomer[c.customer_id] || Number(c.total_revenue) || Number(c.lifetime_value) || 0;
+    const custOrders = ordersByCustomer[c.customer_id] || Number(c.total_orders) || 0;
+    const custAov = custOrders > 0 ? (custRev / custOrders) : (Number(c.average_order_value) || 0);
+    const lastDate = lastOrderByCustomer[c.customer_id] || c.last_purchase_date || null;
+    return {
+      ...c,
+      _total_revenue: custRev,
+      _total_orders: custOrders,
+      _aov: custAov,
+      _last_order_date: lastDate,
+      _recency_days: lastDate
+        ? Math.round((new Date(todayKey).getTime() - new Date(lastDate).getTime()) / 86400000)
+        : null,
+      _churnPct: c.churn_risk === null || c.churn_risk === undefined || c.churn_risk === ""
+        ? null
+        : Math.round(Number(c.churn_risk) <= 1 ? Number(c.churn_risk) * 100 : Number(c.churn_risk)),
+    };
+  });
 
   const total = enriched.length;
   // Same churn definition as the KPI page, the scores and the audit page.

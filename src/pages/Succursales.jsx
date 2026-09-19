@@ -10,14 +10,16 @@ export default function Succursales() {
   const { data: orders, isLoading: lo } = useQuery({ queryKey: ["orders"], queryFn: () => fetchAll(base44.entities.Order) });
   const { data: employees, isLoading: le } = useQuery({ queryKey: ["employees"], queryFn: () => fetchAll(base44.entities.Employee) });
   const { data: assets, isLoading: la } = useQuery({ queryKey: ["assets"], queryFn: () => fetchAll(base44.entities.Asset) });
+  const { data: summaryRows } = useQuery({ queryKey: ["executive-summary"], queryFn: () => fetchAll(base44.entities.ExecutiveSummary) });
 
   if (lo || le || la) return <p className="text-sm text-muted-foreground">Chargement…</p>;
 
   const hasOrders = orders && orders.length > 0;
   const hasEmployees = employees && employees.length > 0;
   const hasAssets = assets && assets.length > 0;
+  const hasSummary = summaryRows && summaryRows.length > 0;
 
-  if (!hasOrders && !hasEmployees && !hasAssets) {
+  if (!hasOrders && !hasEmployees && !hasAssets && !hasSummary) {
     return (
       <EmptyState
         icon={Building}
@@ -52,10 +54,23 @@ export default function Succursales() {
 
   (orders || []).forEach(o => {
     const loc = ensureLoc(o.location_id || o.succursale || o.store || o.location);
-    loc.revenue += Number(o.total_revenue) || 0;
-    loc.cogs += Number(o.total_cost) || 0;
-    loc.grossProfit += Number(o.gross_profit) || 0;
+    const rev = Number(o.total_revenue) || Number(o.total) || 0;
+    const cogs = Number(o.total_cost) || Number(o.cost) || 0;
+    loc.revenue += rev;
+    loc.cogs += cogs;
+    loc.grossProfit += Number(o.gross_profit) || (rev - cogs);
   });
+
+  if ((orders || []).length === 0 && (summaryRows || []).length > 0) {
+    summaryRows.forEach(s => {
+      const loc = ensureLoc(s.location_id || s.succursale || s.store);
+      const rev = Number(s.total_revenue) || Number(s.total) || 0;
+      const cogs = Number(s.total_cost) || Number(s.cost) || 0;
+      loc.revenue += rev;
+      loc.cogs += cogs;
+      loc.grossProfit += Number(s.gross_profit) || (rev - cogs);
+    });
+  }
 
   (employees || []).forEach(e => {
     const loc = ensureLoc(e.location || e.branch || e.succursale || e.department);

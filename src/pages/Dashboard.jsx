@@ -185,7 +185,11 @@ export default function Dashboard() {
     expenses: fExpenses,
     customers: fCustomers,
     observations: fObservations,
-    cashflow: cashflow || []
+    cashflow: cashflow || [],
+    campaigns: campaigns || [],
+    campaignDaily: campaignDaily || [],
+    inventory: inventory || [],
+    products: products || [],
   }, ["total_revenue", "total_expense", "net_income", "net_margin_pct", "aov", "active_customers", "customer_sentiment_score"]);
 
   // === COMPUTATIONS (Hybride : Ancien + Nouveau) ===
@@ -212,7 +216,7 @@ export default function Dashboard() {
     const orderRevenue = fOrders.reduce((s, o) => s + (Number(o.total_revenue) || Number(o.total) || 0), 0);
 
     // Full monthly data (ALL records, not period-filtered) for charts and trends
-    const financialMonthly = financialMonthlySeries(transactions || [], expenseRecords || []);
+    const financialMonthly = financialMonthlySeries(transactions || [], expenseRecords || [], orders || []);
     const revenueMonthly = financialMonthly.map((pt) => ({ month: pt.month, val: pt.income }));
     const expenseMonthly = financialMonthly.map((pt) => ({ month: pt.month, val: pt.expense }));
     const marginMonthly = financialMonthly.map((pt) => ({

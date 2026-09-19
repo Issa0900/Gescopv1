@@ -47,11 +47,18 @@ export function useKpiEngine(data, kpiIds) {
     addEntity('Payroll', data.payrolls);
     addEntity('Customer', data.customers);
     addEntity('Product', data.products);
+    addEntity('Inventory', data.inventory);
+    addEntity('Supplier', data.suppliers);
+    addEntity('ExecutiveSummary', data.executiveSummary);
+    addEntity('Asset', data.assets);
     // Campaign and CampaignDaily both roll up to the same canonicalKeys
-    // (marketing_spend, campaign_revenue...) by design - pass only one to
-    // avoid the entity filter picking whichever happens to be seen first
-    // and silently ignoring the other's rows.
-    addEntity('CampaignDaily', data.campaignDaily);
+    // (marketing_spend, campaign_revenue...) by design - use CampaignDaily if present,
+    // otherwise Campaign.
+    if (data.campaignDaily?.length) {
+      addEntity('CampaignDaily', data.campaignDaily);
+    } else if (data.campaigns?.length) {
+      addEntity('Campaign', data.campaigns);
+    }
 
     // NOUVEAU DATA CORE (PHASE 2) - Traitement des Observations
     if (data.observations) {

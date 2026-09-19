@@ -14,7 +14,7 @@ import { validSalesOrders, columnPresent } from "@/lib/metrics";
 
 function formatCurrency(val) {
   if (val === null || val === undefined) return "-";
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(val);
+  return `${Math.round(val).toLocaleString("fr-CA")} $`;
 }
 
 export default function RessourcesHumaines() {
@@ -68,6 +68,20 @@ export default function RessourcesHumaines() {
       const total = Number(o.total_revenue) || Number(o.total);
       if (month && Number.isFinite(total)) add(o, month, "total_revenue", Math.max(0, total));
     });
+
+    // If payroll rows are missing but we have employee costs and order months,
+    // distribute the payroll evenly across the active months so the chart works.
+    if ((data.payrolls || []).length === 0 && (data.employees || []).length > 0) {
+      const annualPayroll = (data.employees || []).reduce((s, e) => s + (Number(e.total_employer_cost) || Number(e.annual_salary) || Number(e.salary) || 0), 0);
+      const months = Object.keys(byMonth);
+      if (annualPayroll > 0 && months.length > 0) {
+        const monthlyShare = annualPayroll / months.length;
+        months.forEach((m) => {
+          byMonth[m].payroll_total = Math.round(monthlyShare);
+        });
+      }
+    }
+
     const rows = Object.values(byMonth).sort((a, b) => a.date.localeCompare(b.date));
     return { timeSeries: rows, available: rows.length > 0 };
   }, [data]);
@@ -107,6 +121,21 @@ export default function RessourcesHumaines() {
       });
     }
 
+    // Fallback: if no Payroll and no transaction salaries, sum employee annual costs/salaries
+    if (totalPayroll === 0 && data.employees && data.employees.length > 0) {
+      data.employees.forEach(e => {
+        const cost = Number(e.total_employer_cost) || Number(e.annual_salary) || Number(e.salary) || 0;
+        totalPayroll += cost;
+      });
+    }
+
+    // Fallback: if totalRev is 0, sum orders
+    if (totalRev === 0 && data.orders && data.orders.length > 0) {
+      validSalesOrders(data.orders).forEach(o => {
+        totalRev += (Number(o.total_revenue) || Number(o.total) || 0);
+      });
+    }
+
     const revPerEmp = headcount > 0 ? (totalRev / headcount) : 0;
     const ratio = totalRev > 0 ? (totalPayroll / totalRev) : 0;
 
@@ -116,6 +145,21 @@ export default function RessourcesHumaines() {
     const avgCommission = withCommission.length > 0
       ? withCommission.reduce((s, e) => s + (Number(e.commission_rate) || 0), 0) / withCommission.length
       : null;
+
+    // Fallback: if totalPayroll is still 0 but employees have commission rates and orders exist, compute commissions
+    if (totalPayroll === 0 && withCommission.length > 0 && data.orders && data.orders.length > 0) {
+      const empCommMap = {};
+      withCommission.forEach(e => {
+        empCommMap[e.employee_id] = Number(e.commission_rate) || 0;
+      });
+      data.orders.forEach(o => {
+        const rate = empCommMap[o.employee_id] || (avgCommission || 0);
+        const rev = Number(o.total_revenue) || Number(o.total) || 0;
+        if (rate > 0 && rev > 0) {
+          totalPayroll += rev * rate;
+        }
+      });
+    }
 
     return {
       metrics: { headcount, totalPayroll, revPerEmp, ratio, totalRev, avgCommission },

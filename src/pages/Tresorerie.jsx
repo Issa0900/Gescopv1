@@ -24,27 +24,28 @@ export default function Tresorerie() {
     queryKey: ["payroll-summary"],
     queryFn: () => fetchAll(base44.entities.Payroll, "-period"),
   });
+  const { data: transactions, isLoading: ltx } = useQuery({
+    queryKey: ["transactions-summary"],
+    queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
+  });
 
   // GESCOP Phase 4 SSOT
-  const { kpis: engineKpis } = useKpiEngine({ cashflow: cashflow || [] }, ["cash_closing"]);
+  const { kpis: engineKpis } = useKpiEngine({ cashflow: cashflow || [], transactions: transactions || [] }, ["cash_closing"]);
 
   // These query keys are shared with the Dashboard, so this page can render
   // instantly if the user just navigated from there.
-  const isLoading = lcf || lex || lp;
+  const isLoading = lcf || lex || lp || ltx;
   
   if (isLoading) return <p className="text-sm text-muted-foreground">Chargement...</p>;
-  if (!cashflow?.length && !expenses?.length && !payroll?.length) {
+  if (!cashflow?.length && !expenses?.length && !payroll?.length && !transactions?.length) {
     return (
       <EmptyState
         icon={Wallet}
         title="Aucune donnée de trésorerie"
-        description="Importez vos données de flux de trésorerie, dépenses ou paie pour suivre votre position et vos tendances."
+        description="Importez vos données de flux de trésorerie, transactions, dépenses ou paie pour suivre votre position et vos tendances."
       />
     );
   }
-
-  // Consommation officielle SSOT
-  const currentCash = engineKpis.get("cash_closing")?.value || 0;
 
   const expenseRows = expenses || [];
   const payrollRows = payroll || [];
@@ -69,7 +70,35 @@ export default function Tresorerie() {
     byMonthCash[m].solde = Number(c.closing_cash) || 0;
   });
 
+  if ((!cashflow || cashflow.length === 0) && transactions && transactions.length > 0) {
+    const sortedTx = [...transactions].sort((a, b) => ((a.date || "") < (b.date || "") ? -1 : 1));
+    let runningBalance = 0;
+    sortedTx.forEach((t) => {
+      const m = (t.date || "").slice(0, 7);
+      if (!byMonthCash[m]) {
+        byMonthCash[m] = { in: 0, out: 0, solde: 0, net: 0 };
+      }
+      const amt = Number(t.amount) || 0;
+      const type = (t.type || "").toLowerCase();
+      const isInc = ["income", "entree", "credit", "revenu"].includes(type) || amt > 0;
+      const isExp = ["expense", "sortie", "debit", "depense"].includes(type) || amt < 0;
+      const posAmt = Math.abs(amt);
+      if (isInc && !isExp) {
+        byMonthCash[m].in += posAmt;
+        byMonthCash[m].net += posAmt;
+        runningBalance += posAmt;
+      } else {
+        byMonthCash[m].out += posAmt;
+        byMonthCash[m].net -= posAmt;
+        runningBalance -= posAmt;
+      }
+      byMonthCash[m].solde = runningBalance;
+    });
+  }
+
   const monthsCash = Object.keys(byMonthCash).sort();
+  // Consommation officielle SSOT avec fallback sur le solde calculé
+  const currentCash = engineKpis.get("cash_closing")?.value || (monthsCash.length > 0 ? byMonthCash[monthsCash[monthsCash.length - 1]]?.solde : 0);
   // A raw sum over the whole imported history (positive = cash grew) presented
   // as a MONTHLY figure overstated it by the number of months covered, and a
   // stale assumption about the engine's sign convention flipped it negative on

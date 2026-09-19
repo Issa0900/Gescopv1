@@ -90,6 +90,13 @@ export const FIELD_ALIASES: Record<string, string> = {
   "role_poste": "role", "poste": "role", "titre_poste": "role", "taux_commission": "commission_rate",
   "nb_transactions": "total_orders", "points_fidelite": "loyalty_points", "points_de_fidelite": "loyalty_points",
   "valeur_stock_cout": "inventory_value", "valeur_stock_vente": "selling_inventory_value",
+  "id_immobilisation": "asset_id", "description_actif": "description",
+  "classe_dpa": "dpa_class", "classe_dpa_fiscale": "dpa_class",
+  "taux_amortissement_dpa": "dpa_rate", "taux_dpa": "dpa_rate",
+  "cout_acquisition_initial_cad": "initial_cost", "cout_acquisition_initial": "initial_cost", "cout_acquisition": "initial_cost",
+  "amortissement_cumule_cad": "accumulated_depreciation", "amortissement_cumule": "accumulated_depreciation",
+  "valeur_nette_comptable_cad": "net_book_value", "valeur_nette_comptable": "net_book_value", "vnc": "net_book_value",
+  "commentaire_historique": "historical_comment",
 };
 
 /**
@@ -2836,7 +2843,7 @@ export function normalizeRow(
     if (!r.asset_id && r.description) {
       r.asset_id = `AST-${stripAccents(String(r.description)).toUpperCase().replace(/[^A-Z0-9]/g, "_").slice(0, 20)}`;
     }
-    if (r.net_book_value == null && r.initial_cost != null && r.accumulated_depreciation != null) {
+    if ((r.net_book_value == null || r.net_book_value === "" || isNaN(Number(r.net_book_value))) && r.initial_cost != null && r.accumulated_depreciation != null) {
       const initial = parseNumber(r.initial_cost) || 0;
       const accum = parseNumber(r.accumulated_depreciation) || 0;
       r.net_book_value = Math.max(0, initial - accum);

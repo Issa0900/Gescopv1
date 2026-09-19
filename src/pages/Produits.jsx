@@ -71,7 +71,7 @@ function deriveProductsFromInventory(inventory) {
         purchase_cost: cost,
         selling_price: price,
         gross_margin: price > 0 ? ((price - cost) / price) * 100 : 0,
-        inventory_level: i.closing_stock != null ? Number(i.closing_stock) : null,
+        inventory_level: i.closing_stock != null ? Number(i.closing_stock) : (i.qte_en_stock != null ? Number(i.qte_en_stock) : (i.inventory_level != null ? Number(i.inventory_level) : null)),
         reorder_point: i.reorder_point != null ? Number(i.reorder_point) : null,
         status: i.stock_status || null,
       };

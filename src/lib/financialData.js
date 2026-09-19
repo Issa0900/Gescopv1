@@ -9,8 +9,28 @@ export function prepareTransactions(transactions) {
   };
 }
 
-export function financialSummary(transactions) {
-  const { incomes, expenses } = prepareTransactions(transactions);
+export function financialSummary(transactions = [], expenseEntityRows = [], orderRows = []) {
+  const { incomes: txnIncomes, expenses: txnExpenses } = prepareTransactions(transactions);
+
+  const orderIncomes = (orderRows || []).filter(Boolean).map((o) => ({
+    ...o,
+    _amount: Number(o?.total_revenue) || Number(o?.total) || (Number(o?.quantity) * Number(o?.unit_price)) || 0,
+  })).filter((o) => o._amount > 0);
+
+  const orderExpenses = (txnExpenses.length === 0)
+    ? (orderRows || []).filter(Boolean).map((o) => ({
+        ...o,
+        _amount: Number(o?.total_cost) || Number(o?.cost) || (Number(o?.quantity) * Number(o?.unit_cost)) || 0,
+      })).filter((o) => o._amount > 0)
+    : [];
+
+  const incomes = [...txnIncomes, ...orderIncomes];
+  const expenses = [
+    ...txnExpenses,
+    ...(expenseEntityRows || []).filter(Boolean).map((e) => ({ ...e, _amount: Number(e?.amount) || 0 })),
+    ...orderExpenses,
+  ];
+
   const revenue = incomes.reduce((sum, row) => sum + row._amount, 0);
   const expense = expenses.reduce((sum, row) => sum + row._amount, 0);
   const netIncome = revenue - expense;
@@ -25,18 +45,46 @@ export function financialSummary(transactions) {
 }
 
 /**
- * @param {Array} transactions
- * @param {Array} [expenseEntityRows] - rows from the dedicated Expense entity,
- *   costs live there just as often as in expense-typed Transaction rows, and
- *   reading only one made this series (and every card/chart built on it)
- *   read 0 $ of expenses whenever a company's costs sat in the other one.
+ * @param {Array} [transactions]
+ * @param {Array} [expenseEntityRows] - rows from the dedicated Expense entity
+ * @param {Array} [orderRows] - rows from the dedicated Order entity (sales/retail)
+ * @param {Array} [executiveSummaryRows] - rows from ExecutiveSummary (aggregated monthly P&L)
  */
-export function financialMonthlySeries(transactions, expenseEntityRows = []) {
-  const { incomes, expenses: txnExpenses } = prepareTransactions(transactions);
-  const expenses = [
+export function financialMonthlySeries(transactions = [], expenseEntityRows = [], orderRows = [], executiveSummaryRows = []) {
+  const { incomes: txnIncomes, expenses: txnExpenses } = prepareTransactions(transactions);
+
+  const orderIncomes = (orderRows || []).filter(Boolean).map((o) => ({
+    ...o,
+    _amount: Number(o?.total_revenue) || Number(o?.total) || (Number(o?.quantity) * Number(o?.unit_price)) || 0,
+  })).filter((o) => o._amount > 0);
+
+  // If no bank transactions exist, orders COGS are treated as expenses
+  const orderExpenses = (txnExpenses.length === 0)
+    ? (orderRows || []).filter(Boolean).map((o) => ({
+        ...o,
+        _amount: Number(o?.total_cost) || Number(o?.cost) || (Number(o?.quantity) * Number(o?.unit_cost)) || 0,
+      })).filter((o) => o._amount > 0)
+    : [];
+
+  let incomes = [...txnIncomes, ...orderIncomes];
+  let expenses = [
     ...txnExpenses,
-    ...(expenseEntityRows || []).map((e) => ({ ...e, _amount: Number(e.amount) || 0 })),
+    ...(expenseEntityRows || []).filter(Boolean).map((e) => ({ ...e, _amount: Number(e?.amount) || 0 })),
+    ...orderExpenses,
   ];
+
+  // If no transactions and no orders, fall back to ExecutiveSummary if available
+  if (incomes.length === 0 && (executiveSummaryRows || []).length > 0) {
+    incomes = (executiveSummaryRows || []).filter(Boolean).map((e) => ({
+      ...e,
+      _amount: Number(e?.total_revenue) || Number(e?.total) || 0,
+    })).filter((e) => e._amount > 0);
+    expenses = (executiveSummaryRows || []).filter(Boolean).map((e) => ({
+      ...e,
+      _amount: Number(e?.total_cost) || Number(e?.cost) || 0,
+    })).filter((e) => e._amount > 0);
+  }
+
   const revenue = monthlyAggComplete(incomes, "date", "_amount");
   const expense = monthlyAggComplete(expenses, "date", "_amount");
   const months = [...new Set([

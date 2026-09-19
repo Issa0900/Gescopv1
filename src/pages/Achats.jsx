@@ -35,7 +35,6 @@ export default function Achats() {
     queryFn: () => fetchAll(base44.entities.Product),
   });
 
-  if (lp || ls) return <p className="text-sm text-muted-foreground">Chargement…</p>;
   if (lp || ls || li || lpr) return <p className="text-sm text-muted-foreground">Chargement…</p>;
 
   const hasPurchases = purchases && purchases.length > 0;
@@ -62,6 +61,7 @@ export default function Achats() {
   const hasContact = (suppliers || []).some((s) => s.contact_name);
   const hasEmail = (suppliers || []).some((s) => s.email);
   const hasPaymentTerms = (suppliers || []).some((s) => s.payment_terms);
+  const hasPurchaseVolume = (suppliers || []).some((s) => s.purchase_volume != null && Number(s.purchase_volume) > 0);
 
   const total = purchases?.length || 0;
   const late = (purchases || []).filter((p) => p.status === "retard").length;
@@ -70,7 +70,7 @@ export default function Achats() {
   const avgDelay = delaySamples.length > 0
     ? Math.round(delaySamples.reduce((s, p) => s + Number(p.delay_days || 0), 0) / delaySamples.length)
     : null;
-  const activeSuppliers = (suppliers || []).filter((s) => s.status === "actif").length;
+  const activeSuppliers = (suppliers || []).filter((s) => s.status === "actif" || !s.status).length;
 
   return (
     <div className="space-y-8">
@@ -104,6 +104,7 @@ export default function Achats() {
                 {hasContact && <th className="px-4 py-3 font-medium">Contact</th>}
                 {hasEmail && <th className="px-4 py-3 font-medium">Courriel</th>}
                 {hasPaymentTerms && <th className="px-4 py-3 font-medium">Conditions paiement</th>}
+                {hasPurchaseVolume && <th className="px-4 py-3 font-medium">Volume d'achats</th>}
                 <th className="px-4 py-3 font-medium">Délai moyen</th>
                 <th className="px-4 py-3 font-medium">Score qualité</th>
                 <th className="px-4 py-3 font-medium">Fiabilité</th>
@@ -119,12 +120,13 @@ export default function Achats() {
                   {hasContact && <td className="px-4 py-3">{s.contact_name || "-"}</td>}
                   {hasEmail && <td className="px-4 py-3">{s.email || "-"}</td>}
                   {hasPaymentTerms && <td className="px-4 py-3">{s.payment_terms || "-"}</td>}
+                  {hasPurchaseVolume && <td className="px-4 py-3">{s.purchase_volume != null ? `${Math.round(s.purchase_volume).toLocaleString("fr-CA")} $` : "-"}</td>}
                   <td className="px-4 py-3">{s.average_delivery_days != null ? `${s.average_delivery_days} j` : "-"}</td>
                   <td className="px-4 py-3">{s.quality_score != null ? s.quality_score : "-"}</td>
                   <td className="px-4 py-3">{s.reliability_score != null ? s.reliability_score : "-"}</td>
                   <td className="px-4 py-3">
-                    <span className={s.status === "actif" ? "text-emerald-600" : s.status === "problematique" ? "text-red-600" : "text-muted-foreground"}>
-                      {supplierStatusLabels[s.status] || s.status || "-"}
+                    <span className={s.status === "actif" || !s.status ? "text-emerald-600" : s.status === "problematique" ? "text-red-600" : "text-muted-foreground"}>
+                      {supplierStatusLabels[s.status] || (s.status ? s.status : "Actif")}
                     </span>
                   </td>
                 </tr>

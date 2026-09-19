@@ -36,7 +36,7 @@ export default function Marketing() {
 
   if (lc || ld || lcu || ltx) return <p className="text-sm text-muted-foreground">Chargement…</p>;
   
-  let totalSpend = (campaigns || []).reduce((s, c) => s + num(c.spend), 0);
+  let totalSpend = (campaigns || []).reduce((s, c) => s + num(c.spend || c.budget), 0);
   let totalRevenue = (campaigns || []).reduce((s, c) => s + num(c.revenue), 0);
   const totalNew = (campaigns || []).reduce((s, c) => s + num(c.new_customers), 0);
   const totalConversions = (campaigns || []).reduce((s, c) => s + num(c.conversions), 0);
@@ -103,7 +103,7 @@ export default function Marketing() {
   campaigns.forEach((c) => {
     const ch = c.channel || "Autre";
     if (!byChannel[ch]) byChannel[ch] = { spend: 0, revenue: 0, conversions: 0, new_customers: 0, impressions: 0, clicks: 0 };
-    byChannel[ch].spend += num(c.spend);
+    byChannel[ch].spend += num(c.spend || c.budget);
     byChannel[ch].revenue += num(c.revenue);
     byChannel[ch].conversions += num(c.conversions);
     byChannel[ch].new_customers += num(c.new_customers);
@@ -231,8 +231,8 @@ export default function Marketing() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {[...campaigns].sort((a, b) => num(b.spend) - num(a.spend)).map((c) => {
-              const spend = num(c.spend);
+            {[...campaigns].sort((a, b) => num(b.spend || b.budget) - num(a.spend || a.budget)).map((c) => {
+              const spend = num(c.spend || c.budget);
               const revenue = num(c.revenue);
               const newCustomers = num(c.new_customers);
               const conversions = num(c.conversions);

@@ -192,7 +192,10 @@ export default function Kpis() {
     expenses: expenses || [],
     employees: employees || [],
     payrolls: payrolls || [],
+    campaigns: campaigns || [],
     campaignDaily: campaignDaily || [],
+    products: products || [],
+    inventory: inventory || [],
   }, ["customer_sentiment_score", ...ADDABLE_KPI_IDS]);
 
   // "+ Ajouter un indicateur" catalog: computed live regardless of whether
