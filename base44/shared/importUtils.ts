@@ -1577,12 +1577,10 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "adresse": "address",
   "statut_compte": "status",
   "total_achats_ttc_cad": "total_revenue",
-  "total_achats": "total_revenue",
 
   // Sales Orders & Retail
   "date_heure": "date",
   "canal_vente": "channel",
-  "nom_client": "customer_name",
   "id_vendeur": "employee_id",
   "remise_ligne": "discount",
   "prix_net": "unit_price",

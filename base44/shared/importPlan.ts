@@ -19,7 +19,7 @@
 // la preuve gagne. Voir verifierAvecPreuves().
 
 import { getSchema } from "./entitySchemas.ts";
-import { parseDate, stripAccents, FIELD_ALIASES, cleCanonique, ALIAS_CANONIQUES, variantesCanoniques, isSummaryOrTotalRow, type ConventionDate } from "./importUtils.ts";
+import { parseDate, stripAccents, FIELD_ALIASES, cleCanonique, ALIAS_CANONIQUES, variantesCanoniques, isSummaryOrTotalRow, type ConventionDate, type InvocateurLLM } from "./importUtils.ts";
 import { trouverLigneEntetes, detectEntityByHeaders, detectEntityByFieldOverlap, detectEntityByName } from "./sheetDetect.ts";
 import { recognizeAllColumns } from "./core/contextualRecognition.ts";
 import { classifyDocumentSheet, type SheetClassificationResult } from "./core/documentClassifier.ts";
