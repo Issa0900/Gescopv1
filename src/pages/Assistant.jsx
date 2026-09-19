@@ -6,13 +6,22 @@ import EmptyState from "@/components/EmptyState";
 import ReactMarkdown from "react-markdown";
 import { MessageSquare, Send, Loader2, Sparkles, Database } from "lucide-react";
 
+const CLASSIFICATION_CONFIG = {
+  FACT: { label: "Fait vérifié", color: "bg-blue-500/15 text-blue-700 border-blue-500/30 dark:text-blue-300" },
+  CALCULATION: { label: "Calcul arithmétique", color: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-300" },
+  OBSERVATION: { label: "Observation factuelle", color: "bg-indigo-500/15 text-indigo-700 border-indigo-500/30 dark:text-indigo-300" },
+  INFERENCE: { label: "Analyse déductive", color: "bg-purple-500/15 text-purple-700 border-purple-500/30 dark:text-purple-300" },
+  HYPOTHESIS: { label: "Hypothèse", color: "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-300" },
+  RECOMMENDATION: { label: "Recommandation stratégique", color: "bg-teal-500/15 text-teal-700 border-teal-500/30 dark:text-teal-300" },
+};
+
 const suggestions = [
-  "Pourquoi mes ventes baissent-elles ?",
-  "Quels sont mes principaux risques ?",
-  "Où puis-je économiser ?",
-  "Que dois-je faire aujourd'hui ?",
-  "Prévoir ma trésorerie",
-  "Simuler une décision",
+  "Analyse la rentabilité de mes succursales",
+  "Quels sont mes principaux risques financiers et de trésorerie ?",
+  "Où puis-je réduire mes coûts et charges récurrentes ?",
+  "Quels sont mes produits les plus et moins rentables ?",
+  "Quel est le bilan et l'efficacité de mes campagnes marketing ?",
+  "Que dois-je prioriser cette semaine pour maximiser le cash ?",
 ];
 
 export default function Assistant() {
@@ -83,12 +92,12 @@ export default function Assistant() {
                   <div className="prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0.5">
                     {m.classification && (
                       <div className="mb-2 flex items-center gap-2">
-                        <span className="rounded-full bg-primary/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary border border-primary/30">
-                          {m.classification}
+                        <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${CLASSIFICATION_CONFIG[m.classification]?.color || "bg-primary/20 text-primary border-primary/30"}`}>
+                          {CLASSIFICATION_CONFIG[m.classification]?.label || m.classification}
                         </span>
                         {m.confidence != null && (
                           <span className="text-[11px] font-medium text-muted-foreground">
-                            Confiance: {m.confidence > 1 ? Math.round(m.confidence) : Math.round(m.confidence * 100)}%
+                            Indice de confiance : {m.confidence > 1 ? Math.round(m.confidence) : Math.round(m.confidence * 100)} %
                           </span>
                         )}
                       </div>

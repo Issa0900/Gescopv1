@@ -12,7 +12,6 @@ export default async function(req) {
     if (!message) return Response.json({ error: "message requis" }, { status: 400 });
 
     const ctx = await buildBusinessContext(base44);
-
     const companyName = ctx.company?.name || "l'entreprise";
     const companyIndustry = ctx.company?.industry || "PME";
 
@@ -22,9 +21,7 @@ Tu conseilles directement la direction générale (CEO, CFO, COO) dans un contex
 TON OBJECTIF :
 Fournir des diagnostics exécutifs percutants, 100% fidèles aux chiffres réels, à haute valeur décisionnelle, et immédiatement transformables en actions concrètes pour maximiser la rentabilité, protéger la trésorerie et accélérer la croissance.
 
-CONTEXTE ET DONNÉES RÉELLES DE L'ENTREPRISE :
 ${ctx.context}
-
 ══════════════════════════════════════════════════════════════════
 MÉTHODOLOGIE D'ANALYSE ET RÈGLES DE CONDUITE (CFO-GRADE)
 ══════════════════════════════════════════════════════════════════

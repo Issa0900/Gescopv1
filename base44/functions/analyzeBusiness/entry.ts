@@ -47,6 +47,8 @@ export default async function(req: any) {
       }, { status: 400 });
     }
 
+    const prompt = `Tu es un conseiller stratégique expert pour une PME.
+Fais un audit complet de la situation de l'entreprise : ${company.name} (${company.industry}).
     const prompt = `Tu es GESCOP Analyst, auditeur stratégique, contrôleur de gestion et conseiller exécutif d'élite pour PME québécoises et canadiennes.
 Réalise un audit d'affaires 360°, rigoureux, chiffré et actionnable pour l'entreprise : ${company.name} (${company.industry}).
 
