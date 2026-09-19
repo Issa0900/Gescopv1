@@ -1,350 +1,416 @@
 import React, { useState } from "react";
-import { ChevronDown, Lightbulb, Upload, LayoutDashboard, BarChart3, AlertTriangle, ShieldAlert, Radar as RadarIcon, CheckSquare, Bell, FileText, MessageSquare, Settings, Sparkles, Rocket, Brain, TrendingUp, Calculator, Target, History, Users, Package, Megaphone, Wallet, ShieldCheck } from "lucide-react";
+import { 
+  ChevronDown, Lightbulb, Upload, LayoutDashboard, BarChart3, AlertTriangle, 
+  ShieldAlert, Radar as RadarIcon, CheckSquare, Bell, FileText, MessageSquare, 
+  Settings, Sparkles, Rocket, Brain, TrendingUp, Calculator, Target, History, 
+  Users, Package, Megaphone, Wallet, ShieldCheck, CheckCircle2, HelpCircle, 
+  ArrowRight, Check, AlertCircle, Info, Building2, Landmark, Truck, Wrench
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import ManualTableOfContents from "@/components/ManualTableOfContents";
 import BrandLogo from "@/components/BrandLogo";
 
 const groups = [
   {
-    label: "Démarrage",
+    label: "1. Cadrage & Prérequis",
     sections: [
       {
-        id: "demarrage",
-        title: "Démarrage rapide",
-        icon: Rocket,
+        id: "perimetre",
+        title: "Périmètre, Cible & Prérequis",
+        icon: Target,
+        badge: "Fondations",
+        objective: "Identifier les prérequis techniques, les rôles d'accès et les règles de conformité avant toute manipulation.",
         content: [
-          { h: "Bienvenue dans GESCOP", p: "GESCOP est un système intelligent tout-en-un pour le pilotage, l'anticipation et l'aide à la décision stratégique destiné aux PME. Il centralise vos données financières et opérationnelles, détecte automatiquement les signaux faibles, et produit des recommandations actionnables." },
-          { h: "Première utilisation", p: "Au premier accès, l'assistant d'onboarding vous guide en trois étapes : identité de l'entreprise, activité & clientèle, puis objectifs stratégiques. Vous pouvez renseigner l'URL de votre site web et cliquer sur « Auto-remplir » pour pré-remplir automatiquement les champs à partir des informations publiques." },
-          { h: "Le flux de travail recommandé", p: "1. Configurez votre entreprise (onboarding) → 2. Importez vos données (transactions, clients, produits, commandes, etc.) → 3. Lancez l'analyse IA depuis le tableau de bord → 4. Consultez les anomalies, risques et recommandations → 5. Convertissez les recommandations en tâches → 6. Générez un rapport." },
-          { h: "Données et modules", p: "Chaque module de GESCOP s'appuie sur des données spécifiques que vous importez. Le tableau ci-dessous détaille, pour chaque module, quelles données le nourrissent et ce qu'il produit. Importez les données correspondantes pour activer un module - un module sans données reste vide jusqu'à l'import." },
-        ],
-      },
+          {
+            h: "1. Public cible & Niveau technique requis",
+            action: "Identifiez votre rôle d'accès dans GESCOP pour adapter votre usage :",
+            steps: [
+              "Direction Générale (CEO / Fondateur) : Consultation du Score de Santé, des priorités du jour et dialogue stratégique avec l'Assistant.",
+              "Direction Financière & Comptabilité (CFO / DAF / Contrôleur) : Validation des imports P&L, suivi de trésorerie, DPA et clôtures mensuelles.",
+              "Direction des Opérations & Ventes (COO / Responsable Magasins) : Pilotage multi-succursales, gestion des stocks et marges par produit.",
+              "Équipe Marketing & Service Client : Mesure du ROAS, coûts d'acquisition (CAC) et gestion des réclamations clients."
+            ],
+            successIndicator: "Aucune compétence en programmation n'est requise. La maîtrise d'un tableur (Excel ou Google Sheets) suffit pour exploiter 100% de la plateforme.",
+            tip: "Un mode démonstration préchargé avec une simulation complète est disponible pour tester les fonctionnalités sans risque."
+          },
+          {
+            h: "2. Objectif unique du document",
+            action: "Ce que vous saurez accomplir à la fin de la lecture de ce guide :",
+            steps: [
+              "Configurer votre profil d'entreprise en moins de 3 minutes.",
+              "Glisser-déposer vos classeurs Excel comptables et opérationnels sans rejet ni blocage.",
+              "Interpréter les indicateurs financiers clés ($ CAD) et piloter vos succursales.",
+              "Poser des questions complexes à l'Assistant IA pour obtenir des décisions chiffrées actionnables."
+            ],
+            successIndicator: "Vous serez en mesure de mener un cycle de pilotage mensuel complet en totale autonomie."
+          },
+          {
+            h: "3. Prérequis matériels & Données sources",
+            action: "Rassemblez les éléments suivants avant d'entamer les étapes :",
+            steps: [
+              "Navigateur web récent : Google Chrome, Microsoft Edge, Mozilla Firefox ou Apple Safari (résolution recommandée : 1280×800 minimum).",
+              "Vos fichiers de données d'entreprise : Relevés bancaires CSV, exports de caisse POS, fichiers de paie ou exports Excel de vos logiciels (QuickBooks, Shopify, Acomba, Sage).",
+              "Un compte utilisateur actif avec le rôle Administrateur ou Analyste."
+            ],
+            successIndicator: "Vos fichiers sont prêts sur votre poste de travail au format .xlsx ou .csv."
+          },
+          {
+            h: "4. Règles critiques & Conformité Loi 25 (Québec)",
+            action: "Respectez impérativement ces trois consignes de gouvernance des données :",
+            steps: [
+              "Souveraineté des données : GESCOP héberge l'ensemble des données au Canada dans des centres certifiés SOC2 et ISO 27001.",
+              "Protection des renseignements personnels : Ne chargez jamais de numéros d'assurance sociale (NAS) ou de cartes de crédit complètes.",
+              "Traçabilité immuable : Chaque écriture importée conserve un identifiant d'import et son contenu original d'archive."
+            ],
+            warning: "Conformité Loi 25 : En cas de suppression demandée par un client, utilisez le module Clients pour anonymiser sa fiche en un clic."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    label: "2. Mise en route pas-à-pas",
+    sections: [
       {
         id: "onboarding",
-        title: "Configuration de l'entreprise",
+        title: "Étape 1 : Configuration initiale (3 minutes)",
         icon: Sparkles,
+        badge: "Démarrage",
+        objective: "Établir la carte d'identité de l'entreprise pour contextualiser l'ensemble des analyses financières et prédictives.",
         content: [
-          { h: "Étape 1 - Identité", p: "Renseignez le nom, le secteur, la localisation, le nombre d'employés et le chiffre d'affaires. Le champ « Site web » permet l'enrichissement automatique : entrez l'URL puis cliquez sur « Auto-remplir » pour extraire les informations publiques de votre entreprise via IA." },
-          { h: "Étape 2 - Activité & clientèle", p: "Décrivez votre modèle d'affaires, vos produits, services et clientèle. Sélectionnez les outils que vous utilisez déjà (Excel, QuickBooks, Shopify, etc.) en cliquant sur les tuiles correspondantes." },
-          { h: "Étape 3 - Objectifs", p: "Choisissez vos objectifs stratégiques. Ces objectifs orientent les recommandations produites par le moteur d'analyse IA - plus ils sont précis, plus les recommandations sont pertinentes." },
-          { h: "Données produites", p: "L'onboarding alimente l'entité Company (profil d'entreprise) qui sert de contexte à toutes les analyses IA, à l'assistant, et au radar externe. Sans onboarding, l'analyse IA ne peut pas démarrer." },
-        ],
+          {
+            h: "Action 1 : Renseigner l'identité de l'entreprise",
+            action: "Complétez la fiche d'identification dès votre première connexion :",
+            steps: [
+              "Accédez à l'écran de configuration initiale ou rendez-vous dans le menu « Paramètres ».",
+              "Saisissez la raison sociale légale, le secteur d'activité (ex. Commerce de détail plein air) et la localisation principale.",
+              "Renseignez l'URL publique de votre site web et cliquez sur le bouton « Auto-remplir avec l'IA ».",
+              "Vérifiez les données extraites automatiquement (description d'activité, effectif estimé) et validez."
+            ],
+            successIndicator: "La fiche affiche le badge vert « Entreprise configurée » avec le logo et la devise par défaut ($ CAD).",
+            tip: "Si votre site web est protégé par un mot de passe ou indisponible, vous pouvez saisir les champs manuellement en moins de 60 secondes."
+          },
+          {
+            h: "Action 2 : Définir le modèle d'affaires & les succursales",
+            action: "Précisez l'organisation opérationnelle de votre entreprise :",
+            steps: [
+              "Sélectionnez vos canaux de distribution : Magasins physiques, Boutique en ligne (E-commerce), Vente B2B aux professionnels.",
+              "Dans la section Succursales, enregistrez vos points de vente réels (ex. Web, Lévis, Chicoutimi, Québec, Trois-Rivières).",
+              "Sélectionnez les logiciels tiers que vous utilisez déjà pour adapter le vocabulaire d'ingestion."
+            ],
+            successIndicator: "La liste des succursales actives est visible dans les filtres de rapport.",
+            warning: "Ne confondez pas une « Succursale » (lieu physique de vente ou entrepôt) avec un « Département » (service interne comme Comptabilité ou RH)."
+          },
+          {
+            h: "Action 3 : Fixer vos objectifs stratégiques de l'exercice",
+            action: "Indiquez à GESCOP vos cibles prioritaires pour guider ses recommandations :",
+            steps: [
+              "Définissez un objectif de rentabilité (ex. Marge brute cible : 50 %).",
+              "Définissez un seuil de sécurité de trésorerie (ex. Réserve minimale : 50 000 $ CAD).",
+              "Enregistrez vos priorités de croissance (ex. Réduction du coût d'acquisition client de 10 %)."
+            ],
+            successIndicator: "Les barres de progression de vos objectifs apparaissent sur le Tableau de bord avec les écarts en temps réel."
+          }
+        ]
       },
       {
         id: "import",
-        title: "Import universel de données (Moteur V3)",
+        title: "Étape 2 : Ingestion Universelle des Données",
         icon: Upload,
+        badge: "Import V3",
+        objective: "Importer vos données comptables, commerciales et de stocks sans friction grâce au moteur d'ingestion sémantique.",
         content: [
-          { h: "Formats supportés & Moteur Universel V3", p: "GESCOP accepte les fichiers CSV, Excel (.xlsx, .xls), TSV et PDF texte. Grâce au Moteur Universel V3, l'application analyse la structure, le grain des données (transactionnel fin, composite ou agrégé par succursale), et rattache automatiquement chaque colonne au concept commercial approprié." },
-          { h: "Reconnaissance sémantique & Tolérance", p: "Le moteur comprend plus de 7 langues (français québécois, anglais, espagnol, allemand, italien, etc.), gère la tokenisation (camelCase, snake_case, espaces), tolère les fautes de frappe courantes et élimine automatiquement les lignes de « TOTAL » ou « Sommaire » pour ne conserver que la donnée utile." },
-          { h: "Rattrapage contextuel & Mémoire", p: "Si une colonne utilise un terme propre à votre organisation (ex. « Succursale », « Coût Total ($) », « % Marge »), GESCOP utilise le profil d'entreprise et le Dictionnaire d'Entreprise pour la rattacher automatiquement (ex. Succursale ≠ Département, Profit brut $ ≠ Marge brute %)." },
-          { h: "Types de données importables", p: "Vous pouvez importer simultanément plusieurs fichiers pour alimenter les différentes tables de l'app. Chaque type de données alimente un ou plusieurs modules spécifiques :" },
-          { h: "Transactions (income/expense)", p: "Fichier avec colonnes : date, description, montant, type (income/expense), catégorie. Alimente : Tableau de bord, KPI (domaine Finance), Trésorerie, Anomalies, Prévisions, Assistant IA." },
-          { h: "Commandes (Orders)", p: "Fichier avec colonnes : order_id, customer_id, date, channel, product_id, quantity, unit_price, total, payment_status, fulfillment_status. Alimente : KPI (domaine Ventes), Clients (LTV, panier moyen), Produits (ventes mensuelles)." },
-          { h: "Clients (Customers)", p: "Fichier avec colonnes : customer_id, name, email, segment, status, acquisition_date, total_spent. Alimente : page Clients (segmentation, churn, LTV), KPI (domaine Clients)." },
-          { h: "Produits (Products)", p: "Fichier avec colonnes : product_id, product_name, category, purchase_cost, selling_price, gross_margin, monthly_sales, inventory_level, reorder_point, status. Alimente : page Produits, KPI (domaine Opérations)." },
-          { h: "Stocks (Inventory)", p: "Fichier avec colonnes : date, product_id, opening_stock, units_sold, closing_stock, stock_status. Alimente : page Produits (alertes rupture, stock dormant), KPI (domaine Opérations)." },
-          { h: "Campagnes (Campaigns)", p: "Fichier avec colonnes : campaign_id, campaign_name, channel, budget, spend, impressions, clicks, conversions, revenue, status. Alimente : page Marketing, KPI (domaine Marketing)." },
-          { h: "Flux de trésorerie (Cashflow)", p: "Fichier avec colonnes : date, opening_cash, cash_in, cash_out, closing_cash, accounts_receivable, accounts_payable. Alimente : page Trésorerie, KPI (Trésorerie actuelle). GESCOP distingue rigoureusement les 4 flux (ouverture, entrées, sorties, clôture)." },
-          { h: "Dépenses (Expenses)", p: "Fichier avec colonnes : date, category, supplier, amount, recurring, department. Alimente : page Trésorerie (dépenses récurrentes), analyse IA." },
-          { h: "Employés & Paie (Employees, Payroll)", p: "Fichiers avec colonnes : employee_id, department, hourly_rate, weekly_hours / payroll_id, period, regular_pay, overtime. Alimente : page Trésorerie (coûts salariaux), analyse IA." },
-          { h: "Fournisseurs (Suppliers)", p: "Fichier avec colonnes : supplier_id, supplier_name, category, average_delivery_days, quality_score, reliability_score. Alimente : analyse IA (risques fournisseurs), radar externe." },
-          { h: "Concurrents (Competitors)", p: "Fichier avec colonnes : competitor_id, name, sector, market_position, price_position, estimated_revenue. Alimente : page Paramètres (suivi concurrents), radar externe." },
-          { h: "Campagnes journalières (CampaignDaily)", p: "Fichier avec colonnes : date, campaign_id, impressions, clicks, spend, revenue, roas. Alimente : page Marketing (analyse temporelle fine par campagne)." },
-          { h: "Interactions client (Interaction)", p: "Fichier avec colonnes : interaction_id, date, customer_id, channel, type, sentiment, satisfaction_score. Alimente : analyse IA (satisfaction client, plaintes), radar externe." },
-          { h: "Achats (Purchase)", p: "Fichier avec colonnes : purchase_id, date, supplier_id, product_id, quantity, unit_cost, total_cost, status. Alimente : analyse IA (risques fournisseurs, retards de livraison)." },
-          { h: "Signaux externes (ExternalSignal)", p: "Fichier avec colonnes : title, family, impact, source, url, date, relevance_score. Alimente : page Radar externe. Note : ces signaux sont normalement générés par l'IA, mais peuvent aussi être importés manuellement." },
-          { h: "Objectifs (Goal)", p: "Fichier avec colonnes : goal_id, domain, metric, target, current, period, priority, status. Alimente : suivi des objectifs stratégiques, comparaison cible vs réel." },
-          { h: "Événements (Event)", p: "Fichier avec colonnes : event_id, date, event_type, description, impact_area. Alimente : analyse IA (contexte des événements internes ayant un impact sur les performances)." },
-          { h: "Qualité & Audit de données", p: "Après l'import, un score de qualité sur 100 est calculé. Les lignes douteuses sont isolées en quarantaine avec motif explicite. L'historique complet et la traçabilité restent consultables à tout moment." },
-        ],
-      },
-      {
-        id: "sources",
-        title: "Où trouver vos données",
-        icon: FileText,
-        content: [
-          { h: "Transactions (revenus/dépenses)", p: "Exportez depuis votre logiciel comptable : QuickBooks, Sage, Xero, Wave, FreshBooks ou votre banque (export CSV des relevés). Colonnes typiques : date, description, montant, type. La plupart des banques canadiennes (RBC, TD, Scotia, BMO, Desjardins) offrent un export CSV des transactions depuis leur portail en ligne." },
-          { h: "Commandes (Orders)", p: "Exportez depuis votre plateforme e-commerce : Shopify (Admin → Orders → Export), WooCommerce, BigCommerce, Wix Stores, ou votre système de caisse (POS). Colonnes typiques : order_id, date, customer_id, product_id, quantity, total, payment_status." },
-          { h: "Clients (Customers)", p: "Exportez depuis votre CRM ou plateforme e-commerce : Shopify (Customers → Export), HubSpot, Salesforce, Zoho CRM, ou votre fichier Excel de gestion client. Colonnes typiques : customer_id, name, email, segment, status, total_spent, acquisition_date." },
-          { h: "Produits (Products)", p: "Exportez depuis votre plateforme e-commerce ou votre système de gestion des stocks : Shopify (Products → Export), WooCommerce, Lightspeed, ou votre fichier Excel de catalogue. Colonnes typiques : product_id, product_name, category, purchase_cost, selling_price, gross_margin, status." },
-          { h: "Stocks (Inventory)", p: "Exportez depuis votre système de gestion des stocks : Shopify Inventory, Lightspeed, Stocky, ou votre fichier Excel d'inventaire mensuel. Colonnes typiques : date, product_id, opening_stock, units_sold, closing_stock, stock_status." },
-          { h: "Campagnes (Campaigns)", p: "Exportez depuis vos plateformes publicitaires : Google Ads (Campagnes → Rapports → Télécharger), Meta Ads Manager (Exporter), TikTok Ads, ou votre outil d'email (Mailchimp, Klaviyo). Colonnes typiques : campaign_id, campaign_name, channel, spend, impressions, clicks, conversions, revenue." },
-          { h: "Flux de trésorerie (Cashflow)", p: "Construisez ce fichier à partir de votre relevé bancaire (export CSV) ou de votre logiciel comptable (QuickBooks, Xero → Rapport de flux de trésorerie → Export). Colonnes typiques : date, opening_cash, cash_in, cash_out, closing_cash, accounts_receivable, accounts_payable." },
-          { h: "Dépenses (Expenses)", p: "Exportez depuis votre logiciel comptable : QuickBooks (Expenses → Export), Xero, FreshBooks, ou votre fichier Excel de suivi des dépenses. Colonnes typiques : date, category, supplier, amount, recurring, department." },
-          { h: "Employés & Paie (Employees, Payroll)", p: "Exportez depuis votre système de paie : ADP, Ceridian/Dayforce, Payworks, QuickBooks Payroll, ou votre fichier Excel RH. Employees : employee_id, department, hourly_rate, weekly_hours, status. Payroll : payroll_id, employee_id, period, regular_pay, overtime, total_cost." },
-          { h: "Fournisseurs (Suppliers)", p: "Exportez depuis votre logiciel comptable (QuickBooks → Vendors → Export) ou votre fichier Excel de gestion des achats. Colonnes typiques : supplier_id, supplier_name, category, average_delivery_days, quality_score, reliability_score." },
-          { h: "Concurrents (Competitors)", p: "Saisissez manuellement ou exportez depuis un outil d'intelligence commerciale (Crunchbase, Owler, SEMrush). Colonnes typiques : competitor_id, name, sector, market_position, price_position, estimated_revenue, average_rating." },
-          { h: "Campagnes journalières (CampaignDaily)", p: "Exportez depuis vos plateformes publicitaires (Google Ads, Meta Ads) au niveau du rapport journalier par campagne. Colonnes typiques : date, campaign_id, impressions, clicks, spend, revenue." },
-          { h: "Interactions client (Interaction)", p: "Exportez depuis votre système de service client (Zendesk, Intercom, Gorgias) ou votre CRM. Colonnes typiques : interaction_id, date, customer_id, channel, type, sentiment, satisfaction_score." },
-          { h: "Achats (Purchase)", p: "Exportez depuis votre logiciel comptable (QuickBooks → Purchases/Vendors) ou votre système d'approvisionnement. Colonnes typiques : purchase_id, date, supplier_id, product_id, quantity, unit_cost, total_cost, status." },
-          { h: "Signaux externes (ExternalSignal)", p: "Normalement générés par l'IA. Pour un import manuel, créez un fichier avec les signaux marché pertinents : title, family, impact, source, url, date, relevance_score." },
-          { h: "Objectifs (Goal)", p: "Créez manuellement un fichier avec vos objectifs stratégiques : goal_id, domain, metric, target, current, period, priority, status. Exportez aussi depuis votre outil de gestion OKR/KPI." },
-          { h: "Événements (Event)", p: "Créez manuellement un fichier retraçant les événements internes ayant un impact sur l'activité : event_id, date, event_type, description, impact_area." },
-          { h: "Format des fichiers", p: "Tous les fichiers peuvent être en CSV, Excel (.xlsx, .xls) ou TSV. Exportez simplement le fichier depuis votre outil, ou créez un tableur avec les colonnes indiquées. Les en-têtes en français ou en anglais sont acceptés. Le système reconnaît automatiquement le type de données à partir du nom du fichier et de ses colonnes." },
-          { h: "Vous n'avez pas tout ?", p: "GESCOP fonctionne même avec des données partielles. Importez d'abord vos transactions (le minimum requis), puis ajoutez progressivement les autres fichiers. Les modules sans données restent vides jusqu'à l'import correspondant." },
-        ],
-      },
-    ],
+          {
+            h: "Action 1 : Préparer et déposer vos fichiers",
+            action: "Glissez vos fichiers dans la zone d'importation dédiée :",
+            steps: [
+              "Cliquez sur « Importer des données » dans le menu latéral gauche.",
+              "Glissez-déposez votre classeur Excel (.xlsx) complet ou sélectionnez plusieurs fichiers CSV en même temps.",
+              "Patientez 3 à 5 secondes pendant que le Moteur Universel V3 profile la structure de chaque feuille."
+            ],
+            successIndicator: "Un panneau d'analyse s'affiche en listant chaque feuille détectée avec son entité cible (ex. Ventes → Order, Stocks → Inventory).",
+            tip: "GESCOP gère les classeurs multi-feuilles : un seul fichier Excel contenant 7 à 14 feuilles est reconnu et ventilé automatiquement !"
+          },
+          {
+            h: "Action 2 : Vérifier la reconnaissance des colonnes",
+            action: "Contrôlez l'alignement des colonnes suggéré par le système :",
+            steps: [
+              "Vérifiez que chaque colonne source est reliée au concept métier équivalent (ex. « Qte_En_Stock » → closing_stock).",
+              "Les variations d'écritures, abréviations (Qte, Mnt, Tx, Ca) et devises ($ CAD) sont résolues automatiquement.",
+              "Les colonnes vides de grille Excel (ex. col_7, col_8) sont automatiquement neutralisées sans bloquer l'import.",
+              "Cliquez sur « Confirmer et importer »."
+            ],
+            successIndicator: "Le rapport d'importation affiche : « 100% des lignes traitées avec succès — 0 rejet ».",
+            warning: "Si une colonne affiche « Ignorer » alors qu'elle contient une donnée importante, cliquez dessus et sélectionnez manuellement le champ dans la liste déroulante."
+          },
+          {
+            h: "Action 3 : Valider le score de qualité des données",
+            action: "Vérifiez la conformité de l'ingestion sur la page Audit :",
+            steps: [
+              "Consultez l'indicateur de complétude globale (viser un score supérieur à 90%).",
+              "Vérifiez que le tableau de quarantaine est vide (0 ligne rejetée).",
+              "Si des lignes sont en quarantaine, consultez le motif explicatif (ex. date invalide ou montant textuel) pour corriger votre source."
+            ],
+            successIndicator: "La pastille de statut affiche « Données saines » et l'ensemble des modules applicatifs sont instantanément alimentés."
+          }
+        ]
+      }
+    ]
   },
   {
-    label: "Pilotage quotidien",
+    label: "3. Pilotage opérationnel & Modules",
     sections: [
       {
         id: "dashboard",
-        title: "Tableau de bord",
+        title: "Tableau de Bord & Score de Santé 360°",
         icon: LayoutDashboard,
+        badge: "Quotidien",
+        objective: "Évaluer la santé globale de l'entreprise en un coup d'œil et identifier les priorités d'action du matin.",
         content: [
-          { h: "Vue d'ensemble", p: "Le tableau de bord est la page d'accueil. Il présente le score de santé global de l'entreprise (jauge), les statistiques financières clés, et les scores par dimension (finance, ventes, opérations, marketing)." },
-          { h: "Données utilisées", p: "Le tableau de bord agrège les données de toutes les entités importées : Transactions, Orders, Customers, Campaigns, Products, Inventory, Cashflow, ainsi que les résultats de la dernière analyse IA (Anomaly, Risk, Opportunity, Recommendation, Kpi, AnalysisRun). Sans données importées, le tableau de bord affiche l'écran d'onboarding." },
-          { h: "Lancer l'analyse IA", p: "Le bouton « Analyser » déclenche le moteur d'analyse qui examine l'ensemble de vos données, détecte les anomalies, évalue les risques, identifie les opportunités, calcule les KPI et génère des recommandations. Cette opération peut prendre quelques secondes." },
-          { h: "Sections affichées", p: "Après analyse, le tableau de bord affiche : les priorités critiques du jour, le score de santé et les scores par dimension, les KPI clés, les anomalies détectées (triées par sévérité), les risques actifs, les prévisions, et les recommandations prioritaires. Chaque section renvoie vers sa page dédiée pour le détail." },
-        ],
+          {
+            h: "Action 1 : Consulter le Score de Santé Global",
+            action: "Analysez la jauge centrale dès votre connexion quotidienne :",
+            steps: [
+              "La jauge centrale indique un score de 0 à 100 calculé exclusivement sur vos données réelles.",
+              "Vert (80-100) : Excellente situation financière et opérationnelle.",
+              "Jaune (60-79) : Points de vigilance modérés nécessitant un arbitrage.",
+              "Rouge (< 60) : Tension critique sur la trésorerie, la rentabilité ou les ruptures de stock."
+            ],
+            successIndicator: "Chaque dimension mesurée affiche sa tendance par rapport au mois précédent (▲ Hausse, ▼ Baisse, ▬ Stable)."
+          },
+          {
+            h: "Action 2 : Déclencher l'Audit Stratégique IA",
+            action: "Lancez une mise à jour complète de l'analyse décisionnelle :",
+            steps: [
+              "Cliquez sur le bouton « Lancer l'analyse » situé en haut à droite du tableau de bord.",
+              "L'algorithme croise simultanément les 11 domaines (ventes, trésorerie, paie, stocks, campagnes marketing).",
+              "Patientez pendant l'audit (généralement 5 à 10 secondes)."
+            ],
+            successIndicator: "Le bloc « Priorités critiques du jour » est renouvelé avec des actions concrètes et chiffrées."
+          }
+        ]
       },
       {
-        id: "kpis",
-        title: "Moteur Universel de Découverte des KPI",
-        icon: BarChart3,
+        id: "finance",
+        title: "Module Finance & Compte de Résultat (P&L)",
+        icon: Landmark,
+        badge: "Rentabilité",
+        objective: "Contrôler le chiffre d'affaires, la structure de coûts (COGS/OpEx) et la marge nette réelle.",
         content: [
-          { h: "Découverte dynamique des indicateurs", p: "GESCOP ne force pas une liste rigide : son Moteur de Découverte inspecte vos données réelles, identifie automatiquement tous les KPI éligibles, vérifie leur faisabilité mathématique et publie instantanément les indicateurs calculables." },
-          { h: "10 Catalogues de Domaines", p: "Le moteur structure les indicateurs en 10 domaines : Finance (marge brute, EBITDA), Ventes (panier moyen, taux de conversion), Trésorerie (cash runway, burn rate), Clients (LTV, churn rate), Opérations (rotation de stock), Marketing (ROAS, CAC, CTR), RH (masse salariale / revenu), Risques, Prévisions et Stratégie." },
-          { h: "Diagnostic de cause racine des métriques manquantes", p: "Si un indicateur stratégique ne peut être calculé, GESCOP détaille la cause exacte (ex: 'Requis: COGS') et suggère le type de fichier à importer pour débloquer automatiquement ce KPI." },
-          { h: "Sécurité mathématique & Blindage", p: "Chaque formule est protégée contre la division par zéro, les dénominateurs nuls et les incohérences d'échelle. Les valeurs font l'objet d'un audit de plausibilité avant publication." },
-          { h: "Graphique de tendance & Épinglage", p: "Suivez l'évolution mensuelle sur 8 à 12 mois et épinglez vos KPI prioritaires directement sur votre tableau de bord via le centre de configuration." },
-        ],
+          {
+            h: "Action 1 : Analyser la cascade de marge",
+            action: "Suivez la décomposition de vos résultats financiers :",
+            steps: [
+              "Consultez les 4 indicateurs cardinaux : Chiffre d'affaires total, Coût des ventes (CMV), Résultat net et Marge nette %.",
+              "Survolez les barres du graphique mensuel pour comparer l'évolution des revenus face aux charges directes.",
+              "Vérifiez que la marge brute se maintient au-dessus de votre seuil de rentabilité cible."
+            ],
+            successIndicator: "Tous les chiffres sont exprimés en dollars canadiens ($ CAD) arrondis pour une lisibilité exécutive immédiate.",
+            tip: "En l'absence de grand livre bancaire complet, GESCOP calcule votre compte de résultat directement à partir de vos commandes et sommaires exécutifs."
+          }
+        ]
       },
       {
         id: "tresorerie",
-        title: "Trésorerie",
+        title: "Module Trésorerie & Prévisions de Flux",
         icon: Wallet,
+        badge: "Liquidité",
+        objective: "Protéger la pérennité financière en anticipant le solde bancaire et les engagements futurs.",
         content: [
-          { h: "Données utilisées", p: "Ce module s'appuie sur trois sources importées : Cashflow (flux de trésorerie journaliers), Expenses (dépenses et abonnements récurrents), et Payroll (coûts salariaux par période). Sans ces données, la page affiche un état vide." },
-          { h: "Flux de trésorerie", p: "À partir des enregistrements Cashflow, le module trace l'évolution de votre liquidité : encaissements (cash_in), décaissements (cash_out), solde net et solde de clôture (closing_cash) jour par jour. Visualisez la trajectoire pour anticiper les tensions." },
-          { h: "Créances et dettes", p: "Les champs accounts_receivable (créances clients) et accounts_payable (dettes fournisseurs) du fichier Cashflow sont agrégés pour montrer votre position nette à court terme." },
-          { h: "Dépenses récurrentes", p: "Le fichier Expenses alimente la section des abonnements et coûts fixes : les dépenses marquées recurring=true sont listées avec leur montant mensuel total, pour visualiser vos engagements fixes." },
-          { h: "Coûts salariaux", p: "Le fichier Payroll alimente le graphique des coûts de personnel par période (total_cost), pour suivre l'évolution de votre masse salariale et son impact sur la trésorerie." },
-          { h: "Ce que le module fait", p: "Il calcule et affiche : le solde de trésorerie actuel, le flux net moyen, le total des dépenses récurrentes mensuelles, le total des coûts salariaux, et les graphiques d'évolution temporelle (flux de trésorerie, entrées vs sorties, tendance salariale)." },
-        ],
+          {
+            h: "Action 1 : Piloter les flux de trésorerie réels",
+            action: "Inspectez les mouvements de liquidités de la période :",
+            steps: [
+              "Vérifiez le Solde disponible actuel en banque.",
+              "Examinez le flux net mensuel : Encaissements réels moins Décaissements réels.",
+              "Consultez l'indicateur d'Autonomie financière (Cash Runway) indiquant le nombre de mois de fonctionnement sans nouveau revenu."
+            ],
+            successIndicator: "La courbe de trésorerie prévisionnelle projette votre solde sur les 3 prochains mois.",
+            warning: "Si l'autonomie financière passe sous les 60 jours, une alerte critique est automatiquement émise."
+          }
+        ]
       },
       {
-        id: "clients",
-        title: "Clients",
-        icon: Users,
+        id: "succursales",
+        title: "Module Succursales & Multi-Points de Vente",
+        icon: Building2,
+        badge: "Réseau",
+        objective: "Comparer la rentabilité et le volume de ventes entre vos magasins physiques et votre boutique Web.",
         content: [
-          { h: "Données utilisées", p: "Ce module s'appuie sur les entités Customers (fichier clients) et Orders (fichier commandes). Les commandes sont rattachées aux clients via customer_id pour calculer la valeur vie et le panier moyen. Sans clients importés, la page affiche un état vide." },
-          { h: "Portefeuille client", p: "À partir du fichier Customers, le module présente : nombre total de clients, clients actifs, clients inactifs/perdus, et le taux de churn. Chaque client affiche son chiffre d'affaires cumulé (total_spent), sa valeur vie (LTV) et sa date d'acquisition." },
-          { h: "Segmentation automatique", p: "Le champ segment du fichier Customers est utilisé pour répartir vos clients : nouveau, régulier, VIP, B2B, haute valeur, à risque. Un graphique camembert montre la répartition par segment." },
-          { h: "Concentration de revenus", p: "Le module croise Customers et Orders pour identifier la concentration de revenus : quels clients représentent la plus grande part de votre chiffre d'affaires, et quel est le risque de dépendance." },
-          { h: "Ce que le module fait", p: "Il calcule et affiche : le nombre de clients par segment, le taux de churn, la LTV moyenne, le panier moyen par client, un graphique de répartition par segment, un graphique des revenus par client, et un tableau des top clients." },
-        ],
+          {
+            h: "Action 1 : Évaluer la performance par succursale",
+            action: "Détectez les écarts de rentabilité géographique :",
+            steps: [
+              "Consultez le tableau comparatif ventilant le Chiffre d'affaires, la Marge brute et le Panier moyen (AOV) par emplacement.",
+              "Identifiez les succursales motrices (ex. Web, Lévis, Chicoutimi) et celles nécessitant un soutien commercial.",
+              "Filtrez les résultats par succursale pour afficher un compte de résultat dédié à chaque point de vente."
+            ],
+            successIndicator: "Chaque succursale affiche sa contribution relative (%) au chiffre d'affaires global de l'entreprise."
+          }
+        ]
       },
       {
-        id: "produits",
-        title: "Produits",
+        id: "operations",
+        title: "Clients, Produits, Stocks, RH & Fournisseurs",
         icon: Package,
+        badge: "Opérations",
+        objective: "Gérer l'ensemble des leviers opérationnels quotidiens pour éliminer les gaspillages.",
         content: [
-          { h: "Données utilisées", p: "Ce module s'appuie sur les entités Products (fichier catalogue produits) et Inventory (fichier mouvements de stock). Les deux sont reliés via product_id. Sans produits importés, la page affiche un état vide." },
-          { h: "Catalogue de produits", p: "À partir du fichier Products, le module affiche : nombre total de produits, marge brute moyenne, ventes mensuelles totales, et le statut de chaque produit (actif, discontinué, rupture, nouveau)." },
-          { h: "Gestion des stocks", p: "Le fichier Inventory alimente les alertes de stock : produits en rupture, proches de la rupture, en surstock ou dormants. Le champ stock_status est utilisé pour classer chaque produit. Un graphique camembert montre la répartition des statuts de stock." },
-          { h: "Marge et rentabilité", p: "Le module compare le coût d'achat (purchase_cost) et le prix de vente (selling_price) de chaque produit pour calculer la marge brute (gross_margin). Les produits à marge faible ou négative sont signalés pour révision tarifaire ou renégociation fournisseur." },
-          { h: "Ce que le module fait", p: "Il calcule et affiche : le nombre de produits, la marge moyenne, le nombre de produits dormants, les alertes de rupture, un graphique des ventes par produit, un graphique de répartition des stocks, et un tableau des produits les plus performants." },
-        ],
-      },
-      {
-        id: "marketing",
-        title: "Marketing",
-        icon: Megaphone,
-        content: [
-          { h: "Données utilisées", p: "Ce module s'appuie sur l'entité Campaigns (fichier campagnes publicitaires). Optionnellement, CampaignDaily (données journalières par campagne) peut affiner l'analyse temporelle. Sans campagnes importées, la page affiche un état vide." },
-          { h: "Performance des campagnes", p: "À partir du fichier Campaigns, le module synthétise pour chaque campagne : budget, dépenses (spend), impressions, clics, conversions, chiffre d'affaires généré (revenue), nouveaux clients, CAC et ROAS. Les canaux supportés : Google Ads, Meta Ads, Instagram, email, TikTok." },
-          { h: "Indicateurs calculés", p: "Le module calcule à partir des totaux : ROAS moyen (revenue / spend), CAC moyen (spend / conversions), taux de clic (CTR = clicks / impressions), taux de conversion (conversions / clicks). Ces indicateurs sont agrégés par canal et dans le temps." },
-          { h: "Ce que le module fait", p: "Il affiche : les KPI marketing globaux (ROAS, CAC, CTR, taux de conversion), un graphique en barres de la performance par canal, un graphique linéaire de l'évolution du ROAS dans le temps, et un tableau détaillé triable de toutes les campagnes." },
-          { h: "Recommandations", p: "Les campagnes sous le seuil de rentabilité (ROAS < 1) ou avec un CAC élevé sont visibles dans le tableau pour ajustement ou suspension." },
-        ],
-      },
-    ],
+          {
+            h: "Action 1 : Piloter l'inventaire et les ruptures (Stocks)",
+            action: "Évitez les ruptures de stock tout en limitant le capital immobilisé :",
+            steps: [
+              "Consultez la Valeur d'inventaire totale et le nombre d'unités physiques en entrepôt.",
+              "Triez le tableau par statut pour isoler les articles en statut « Proche rupture » ou « Rupture ».",
+              "Vérifiez les seuils de réapprovisionnement pour émettre les bons de commande fournisseurs à temps."
+            ],
+            successIndicator: "La valeur du stock dormant immobilisé est chiffrée en dollars CAD.",
+            tip: "Un stock dormant depuis plus de 90 jours fait l'objet d'une recommandation automatique de déstockage ou promotion."
+          },
+          {
+            h: "Action 2 : Segmenter la clientèle & lutter contre le churn (Clients)",
+            action: "Identifiez les clients à forte valeur et ceux sur le point de partir :",
+            steps: [
+              "Consultez le Chiffre d'affaires consolidé et le panier moyen par client.",
+              "Isolez le segment « Clients à risque » (inactifs depuis plus de 90 jours avec historique d'achat élevé).",
+              "Exportez la liste ciblée pour déclencher une campagne marketing de réactivation."
+            ],
+            successIndicator: "Le taux d'attrition (churn) est mesuré mensuellement."
+          },
+          {
+            h: "Action 3 : Mesurer la masse salariale et la productivité (RH)",
+            action: "Contrôlez l'adéquation entre effectif et volume d'affaires :",
+            steps: [
+              "Consultez la Masse salariale globale (salaires fixes, horaires et commissions sur ventes).",
+              "Vérifiez le ratio Masse salariale / Chiffre d'affaires (généralement entre 15% et 35% selon le secteur).",
+              "Examinez le CA moyen généré par employé."
+            ],
+            successIndicator: "Chaque vendeur commissionné voit ses commissions calculées en direct sur les commandes enregistrées."
+          },
+          {
+            h: "Action 4 : Suivre l'amortissement et la DPA fiscale (Immobilisations)",
+            action: "Gérez vos actifs matériels, véhicules et bâtiments selon les normes fiscales canadiennes :",
+            steps: [
+              "Consultez le Coût d'acquisition brut (VBA) et la Valeur Nette Comptable (VNC) globale.",
+              "Vérifiez le Taux de vétusté moyen du parc (Amortissements cumulés / Valeur brute).",
+              "Consultez les classes fiscales de DPA (ex. Classe 1 pour bâtiments, Classe 0 pour terrains)."
+            ],
+            successIndicator: "La valeur de dépréciation annuelle déductible est calculée automatiquement pour votre bilan."
+          }
+        ]
+      }
+    ]
   },
   {
-    label: "Intelligence & analyse",
+    label: "4. Intelligence & Aide à la décision",
     sections: [
-      {
-        id: "anomalies",
-        title: "Anomalies",
-        icon: AlertTriangle,
-        content: [
-          { h: "Données utilisées", p: "Les anomalies sont générées par le moteur d'analyse IA à partir de l'ensemble de vos données importées (Transactions, Orders, Cashflow, Inventory, Campaigns, etc.). Elles sont stockées dans l'entité Anomaly. Aucune anomalie n'existe tant que vous n'avez pas lancé l'analyse IA." },
-          { h: "Détection automatique", p: "Le moteur d'analyse examine vos données et détecte les écarts anormaux : variation inhabituelle de revenus, dépense exceptionnelle, chute de marge, rupture de stock inattendue, baisse de performance marketing, etc. Chaque anomalie est classée par sévérité (critique, important, modéré, faible)." },
-          { h: "Explications", p: "Chaque anomalie inclut une explication contextuelle (champ explanation) qui décrit la nature de l'écart et son ampleur (deviation_pct en pourcentage). Cela vous aide à comprendre rapidement ce qui s'est passé." },
-          { h: "Résolution", p: "Marquez une anomalie comme « résolue » une fois que vous l'avez traitée. Les anomalies résolues restent consultables dans la section inférieure pour référence." },
-          { h: "Notifications automatiques", p: "Lorsqu'une anomalie critique est détectée, GESCOP vous envoie automatiquement un email et crée une alerte dans l'application pour vous prévenir immédiatement." },
-        ],
-      },
-      {
-        id: "risques",
-        title: "Risques & opportunités",
-        icon: ShieldAlert,
-        content: [
-          { h: "Données utilisées", p: "Les risques et opportunités sont générés par le moteur d'analyse IA à partir de l'ensemble de vos données importées et du profil d'entreprise (Company). Ils sont stockés dans les entités Risk et Opportunity. Aucun risque ni opportunité n'existe tant que vous n'avez pas lancé l'analyse." },
-          { h: "Risques", p: "Les risques sont évalués selon leur probabilité, leur impact (faible/moyen/élevé), leur urgence et leur confiance. Un score global permet de prioriser. Chaque risque inclut une description, une catégorie, un impact financier estimé et un horizon temporel." },
-          { h: "Opportunités", p: "Les opportunités représentent des leviers de croissance identifiés par l'IA. Elles sont classées par potentiel (faible, moyen, élevé), probabilité de réussite, impact financier et niveau de confiance." },
-          { h: "Notifications automatiques", p: "Lorsqu'un risque à urgence élevée est détecté, GESCOP vous envoie automatiquement un email et crée une alerte dans l'application pour vous prévenir immédiatement." },
-          { h: "Conversion en tâches", p: "Pour chaque risque ou opportunité, vous pouvez créer une tâche d'action directement. Le statut du risque ou de l'opportunité est alors mis à jour pour suivre le traitement." },
-        ],
-      },
-      {
-        id: "recommandations",
-        title: "Recommandations",
-        icon: Lightbulb,
-        content: [
-          { h: "Données utilisées", p: "Les recommandations sont générées par le moteur d'analyse IA à partir des risques, opportunités et anomalies détectés. Elles sont stockées dans l'entité Recommendation. Aucune recommandation n'existe tant que vous n'avez pas lancé l'analyse." },
-          { h: "Recommandations IA", p: "Chaque recommandation décrit la situation, l'analyse, l'impact attendu et l'action recommandée, avec une priorité (faible à urgente) et un impact financier estimé." },
-          { h: "Accepter ou rejeter", p: "Vous pouvez accepter une recommandation (ce qui la convertit en tâche actionnable) ou la rejeter. Les recommandations traitées restent consultables dans la section inférieure." },
-          { h: "Conversion en tâche", p: "L'acceptation d'une recommandation crée automatiquement une tâche avec sa catégorie et sa priorité, prête à être suivie dans la section Tâches." },
-        ],
-      },
-      {
-        id: "insights",
-        title: "Insights",
-        icon: Brain,
-        content: [
-          { h: "Données utilisées", p: "La page Insights agrège les signaux détectés par l'IA depuis quatre entités : Anomaly, Risk, Opportunity et Recommendation. Aucun insight n'est disponible tant que vous n'avez pas lancé l'analyse IA." },
-          { h: "Insights structurés", p: "Tous les signaux sont présentés dans un format uniforme : Quoi (le fait), Pourquoi (l'explication), Impact (estimation financière), et Action (ce qu'il faut faire). Chaque insight inclut un niveau de confiance et un impact financier estimé." },
-          { h: "Filtrage", p: "Filtrez les insights par type (anomalie, risque, opportunité, recommandation) et par priorité. Triez par impact financier ou par confiance pour identifier rapidement les actions les plus importantes." },
-          { h: "Actionnabilité", p: "Chaque insight est conçu pour être directement actionnable : l'action recommandée est spécifique et immédiate, pas théorique. L'impact financier estimé vous aide à prioriser." },
-        ],
-      },
-      {
-        id: "radar",
-        title: "Radar Stratégique (12 Domaines & Cross-Signal)",
-        icon: RadarIcon,
-        content: [
-          { h: "Architecture des 12 Domaines", p: "Le Radar GESCOP surveille l'environnement global de votre PME à travers 12 domaines : 1. Concurrence, 2. Marché & Demande, 3. Clients & Comportements, 4. Prix & Offres, 5. Produits & Services, 6. Marketing & Communication, 7. Technologie & Innovation, 8. Économie & Finance externe, 9. Réglementation & Juridique, 10. Territoire & Économie locale, 11. Chaîne d'approvisionnement, 12. RH & Emploi." },
-          { h: "Moteur Cross-Signal & Typage Strict", p: "Pour garantir une rigueur absolue, le moteur classe chaque information selon 3 statuts : [FAIT] (information vérifiée et objective), [INFÉRENCE] (déduction logique reliant un fait externe aux indicateurs internes de votre entreprise), et [HYPOTHÈSE] (scénario d'anticipation ou signal faible nécessitant vigilance)." },
-          { h: "Les 5 Questions Fondamentales", p: "À chaque actualisation, le Radar répond aux 5 questions clés du dirigeant : 1. Qu'est-ce qui a changé dans l'environnement ? 2. Qu'est-ce qui bouge chez les concurrents ? 3. Qu'est-ce qui influence les clients ? 4. Quels risques ou opportunités émergent ? 5. Quelle action l'entreprise doit-elle engager immédiatement ?" },
-          { h: "Adaptation sectorielle automatique", p: "Selon le profil renseigné dans Paramètres, GESCOP pondère les domaines critiques de votre activité (ex. Commerce de détail et plein air = Concurrence, Prix, Marché, Approvisionnement)." },
-          { h: "Recommandations et Actions immédiates", p: "Chaque signal critique propose une action immédiate directement convertible en tâche stratégique." },
-        ],
-      },
-      {
-        id: "previsions",
-        title: "Prévisions",
-        icon: TrendingUp,
-        content: [
-          { h: "Données utilisées", p: "Les prévisions sont générées par le moteur d'analyse IA à partir de l'historique de vos Transactions (revenus et dépenses) et de votre Cashflow (solde de trésorerie). Plus l'historique importé est long, plus les prévisions sont fiables." },
-          { h: "Trois axes de prévision", p: "GESCOP projette trois indicateurs clés sur 30, 60 et 90 jours : le chiffre d'affaires, la marge, et la trésorerie. Les prévisions sont basées sur les tendances de vos données historiques." },
-          { h: "Visualisation", p: "Chaque prévision est accompagnée d'un graphique montrant la trajectoire projetée. Les intervalles de confiance et la probabilité vous indiquent la marge d'incertitude autour de chaque projection." },
-          { h: "Anticipation", p: "Utilisez les prévisions pour anticiper les besoins de trésorerie, identifier les mois à risque, et planifier les investissements au bon moment." },
-        ],
-      },
-      {
-        id: "historique",
-        title: "Historique des analyses",
-        icon: History,
-        content: [
-          { h: "Données utilisées", p: "L'historique s'appuie sur l'entité AnalysisRun qui enregistre chaque exécution du moteur d'analyse IA avec son score de santé, ses scores par dimension, et ses compteurs (anomalies, risques, opportunités, recommandations)." },
-          { h: "Mémoire d'analyse", p: "Chaque analyse IA est enregistrée avec son horodatage, son score de santé global, ses scores par dimension (finance, ventes, opérations, marketing), et le nombre de signaux détectés. Cette mémoire vous permet de suivre l'évolution de votre entreprise dans le temps." },
-          { h: "Évolution du score", p: "Un graphique montre l'évolution de votre score de santé global sur toutes les analyses passées. Identifiez les tendances : amélioration continue, stagnation, ou dégradation." },
-          { h: "Comparaison temporelle", p: "La section « Qu'est-ce qui a changé ? » compare automatiquement les deux dernières analyses et liste les améliorations et dégradations par dimension." },
-        ],
-      },
-    ],
-  },
-  {
-    label: "Action & outils",
-    sections: [
-      {
-        id: "simulateur",
-        title: "Simulateur de décisions",
-        icon: Calculator,
-        content: [
-          { h: "Données utilisées", p: "Le simulateur s'appuie sur vos données réelles importées (Transactions, Orders, Products) comme point de référence pour les scénarios. Il utilise les totaux actuels (revenu, marge, coûts) comme valeurs de base ajustables." },
-          { h: "Simulation « Et si ? »", p: "Le simulateur vous permet de tester l'impact financier d'une décision avant de la prendre. Ajustez les curseurs (prix, volume, coûts, délais) et voyez instantanément l'effet sur le chiffre d'affaires, la marge et la trésorerie." },
-          { h: "Scénarios", p: "Testez plusieurs scénarios : augmentation de prix, réduction de coûts, investissement marketing, embauche. Comparez les résultats pour choisir la meilleure option." },
-          { h: "Conversion en décision", p: "Une fois satisfait d'un scénario, convertissez-le en décision suivie dans la page Décisions pour comparer la prévision au résultat réel." },
-        ],
-      },
-      {
-        id: "decisions",
-        title: "Décisions & apprentissage",
-        icon: Target,
-        content: [
-          { h: "Données utilisées", p: "La page Décisions s'appuie sur l'entité Decision qui enregistre le cycle complet de vos décisions : impact prévu, impact réel, statut. Les décisions peuvent être créées manuellement ou à partir du simulateur." },
-          { h: "Mémoire décisionnelle", p: "La page suit le cycle complet : À décider → Décisions prises → Résultats. Chaque décision enregistre son impact prévu, puis son impact réel une fois le résultat connu." },
-          { h: "Comparaison prévision/réalité", p: "Lorsque vous ajoutez les résultats réels d'une décision, GESCOP calcule automatiquement la performance (pourcentage de l'impact prévu réellement atteint). Vous voyez d'un coup d'œil si vos décisions ont eu l'effet espéré." },
-          { h: "Apprentissage", p: "Les statistiques de précision (précision moyenne, nombre de décisions suivies, prévisions trop optimistes) vous aident à calibrer vos futures prévisions. GESCOP apprend de vos écarts pour améliorer la qualité de ses recommandations." },
-        ],
-      },
-      {
-        id: "taches",
-        title: "Tâches",
-        icon: CheckSquare,
-        content: [
-          { h: "Données utilisées", p: "La section Tâches s'appuie sur l'entité Task. Les tâches sont créées soit manuellement, soit automatiquement quand vous acceptez une recommandation ou convertissez un risque/opportunité en action." },
-          { h: "Suivi des actions", p: "La section centralise toutes les actions issues des recommandations, risques et opportunités que vous avez convertis. Chaque tâche a une catégorie, une priorité, une échéance et un responsable." },
-          { h: "Statuts", p: "Les tâches passent par quatre statuts : à faire, en cours, terminée, annulée. Mettez à jour le statut au fur et à mesure de votre progression." },
-          { h: "Catégories", p: "Les catégories incluent : urgent, financier, commercial, marketing, opérationnel, administratif et stratégique - pour organiser votre plan d'action." },
-          { h: "Vue calendrier", p: "Basculez entre la vue liste et la vue calendrier pour visualiser vos échéances dans le temps et planifier votre charge de travail." },
-        ],
-      },
-      {
-        id: "alertes",
-        title: "Alertes",
-        icon: Bell,
-        content: [
-          { h: "Données utilisées", p: "Les alertes s'appuient sur l'entité Alert. Elles sont générées automatiquement par le moteur d'analyse IA (anomalie critique, risque élevé) ou par le système (échéance de tâche, seuil de trésorerie)." },
-          { h: "Centre de notifications", p: "Les alertes vous informent des événements importants détectés par le système. Elles sont classées par niveau (critique, important, modéré, info, faible)." },
-          { h: "Notifications par email", p: "Les alertes critiques (anomalie critique ou risque majeur) déclenchent automatiquement l'envoi d'un email à votre adresse pour vous prévenir même hors de l'application." },
-          { h: "Lien direct", p: "Chaque alerte peut être liée à un élément spécifique (risque, anomalie, recommandation) - cliquez pour accéder directement à l'élément concerné." },
-          { h: "Marquer comme lue", p: "Une fois consultée, marquez l'alerte comme lue pour garder votre centre de notifications propre. Les alertes archivées restent accessibles." },
-        ],
-      },
-      {
-        id: "rapports",
-        title: "Rapports",
-        icon: FileText,
-        content: [
-          { h: "Données utilisées", p: "Les rapports sont générés par le moteur d'analyse IA en synthétisant l'ensemble de vos données : Company (profil), Transactions, Orders, KPI, Anomaly, Risk, Opportunity, Recommendation, AnalysisRun. Ils sont stockés dans l'entité Report." },
-          { h: "Génération de rapports", p: "GESCOP produit trois types de rapports : quotidien, hebdomadaire et mensuel. Chaque rapport synthétise l'état de votre entreprise sur la période concernée : santé globale, anomalies, risques, recommandations et actions." },
-          { h: "Contenu", p: "Les rapports sont au format texte enrichi et incluent un résumé exécutif, les indicateurs clés, les points d'attention et les actions prioritaires. Ils sont consultables directement dans l'application." },
-          { h: "Historique", p: "Tous les rapports générés sont conservés et consultables dans l'historique. Vous pouvez les supprimer si nécessaire." },
-        ],
-      },
       {
         id: "assistant",
-        title: "Assistant IA",
+        title: "Assistant GESCOP Analyst (CFO Conversationnel)",
         icon: MessageSquare,
+        badge: "Analyste IA",
+        objective: "Interroger vos données en langage naturel pour obtenir des recommandations d'affaires de niveau Direction Financière.",
         content: [
-          { h: "Données utilisées", p: "L'Assistant IA a accès à l'ensemble de vos données via le module businessContext : profil d'entreprise (Company), Transactions, Orders, Customers, Products, Inventory, Campaigns, Cashflow, Expenses, KPI, Anomalies, Risks, Opportunities, Recommendations. Plus vous importez de données, plus ses réponses sont précises." },
-          { h: "Conversation naturelle", p: "L'Assistant IA répond à vos questions sur votre entreprise en langage naturel. Posez des questions comme « Quelle est ma situation financière ? », « Quels sont mes principaux risques ? » ou « Que dois-je faire en priorité ? »." },
-          { h: "Citations des sources", p: "Chaque réponse de l'assistant indique les sources utilisées (données financières, anomalies détectées, KPI, etc.) avec la période et le volume de données. Vous savez toujours sur quelle base l'IA a répondu, ce qui renforce la confiance dans les recommandations." },
-          { h: "Conseils d'utilisation", p: "Pour des réponses précises, posez des questions spécifiques. L'assistant peut vous aider à interpréter les données, suggérer des actions, ou expliquer une anomalie détectée." },
-        ],
+          {
+            h: "Action 1 : Poser une question stratégique",
+            action: "Formulez votre demande dans la barre de discussion :",
+            steps: [
+              "Accédez à l'onglet « Assistant » dans le menu de navigation.",
+              "Cliquez sur une suggestion exécutive (ex. « Analyse la rentabilité de mes succursales » ou « Où puis-je économiser ? »), ou saisissez votre propre question.",
+              "Appuyez sur la touche Entrée ou sur le bouton d'envoi."
+            ],
+            successIndicator: "L'assistant répond en 3 à 5 secondes avec une synthèse exécutive structurée et chiffrée."
+          },
+          {
+            h: "Action 2 : Interpréter les badges de certification de réponse",
+            action: "Comprenez le degré de certitude de chaque réponse apportée par l'analyste :",
+            steps: [
+              "🔵 Fait vérifié (FACT) : Donnée brute indiscutable extraite directement de vos fichiers importés.",
+              "🟢 Calcul arithmétique (CALCULATION) : Résultat d'une formule mathématique rigoureuse appliquée aux données.",
+              "🟣 Analyse déductive (INFERENCE) : Croisement logique de plusieurs indicateurs pour expliquer une cause.",
+              "🟡 Hypothèse (HYPOTHESIS) : Piste explicative plausible nécessitant une vérification sur le terrain.",
+              "🟢 Recommandation stratégique (RECOMMENDATION) : Plan d'action opérationnel préconisé avec impact chiffré en $ CAD."
+            ],
+            successIndicator: "L'indice de confiance (%) et la liste des sources exactes utilisées sont affichés au bas de chaque réponse."
+          }
+        ]
       },
       {
-        id: "audit",
-        title: "Audit & Intégrité des calculs",
-        icon: ShieldCheck,
+        id: "simulateur",
+        title: "Simulateur d'Impact & Décisions Stratégiques",
+        icon: Calculator,
+        badge: "Scénarios",
+        objective: "Simuler l'impact financier de vos décisions avant de les appliquer dans le monde réel.",
         content: [
-          { h: "Transparence & Single Source of Truth (SSOT)", p: "Le module Audit des calculs offre une vue transparente de l'ensemble de la chaîne de valeur analytique : de la donnée brute importée aux KPI consolidés et aux alertes." },
-          { h: "Score de Qualité & Quarantaine", p: "Vérifiez les scores de complétude de chaque fichier, identifiez les anomalies de formats et inspectez les lignes écartées en quarantaine avec le détail de la cause de rejet." },
-          { h: "Souveraineté & Conformité Loi 25", p: "GESCOP garantit la traçabilité intégrale, l'hébergement sécurisé au Canada et l'étanchéité absolue de vos données d'entreprise." },
-        ],
-      },
-      {
-        id: "parametres",
-        title: "Centre de Configuration & Contexte Entreprise (Paramètres)",
-        icon: Settings,
-        content: [
-          { h: "Architecture en 5 Piliers & 13 Sections", p: "Paramètres est le cerveau référentiel de GESCOP. Les données renseignées alimentent l'intelligence sémantique d'import, le moteur KPI, le Radar et les décisions." },
-          { h: "1. Contexte Entreprise", p: "Comprend 6 sections : Entreprise (fiche d'identité et carte de connaissance IA), Activité & Modèle (B2B, B2C, abonnements), Organisation & Succursales (distinction nette entre Succursale physique et Département interne), Produits & Services (catalogue, marges, fournisseurs), Clients & Marchés, et Objectifs Stratégiques." },
-          { h: "2. Intelligence & Sémantique", p: "Comprend 3 sections : KPI & Indicateurs (catalogue et épinglage au tableau de bord), Dictionnaire de l'entreprise (liaison des termes internes vers les concepts universels GESCOP), et Ce que GESCOP a compris (audit sémantique et confiance)." },
-          { h: "3. Surveillance", p: "Surveillance des 12 Domaines du Radar, recommandations sectorielles automatiques et suivi des concurrents directs." },
-          { h: "4. Données & Flux", p: "Sources & Connexions : statut d'ingestion des fichiers universels, connecteurs ERP (Acomba, QuickBooks, Sage) et intégrations POS/Shopify." },
-          { h: "5. Gouvernance & Système", p: "Gestion des utilisateurs (rôles Administrateur, Analyste, Gestionnaire, Observateur) et Préférences régionales ($ CAD, format de dates, alertes et Loi 25)." },
-        ],
-      },
-    ],
+          {
+            h: "Action 1 : Tester un scénario de gestion",
+            action: "Évaluez les conséquences d'un choix opérationnel :",
+            steps: [
+              "Rendez-vous dans la page « Simulateur ».",
+              "Choisissez un levier : Hausse ou baisse des prix de vente (+5%), Embauche d'un nouvel employé, Réallocation du budget publicitaire.",
+              "Visualisez immédiatement l'impact prévisionnel sur votre résultat net et sur votre trésorerie à 90 jours."
+            ],
+            successIndicator: "Un tableau comparatif Avant / Après chiffre le gain ou le risque net en dollars CAD."
+          }
+        ]
+      }
+    ]
   },
+  {
+    label: "5. Dépannage & FAQ",
+    sections: [
+      {
+        id: "troubleshooting",
+        title: "Guide de Dépannage Rapide (Troubleshooting)",
+        icon: Wrench,
+        badge: "Support",
+        objective: "Résoudre instantanément les anomalies ou interrogations les plus fréquentes sans effort cognitif.",
+        content: [
+          {
+            h: "Symptôme 1 : « Un module affiche un écran vide ou 0 $ »",
+            action: "Résolution pas-à-pas en 3 étapes :",
+            steps: [
+              "Cause probable : Le fichier correspondant à ce module n'a pas encore été importé (ex. pas d'actifs importés pour Immobilisations).",
+              "Solution : Rendez-vous sur la page « Importer » et déposez la feuille ou le fichier contenant ces données.",
+              "Vérification : Dès la fin de l'import, rafraîchissez la page du module pour voir vos indicateurs calculés instantanément."
+            ],
+            successIndicator: "Les cartes de statistiques affichent les volumes réels consolidés."
+          },
+          {
+            h: "Symptôme 2 : « Des colonnes sont signalées non reconnues lors de l'import »",
+            action: "Résolution pas-à-pas :",
+            steps: [
+              "Cause probable : Votre en-tête utilise un libellé métier rare ou votre fichier comporte des cellules fusionnées.",
+              "Solution 1 : Le Moteur V3 écarte automatiquement les colonnes fantômes vides (ex. col_7). Vous pouvez ignorer l'alerte si vos colonnes clés sont bien associées.",
+              "Solution 2 : Si la colonne contient une donnée importante, cliquez sur le menu déroulant face au nom de la colonne et choisissez le champ cible.",
+              "Solution 3 : Ajoutez l'équivalence dans le Dictionnaire de l'entreprise (Paramètres → Intelligence) pour que GESCOP s'en souvienne pour toujours."
+            ],
+            successIndicator: "La colonne est rattachée et ses valeurs sont intégrées dans la base de données."
+          },
+          {
+            h: "Symptôme 3 : « L'Assistant IA répond que l'information n'est pas disponible »",
+            action: "Résolution pas-à-pas :",
+            steps: [
+              "Cause probable : GESCOP applique une règle stricte de ZÉRO hallucination. Si une donnée n'est pas dans votre base, l'IA refuse d'inventer.",
+              "Solution : Consultez la section « Sources » de l'assistant pour identifier le fichier manquant (ex. Dépenses, Fournisseurs ou Campagnes) et importez-le.",
+              "Vérification : Reposez votre question : l'assistant cite immédiatement les nouveaux chiffres importés."
+            ],
+            successIndicator: "L'assistant produit une réponse chiffrée avec badge « Fait vérifié » ou « Calcul arithmétique »."
+          },
+          {
+            h: "Symptôme 4 : « Les montants financiers diffèrent entre l'écran d'accueil et le rapport annuel »",
+            action: "Comprendre les fenêtres temporelles :",
+            steps: [
+              "Fenêtre par défaut : Le tableau de bord et les cartes de synthèse affichent par défaut une fenêtre récente (ex. 3 derniers mois) pour refléter la dynamique actuelle.",
+              "Fenêtre consolidée : Les rapports d'audit et les totaux globaux agrègent l'ensemble de l'historique importé.",
+              "Solution : Utilisez le sélecteur de période situé en haut de page pour aligner les plages de dates comparées."
+            ],
+            successIndicator: "Les totaux coïncident au dollar près sur la période sélectionnée."
+          }
+        ]
+      }
+    ]
+  }
 ];
 
 // Flatten for lookup
@@ -352,66 +418,207 @@ const allSections = groups.flatMap((g) => g.sections);
 
 export default function Manuel() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const firstSectionId = groups[0]?.sections[0]?.id || "demarrage";
+  const firstSectionId = groups[0]?.sections[0]?.id || "perimetre";
   const [activeSection, setActiveSection] = useState(firstSectionId);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8">
-      {/* Sidebar nav */}
-      <aside className="lg:w-64 shrink-0">
-        <div className="lg:sticky lg:top-6">
-          <div className="mb-4 flex items-center gap-3">
-            <BrandLogo className="h-11 w-11 shrink-0 border border-border" />
+    <div className="space-y-8">
+      {/* En-tête officiel / Page de garde */}
+      <div className="rounded-3xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-6 sm:p-10 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-border">
+          <div className="flex items-center gap-4">
+            <BrandLogo className="h-14 w-14 shrink-0 rounded-2xl border border-border shadow-sm" />
             <div>
-              <h1 className="text-lg font-bold leading-tight">Manuel utilisateur</h1>
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground">GESCOP · Intelligence stratégique</p>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary border border-primary/25">
+                  Documentation Officielle
+                </span>
+                <span className="text-xs font-semibold text-muted-foreground">Version 2.4 · Septembre 2026</span>
+              </div>
+              <h1 className="mt-1 text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+                Manuel de Pilotage & Guide d'Utilisation
+              </h1>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Système d'Intelligence Stratégique & Contrôle de Gestion pour PME Canadiennes & Québécoises
+              </p>
             </div>
           </div>
-          <button
-            onClick={() => setMobileNavOpen(!mobileNavOpen)}
-            className="mb-2 flex w-full items-center justify-between rounded-lg border border-border px-3 py-2 text-sm font-medium lg:hidden"
-          >
-            {allSections.find((s) => s.id === activeSection)?.title}
-            <ChevronDown className={cn("h-4 w-4 transition-transform", mobileNavOpen && "rotate-180")} />
-          </button>
-          <div className={cn(mobileNavOpen ? "block" : "hidden lg:block")}>
-            <ManualTableOfContents groups={groups} onActiveSectionChange={setActiveSection} />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="rounded-xl border border-border bg-background px-3 py-2 text-right">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Devise standard</p>
+              <p className="text-sm font-bold text-foreground">$ CAD</p>
+            </div>
+            <div className="rounded-xl border border-border bg-background px-3 py-2 text-right">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Conformité</p>
+              <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <ShieldCheck className="h-4 w-4" /> Loi 25 QC
+              </p>
+            </div>
           </div>
         </div>
-      </aside>
 
-      {/* Content */}
-      <div className="min-w-0 flex-1 max-w-3xl">
-        {allSections.map((s, idx) => (
-          <section
-            key={s.id}
-            id={`section-${s.id}`}
-            className={cn(
-              "scroll-mt-6 rounded-2xl border border-border bg-card p-6 sm:p-8",
-              idx !== 0 && "mt-6"
-            )}
-          >
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                <s.icon className="h-5 w-5 text-primary" />
-              </div>
-              <h2 className="text-xl font-bold tracking-tight">{s.title}</h2>
+        {/* Fiche de cadrage rapide (Objectif, Cible, Méthode) */}
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+          <div className="rounded-2xl border border-border/80 bg-background/80 p-4">
+            <div className="flex items-center gap-2 font-bold text-foreground mb-1">
+              <Target className="h-4 w-4 text-primary" />
+              <span>Objectif Unique</span>
             </div>
-            <div className="space-y-5">
-              {s.content.map((block, i) => (
-                <div key={i} id={`heading-${s.id}-${i}`} className="scroll-mt-20">
-                  <h3 className="mb-1.5 text-sm font-semibold text-foreground">{block.h}</h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{block.p}</p>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Amener le gestionnaire à l'autonomie totale pour importer ses données, suivre ses marges et piloter son entreprise sans effort cognitif.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border/80 bg-background/80 p-4">
+            <div className="flex items-center gap-2 font-bold text-foreground mb-1">
+              <Users className="h-4 w-4 text-primary" />
+              <span>Public Cible</span>
+            </div>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Dirigeants (CEO), Directeurs Financiers (CFO), Contrôleurs de gestion et Gestionnaires d'opérations de PME (tous niveaux).
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border/80 bg-background/80 p-4">
+            <div className="flex items-center gap-2 font-bold text-foreground mb-1">
+              <Brain className="h-4 w-4 text-primary" />
+              <span>Règle Zéro Hallucination</span>
+            </div>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              100 % des chiffres et recommandations sont mathématiquement étayés par vos données réelles importées.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Corps du manuel : Sommaire dynamique à gauche, Contenu à droite */}
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Sommaire interactif sticky */}
+        <aside className="lg:w-72 shrink-0">
+          <div className="lg:sticky lg:top-6 space-y-4">
+            <div className="flex items-center justify-between lg:block">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                Table des matières
+              </p>
+              <button
+                onClick={() => setMobileNavOpen(!mobileNavOpen)}
+                className="flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-xs font-medium lg:hidden"
+              >
+                <span>Naviguer</span>
+                <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", mobileNavOpen && "rotate-180")} />
+              </button>
+            </div>
+
+            <div className={cn(mobileNavOpen ? "block" : "hidden lg:block")}>
+              <ManualTableOfContents groups={groups} onActiveSectionChange={setActiveSection} />
+            </div>
+          </div>
+        </aside>
+
+        {/* Contenu textuel et visuel orienté action */}
+        <div className="min-w-0 flex-1 max-w-4xl space-y-10">
+          {allSections.map((s, idx) => (
+            <section
+              key={s.id}
+              id={`section-${s.id}`}
+              className="scroll-mt-6 rounded-3xl border border-border bg-card p-6 sm:p-9 shadow-sm"
+            >
+              {/* En-tête de section */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-5 border-b border-border">
+                <div className="flex items-center gap-3.5">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20">
+                    <s.icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">{s.title}</h2>
+                    {s.objective && (
+                      <p className="mt-0.5 text-xs text-muted-foreground flex items-center gap-1.5">
+                        <span className="font-semibold text-foreground/80">Mission :</span> {s.objective}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              ))}
-            </div>
-          </section>
-        ))}
+                {s.badge && (
+                  <span className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-muted-foreground border border-border">
+                    {s.badge}
+                  </span>
+                )}
+              </div>
 
-        <div className="mt-8 rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            Besoin d'aide supplémentaire ? Utilisez l'Assistant IA dans le menu latéral pour poser vos questions.
-          </p>
+              {/* Blocs d'actions chronologiques */}
+              <div className="mt-6 space-y-8">
+                {s.content.map((block, i) => (
+                  <div key={i} id={`heading-${s.id}-${i}`} className="scroll-mt-20 space-y-3">
+                    <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-bold">
+                        {i + 1}
+                      </span>
+                      {block.h}
+                    </h3>
+
+                    {block.action && (
+                      <p className="text-sm font-medium text-foreground/90 pl-8">
+                        {block.action}
+                      </p>
+                    )}
+
+                    {block.steps && block.steps.length > 0 && (
+                      <div className="pl-8 space-y-2">
+                        {block.steps.map((st, sIdx) => (
+                          <div key={sIdx} className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                            <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                            <span className="leading-relaxed">{st}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Indicateur de succès explicite (Règle d'or #3) */}
+                    {block.successIndicator && (
+                      <div className="ml-8 mt-3 flex items-start gap-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs text-emerald-800 dark:text-emerald-300">
+                        <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                        <div>
+                          <span className="font-bold uppercase tracking-wider text-[10px] block mb-0.5">Indicateur de succès :</span>
+                          <span>{block.successIndicator}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Astuce / Conseil pratique */}
+                    {block.tip && (
+                      <div className="ml-8 mt-2 flex items-start gap-2.5 rounded-xl border border-blue-500/25 bg-blue-500/10 p-3 text-xs text-blue-800 dark:text-blue-300">
+                        <Lightbulb className="h-4 w-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+                        <div>
+                          <span className="font-bold uppercase tracking-wider text-[10px] block mb-0.5">Conseil d'expert :</span>
+                          <span>{block.tip}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Avertissement critique */}
+                    {block.warning && (
+                      <div className="ml-8 mt-2 flex items-start gap-2.5 rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
+                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                        <div>
+                          <span className="font-bold uppercase tracking-wider text-[10px] block mb-0.5">Point de vigilance critique :</span>
+                          <span>{block.warning}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+
+          {/* Pied de page du guide */}
+          <div className="rounded-3xl border border-dashed border-border bg-card/60 p-8 text-center space-y-3">
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <MessageSquare className="h-6 w-6" />
+            </div>
+            <h3 className="text-base font-bold text-foreground">Une interrogation sur vos données ?</h3>
+            <p className="text-sm text-muted-foreground max-w-lg mx-auto">
+              L'Assistant GESCOP Analyst est disponible en permanence dans le menu latéral pour inspecter vos chiffres et simuler vos scénarios.
+            </p>
+          </div>
         </div>
       </div>
     </div>
