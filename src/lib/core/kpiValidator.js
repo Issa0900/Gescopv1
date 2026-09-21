@@ -6,10 +6,10 @@
 // This is the semantic firewall that runs before sending data to the UI.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { getKpiDefinition, resolveKpiDependencies } from "./kpiRegistry";
-import { findEntitiesByCanonicalKey } from "./entityFieldMap";
-import { canDeriveKpi } from "./relationGraph";
-import { KPI_STATUS } from "./semanticTypes";
+import { getKpiDefinition, resolveKpiDependencies } from "./kpiRegistry.js";
+import { findEntitiesByCanonicalKey } from "./entityFieldMap.js";
+import { canDeriveKpi } from "./relationGraph.js";
+import { KPI_STATUS } from "./semanticTypes.js";
 
 /**
  * Validates if a specific KPI can be calculated given a list of available entities.

@@ -119,27 +119,56 @@ export default function ImportPage() {
     }
   };
 
-  /** Deuxieme temps : l'utilisateur a valide la lecture, on ecrit. */
+  /** Deuxieme temps : l'utilisateur a valide la lecture, on ecrit fichier par fichier pour éviter les timeouts */
   const lancerImport = async (plans) => {
     setProcessing(true);
+    const accumulatedResults = [];
+    let totalImported = 0;
     try {
-      const res = await base44.functions.invoke("importMultiData", {
-        files: fichiersEnvoyes,
-        entity_override: manualEntity || null,
-        plans,
-      });
-      const data = res.data || res;
-      if (data.error) {
-        toast({ title: data.error, variant: "destructive" });
-        return;
+      for (let i = 0; i < fichiersEnvoyes.length; i++) {
+        const file = fichiersEnvoyes[i];
+        const filePlans = {};
+        for (const [key, p] of Object.entries(plans || {})) {
+          if (key === file.file_name || key.startsWith(file.file_name + " [") || key.startsWith(file.file_name)) {
+            filePlans[key] = p;
+          }
+        }
+        let fileDone = false;
+        let attempt = 0;
+        while (!fileDone && attempt < 20) {
+          attempt++;
+          const res = await base44.functions.invoke("importMultiData", {
+            files: [file],
+            entity_override: manualEntity || null,
+            plans: filePlans,
+          });
+          const data = res.data || res;
+          
+          if (data.results) {
+            const result = data.results[0];
+            const fileRows = data.results.reduce((s, r) => s + (r.rows || 0), 0);
+            totalImported += fileRows;
+            
+            if (result && result.rateLimited) {
+               toast({ title: `Reprise automatique en cours...`, description: `Pause de sécurité de 10s pour contourner les limites du serveur. (${fileRows} insérées sur cette passe)` });
+               await new Promise(r => setTimeout(r, 10000)); // Attendre 10s que le quota se libère
+               continue; // On relance : deduplicateRows ignorera instantanément celles déjà insérées !
+            } else {
+               accumulatedResults.push(...data.results);
+               fileDone = true;
+            }
+          } else if (data.error) {
+            accumulatedResults.push({ file_name: file.file_name, status: "echoue", rows: 0, error: data.error });
+            fileDone = true;
+          }
+        }
       }
       setAnalyses(null);
-      setImportResult(data);
-      const totalRows = (data.results || []).reduce((s, r) => s + (r.rows || 0), 0);
-      const okCount = (data.results || []).filter((r) => r.status === "complete").length;
+      setImportResult({ results: accumulatedResults });
+      const okCount = accumulatedResults.filter((r) => r.status === "complete").length;
       toast({
         title: "Import terminé",
-        description: `${okCount}/${data.results.length} fichiers traités, ${totalRows} lignes importées`,
+        description: `${okCount}/${accumulatedResults.length} fichiers traités, ${totalImported} lignes importées`,
       });
       qc.invalidateQueries();
     } catch (e) {

@@ -45,7 +45,9 @@ function compterHorsGuillemets(ligne: string, separateur: string): number {
  * l'est pas.
  */
 function detecterSeparateur(texte: string): string {
-  const lignes = texte.split(/\r?\n/).filter((l) => l.trim() !== "").slice(0, 20);
+  // Extraire uniquement le début du fichier pour éviter de split() 50 000 lignes
+  const chunk = texte.slice(0, 4000);
+  const lignes = chunk.split(/\r?\n/).filter((l) => l.trim() !== "").slice(0, 20);
   let retenu = ",";
   let meilleurScore = 0;
   for (const separateur of SEPARATEURS) {

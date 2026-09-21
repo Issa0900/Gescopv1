@@ -9,7 +9,7 @@
 // Consumed by: kpiValidator, displayEngine, dataLineage
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { DATA_TYPES, ECONOMIC_ROLES } from "./semanticTypes";
+import { DATA_TYPES, ECONOMIC_ROLES } from "./semanticTypes.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // QUALITY DIMENSIONS

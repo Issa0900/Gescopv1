@@ -12,19 +12,7 @@
       "type": "string"
     },
     "category": {
-      "type": "string",
-      "enum": [
-        "decoration",
-        "cuisine",
-        "maison",
-        "accessoires",
-        "cadeaux",
-        "lifestyle",
-        "\u00e9quipement",
-        "accessoire",
-        "piece",
-        "entretien"
-      ]
+      "type": "string"
     },
     "subcategory": {
       "type": "string"

@@ -6,8 +6,8 @@
 // Rate-limit errors are NOT data errors: those are waited out and retried, never
 // counted as rejected rows.
 
-const BATCH = 200;
-const MIN_SPLIT = 20;
+const BATCH = 1000;
+const MIN_SPLIT = 50;
 const MAX_ERRORS = 40;
 // Rate limits here are expressed per MINUTE, so the retry budget has to span a
 // minute. The old schedule (6 tries, capped at 8s) gave up after ~23s and
@@ -99,10 +99,26 @@ export async function insertRows(
     }
   };
 
+  // NOUVEAU: Exécution parallèle des batchs avec Promise.all pour accélérer
+  // On limite tout de même la concurrence pour éviter de saturer SQLite
+  const MAX_CONCURRENT_BATCHES = 2;
+  let activePromises: Promise<void>[] = [];
+  
   for (let i = 0; i < rows.length; i += BATCH) {
-    await push(rows.slice(i, i + BATCH));
     if (aborted) break;
-    await sleep(150);
+    const batch = rows.slice(i, i + BATCH);
+    const p = push(batch).finally(() => {
+      activePromises = activePromises.filter(prom => prom !== p);
+    });
+    activePromises.push(p);
+    
+    if (activePromises.length >= MAX_CONCURRENT_BATCHES) {
+      await Promise.race(activePromises);
+    }
+  }
+  
+  if (activePromises.length > 0) {
+    await Promise.all(activePromises);
   }
 
   if (aborted) {

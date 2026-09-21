@@ -11,9 +11,9 @@
 // adapting the dashboard to whatever data was imported.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { getKpisByDomain } from "./kpiRegistry";
-import { filterComputableKpis, validateKpiForDisplay } from "./kpiValidator";
-import { validateChartConfig } from "./chartValidator";
+import { getKpisByDomain } from "./kpiRegistry.js";
+import { filterComputableKpis, validateKpiForDisplay } from "./kpiValidator.js";
+import { validateChartConfig } from "./chartValidator.js";
 
 /**
  * Generates a dynamic dashboard layout based on available data.

@@ -143,6 +143,25 @@
     "status": {
       "type": "string"
     },
+    "city": {
+      "type": "string"
+    },
+    "order_value": {
+      "type": "number"
+    },
+    "segment": {
+      "type": "string"
+    },
+    "customer_segment": {
+      "type": "string"
+    },
+    "age": {
+      "type": "number"
+    },
+    "signup_date": {
+      "type": "string",
+      "format": "date"
+    },
     "import_id": {
       "type": "string"
     }

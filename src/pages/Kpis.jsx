@@ -191,10 +191,20 @@ export default function Kpis() {
     },
     staleTime: 0,
   });
+  const { data: executiveSummaries } = useQuery({
+    queryKey: ["executive-summaries-kpi"],
+    queryFn: async () => {
+      if (!base44?.entities?.ExecutiveSummary?.list) return [];
+      const list = await fetchAll(base44.entities.ExecutiveSummary, "-date");
+      return list || [];
+    },
+    staleTime: 0,
+  });
 
   const { kpis: engineKpis } = useKpiEngine({
     transactions: transactions || [],
     orders: orders || [],
+    executiveSummaries: executiveSummaries || [],
     customers: customers || [],
     observations: observations || [],
     cashflow: cashflow || [],

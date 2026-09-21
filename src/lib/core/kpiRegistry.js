@@ -10,7 +10,7 @@
 // The KPI Engine will resolve dependencies and execute the formulas.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { DOMAINS, KPI_LEVELS, DATA_TYPES, ECONOMIC_ROLES } from "./semanticTypes";
+import { DOMAINS, KPI_LEVELS, DATA_TYPES, ECONOMIC_ROLES } from "./semanticTypes.js";
 
 /**
  * Registry of all computed indicators (KPIs and Measures).
@@ -558,6 +558,39 @@ export const KPI_REGISTRY = Object.freeze({
     },
   },
 
+  order_count: {
+    id: "order_count",
+    name: { fr: "Nombre de commandes", en: "Order Count" },
+    level: KPI_LEVELS.MESURE,
+    domain: DOMAINS.VENTES,
+    semanticType: "count",
+    economicRole: ECONOMIC_ROLES.FLOW,
+    dataType: DATA_TYPES.NUMBER,
+    isAdditive: true,
+    dependencies: [],
+    calculate: (deps) => {
+      const records = deps._records || [];
+      const orders = records.filter(
+        (r) =>
+          (r._entity === undefined || r._entity === "Order" || r._entity === "ExecutiveSummary") &&
+          (r.order_id || r.total_orders != null || (r._entity === "Order" && (r.total != null || r.total_revenue != null))) &&
+          (!r.status || !["annul", "cancel", "void", "draft"].some((s) => String(r.status).toLowerCase().includes(s)))
+      );
+      if (orders.length === 0) return null;
+      let count = 0;
+      let hasSummary = false;
+      for (const r of orders) {
+        if (r.total_orders != null && Number.isFinite(Number(r.total_orders))) {
+          count += Number(r.total_orders);
+          hasSummary = true;
+        } else if (r._entity === "Order" || r.order_id) {
+          count += 1;
+        }
+      }
+      return count > 0 ? count : (hasSummary ? 0 : orders.length);
+    },
+  },
+
   aov: {
     id: "aov",
     name: { fr: "Panier Moyen (AOV)", en: "Average Order Value" },
@@ -567,13 +600,24 @@ export const KPI_REGISTRY = Object.freeze({
     economicRole: ECONOMIC_ROLES.RATIO,
     dataType: DATA_TYPES.CURRENCY,
     isAdditive: false,
-    dependencies: ["total_revenue"], 
-    // GESCOP Phase 3 SSOT : On utilise context._records pour compter proprement les commandes valides
+    dependencies: ["revenue", "total_revenue", "order_count"],
+    // GESCOP Pureté Mathématique SSOT :
+    // Priorité absolue aux revenus de commandes (deps.revenue) pour ne jamais
+    // laisser les transactions bancaires de trésorerie fausser le panier moyen.
     calculate: (deps) => {
-      const records = deps._records || [];
-      const orderCount = records.filter(r => r.order_id && (!r.status || !["annul", "cancel", "void", "draft"].some(s => String(r.status).toLowerCase().includes(s)))).length;
-      if (orderCount === 0 || deps.total_revenue == null) return null;
-      return deps.total_revenue / orderCount;
+      const orderCount = deps.order_count != null ? deps.order_count : (() => {
+        const records = deps._records || [];
+        return records.filter(
+          (r) =>
+            (r._entity === undefined || r._entity === "Order") &&
+            r.order_id &&
+            (!r.status || !["annul", "cancel", "void", "draft"].some((s) => String(r.status).toLowerCase().includes(s)))
+        ).length;
+      })();
+      if (!orderCount || orderCount <= 0) return null;
+      const rev = deps.revenue != null ? deps.revenue : deps.total_revenue;
+      if (rev == null) return null;
+      return Math.round((rev / orderCount) * 100) / 100;
     },
   },
 

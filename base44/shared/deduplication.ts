@@ -6,32 +6,40 @@ export async function deduplicateRows(base44: any, entityName: string, rows: any
   // 1. Generate fingerprints
   const withFp = rows.map(r => ({ ...r, fingerprint: generateFingerprint(entityName, r) }));
 
-  // 2. Fetch all existing fingerprints for deduplication
-  // To avoid N^2 queries, we bulk fetch existing fingerprints. Base44 list() caps at 500.
+  // 2. Intra-file deduplication (O(N) in-memory, instant)
+  const seenFp = new Set<string>();
+  const intraDeduped: any[] = [];
+  let intraDupes = 0;
+  for (const r of withFp) {
+    if (r.fingerprint && seenFp.has(r.fingerprint)) {
+      intraDupes++;
+    } else {
+      if (r.fingerprint) seenFp.add(r.fingerprint);
+      intraDeduped.push(r);
+    }
+  }
+
+  // 3. Check existing fingerprints against recent records (max 1000, 1 single fast query)
   const existingFingerprints = new Set<string>();
-  let page = 0;
-  while (true) {
-    const batch = await base44.entities[entityName].list("-created_date", 500, page * 500);
-    if (!batch || batch.length === 0) break;
-    batch.forEach((b: any) => {
+  try {
+    const recent = await base44.entities[entityName].list("-created_date", 1000, 0);
+    for (const b of recent || []) {
       const fp = b.fingerprint || generateFingerprint(entityName, b);
       if (fp) existingFingerprints.add(fp);
-    });
-    if (batch.length < 500) break;
-    page++;
-    if (page > 500) break; // Supports up to 250,000 rows
+    }
+  } catch {
+    // Non-blocking: database read failure shouldn't abort imports
   }
 
   const newRows: any[] = [];
-  let duplicateCount = 0;
+  let duplicateCount = intraDupes;
 
-  for (const r of withFp) {
-    if (existingFingerprints.has(r.fingerprint)) {
+  for (const r of intraDeduped) {
+    if (r.fingerprint && existingFingerprints.has(r.fingerprint)) {
       duplicateCount++;
     } else {
       newRows.push(r);
-      // Pre-add to prevent duplicates within the SAME import file
-      existingFingerprints.add(r.fingerprint);
+      if (r.fingerprint) existingFingerprints.add(r.fingerprint);
     }
   }
 
