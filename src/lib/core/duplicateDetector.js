@@ -96,6 +96,14 @@ export function detectInternalDuplicates(rows, keyFields = null) {
  * @param {Array<Object>} params.existingImports - Previous Import entity records
  * @returns {DuplicateCheckResult}
  */
+/**
+ * @typedef {Object} DuplicateCheckResult
+ * @property {boolean} isDuplicate
+ * @property {number} confidence
+ * @property {Object|null} matchedImport
+ * @property {string[]} warnings
+ * @property {string|null} suggestion
+ */
 export function checkImportDuplicate({
   fileHash,
   entityType,
@@ -161,7 +169,7 @@ export function detectPeriod(rows, dateField = "date") {
     .filter(Boolean)
     .map((d) => new Date(d))
     .filter((d) => !isNaN(d.getTime()))
-    .sort((a, b) => a - b);
+    .sort((a, b) => a.getTime() - b.getTime());
 
   if (dates.length === 0) return { start: null, end: null };
 

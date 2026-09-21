@@ -63,6 +63,15 @@
     "roas": {
       "type": "number"
     },
+    "cpc": {
+      "type": "number"
+    },
+    "cout_clic": {
+      "type": "number"
+    },
+    "cost_per_click": {
+      "type": "number"
+    },
     "status": {
       "type": "string",
       "enum": [

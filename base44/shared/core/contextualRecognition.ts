@@ -349,7 +349,7 @@ export function recognizeColumn(params: ColumnRecognitionParams): ColumnRecognit
 
   let resolvedKey = nameSignal.matches[0]?.key || 'unknown';
   let resolvedType = nameSignal.matches[0]?.type || 'unknown';
-  let resolvedRole = ECONOMIC_ROLES.IDENTIFIER;
+  let resolvedRole: string = ECONOMIC_ROLES.IDENTIFIER;
 
   justifications.push(...nameSignal.justifications);
   justifications.push(typeSignal.justification);

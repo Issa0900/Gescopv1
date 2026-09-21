@@ -1,0 +1,60 @@
+{
+  "name": "Asset",
+  "type": "object",
+  "properties": {
+    "asset_id": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "acquisition_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "dpa_class": {
+      "type": "string"
+    },
+    "dpa_rate": {
+      "type": "number"
+    },
+    "initial_cost": {
+      "type": "number"
+    },
+    "accumulated_depreciation": {
+      "type": "number"
+    },
+    "net_book_value": {
+      "type": "number"
+    },
+    "location_id": {
+      "type": "string"
+    },
+    "historical_comment": {
+      "type": "string"
+    },
+    "import_id": {
+      "type": "string"
+    },
+    "fingerprint": {
+      "type": "string"
+    },
+    "original_data": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "asset_id"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

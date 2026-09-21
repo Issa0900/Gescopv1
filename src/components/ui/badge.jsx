@@ -23,6 +23,9 @@ const badgeVariants = cva(
   }
 )
 
+/**
+ * @param {React.ComponentPropsWithoutRef<'div'> & { variant?: 'default'|'secondary'|'destructive'|'outline' }} props
+ */
 function Badge({
   className,
   variant,

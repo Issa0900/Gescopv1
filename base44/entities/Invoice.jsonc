@@ -1,0 +1,69 @@
+{
+  "name": "Invoice",
+  "type": "object",
+  "properties": {
+    "company_id": {
+      "type": "string",
+      "description": "ID de l'entreprise associée"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "ID de l'utilisateur"
+    },
+    "stripe_invoice_id": {
+      "type": "string",
+      "description": "Identifiant Stripe de la facture"
+    },
+    "invoice_number": {
+      "type": "string",
+      "description": "Numéro de facture (ex: GESCOP-2026-001)"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Montant payé en devise ($ CAD)"
+    },
+    "currency": {
+      "type": "string",
+      "default": "CAD",
+      "description": "Devise de facturation"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "paid",
+        "open",
+        "void",
+        "uncollectible"
+      ],
+      "default": "paid",
+      "description": "Statut du règlement"
+    },
+    "plan_id": {
+      "type": "string",
+      "enum": [
+        "PLAN_FREE",
+        "PLAN_GESCOP",
+        "PLAN_PRO"
+      ],
+      "description": "Forfait facturé"
+    },
+    "invoice_pdf": {
+      "type": "string",
+      "description": "URL du fichier PDF de la facture"
+    },
+    "hosted_invoice_url": {
+      "type": "string",
+      "description": "URL de la page web Stripe de la facture"
+    },
+    "paid_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date et heure du règlement effectif"
+    }
+  },
+  "required": [
+    "amount",
+    "status"
+  ]
+}
+

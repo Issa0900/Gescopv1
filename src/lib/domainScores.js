@@ -19,6 +19,7 @@ import {
   sumLast,
   sumPrev,
 } from "@/lib/periods";
+import { financialMonthlySeries } from "@/lib/financialData";
 import { getStockAlertSettings, computeStockAlerts } from "@/lib/stockAlerts";
 import { warnIfDataMissing } from "@/lib/core/dataCompleteness";
 import {
@@ -57,41 +58,19 @@ export function computeDomainScores(data) {
     "transactions", "orders", "customers", "campaigns", "campaignDaily",
     "products", "inventory", "cashflow", "expenses", "company",
   ]);
-  const { transactions, orders, customers, campaigns, campaignDaily, products, inventory, cashflow, expenses, company } = data;
+  const { transactions, orders, customers, campaigns, campaignDaily, products, inventory, cashflow, expenses, company, executiveSummary } = data;
   const scores = {};
 
-  // === FINANCE - aggregated margin over 3 complete months ===
-  const isIncome = (t) => {
-    if (!t.type) return false;
-    const s = String(t.type).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    return ["income", "entree", "credit", "revenu", "encaissement"].includes(s);
-  };
-  const isExpense = (t) => {
-    if (!t.type) return false;
-    const s = String(t.type).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    return ["expense", "sortie", "debit", "depense", "decaissement", "charge"].includes(s);
-  };
+  // === FINANCE - aggregated margin over complete months (unifies transactions, orders, expenses, executiveSummary) ===
+  const financialMonthly = financialMonthlySeries(transactions || [], expenses || [], orders || [], executiveSummary || []);
+  const revMonthly = financialMonthly.map((p) => ({ month: p.month, val: p.income }));
+  const expMonthly = financialMonthly.map((p) => ({ month: p.month, val: p.expense }));
 
-  const incomes = (transactions || []).filter(isIncome);
-  const txnExpenses = (transactions || []).filter(isExpense);
-  const revMonthly = monthlyAggComplete(
-    incomes.map(t => ({ ...t, _amt: Number(t.amount) || Number(t.revenue_amount) || 0 })), 
-    "date", 
-    "_amt"
-  );
-  // Expenses live in two separate places that a company can populate
-  // independently: expense-typed rows in the bank-feed Transaction import,
-  // and the dedicated Expense entity (itemized bills, subscriptions, etc.
-  // imported separately). Reading only one made "Dépenses" read 0 $ whenever
-  // a company had real costs recorded exclusively in the other.
-  const expenseRows = [
-    ...txnExpenses.map(t => ({ date: t.date, _amt: Number(t.amount) || Number(t.expense_amount) || 0 })),
-    ...(expenses || []).map(e => ({ date: e.date, _amt: Number(e.amount) || 0 })),
-  ];
-  const expMonthly = monthlyAggComplete(expenseRows, "date", "_amt");
-
-  const recentMargin = aggregateMarginPct(revMonthly, expMonthly, 3);
-  const priorMargin = previousMarginPct(revMonthly, expMonthly, 3);
+  const hasHistory3 = revMonthly.length >= 3;
+  const recentMargin = hasHistory3
+    ? aggregateMarginPct(revMonthly, expMonthly, 3)
+    : (revMonthly.length > 0 ? aggregateMarginPct(revMonthly, expMonthly, revMonthly.length) : null);
+  const priorMargin = hasHistory3 ? previousMarginPct(revMonthly, expMonthly, 3) : null;
   // Margin moves in POINTS. A 2%→4% move is +2 points, not +100%.
   const marginDelta = marginDeltaPoints(recentMargin, priorMargin);
 
@@ -113,8 +92,10 @@ export function computeDomainScores(data) {
     trend: marginDelta === null ? "stable" : marginDelta > 3 ? "up" : marginDelta < -3 ? "down" : "stable",
     explanation:
       recentMargin !== null
-        ? `Marge ${recentMargin.toFixed(0)} % (3 mois)`
-        : "Historique insuffisant (3 mois complets requis)",
+        ? `Marge ${recentMargin.toFixed(0)} % (${hasHistory3 ? "3 mois" : `${revMonthly.length} mois`})`
+        : revMonthly.length === 0
+          ? "Aucune donnée financière importée"
+          : "Historique insuffisant",
   };
 
   // === TRÉSORERIE - runway on NET burn, not gross expenses ===
@@ -156,7 +137,16 @@ export function computeDomainScores(data) {
   // overstated this score's input by the store's full return rate.
   const salesOrders = validSalesOrders(orders);
   const orderRevMonthly = monthlyAggComplete(
-    salesOrders.map(o => ({ ...o, _computed_rev: Number(o.total) || Number(o.revenue_amount) || Number(o.amount) || 0 })),
+    salesOrders.map((o) => ({
+      ...o,
+      _computed_rev:
+        Number(o.total_revenue) ||
+        Number(o.total) ||
+        Number(o.revenue_amount) ||
+        Number(o.amount) ||
+        ((Number(o.quantity) || 1) * (Number(o.unit_price) || Number(o.price) || 0)) ||
+        0,
+    })),
     "date",
     "_computed_rev"
   );
@@ -268,27 +258,36 @@ export function computeDomainScores(data) {
 
   // === CLIENTS - single churn definition + acquisition trend ===
   const churn = churnStats(customers, orders);
+  // churn.rate needs a populated Customer.status field, which most CRM
+  // imports never carry. churnStats() already computes a second, independent
+  // rate from real purchase behaviour (behaviourRate) whenever order history
+  // exists - this used to be discarded, leaving the domain "non mesuré" on
+  // an import with complete customers + orders but no status column.
+  const churnRate = churn.rate !== null ? churn.rate : churn.behaviourRate;
+  const churnIsBehaviour = churn.rate === null && churn.behaviourRate !== null;
   const custMonthly = monthlyAggComplete(customers || [], "acquisition_date", "customer_id", "count");
   const new3 = sumLast(custMonthly, 3);
   const newPrev3 = sumPrev(custMonthly, 3);
 
   let clientsScore;
-  if (churn.rate === null) clientsScore = 50;
-  else if (churn.rate < 5) clientsScore = 85;
-  else if (churn.rate < 10) clientsScore = 70;
-  else if (churn.rate < 20) clientsScore = 50;
+  if (churnRate === null || churnRate === undefined) clientsScore = 50;
+  else if (churnRate < 5) clientsScore = 85;
+  else if (churnRate < 10) clientsScore = 70;
+  else if (churnRate < 20) clientsScore = 50;
   else clientsScore = 30;
   clientsScore = applyTrend(clientsScore, trendPct(new3, newPrev3), 8, 8);
   scores.clients = {
     // measured=false : aucune donnee pour ce domaine. Le score neutre de 50
     // qui suit n'est qu'un repli d'affichage et NE DOIT PAS entrer dans la
     // moyenne globale - une absence de mesure n'est pas une demi-sante.
-    measured: churn.rate !== null,
+    measured: churnRate !== null && churnRate !== undefined,
     score: clamp(clientsScore),
     trend: trendDir(new3, newPrev3),
     explanation:
-      churn.rate !== null
-        ? `${churn.active} actifs · ${churn.rate.toFixed(0)} % churn`
+      churnRate !== null && churnRate !== undefined
+        ? churnIsBehaviour
+          ? `${churn.buyers} acheteurs · ${churnRate.toFixed(0)} % churn (comportement)`
+          : `${churn.active} actifs · ${churnRate.toFixed(0)} % churn`
         : "",
   };
 

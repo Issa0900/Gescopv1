@@ -1,6 +1,16 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * @param {Object} props
+ * @param {string} props.label
+ * @param {number} props.value
+ * @param {(v: number) => void} props.onChange
+ * @param {number} [props.min]
+ * @param {number} [props.max]
+ * @param {number} [props.neutral]
+ * @param {string} [props.hint]
+ */
 export default function SliderControl({
   label,
   value,

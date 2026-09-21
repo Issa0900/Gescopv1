@@ -36,6 +36,7 @@ export function computeKpi({ kpiId, records, fieldSemantics, context = {} }) {
   const resolvedDeps = { ...context };
   const lineageSources = [];
   let lowestQuality = 100;
+  /** @type {import("./semanticTypes").KpiStatus} */
   let status = KPI_STATUS.MEASURED;
 
   let unavailableDeps = 0;
@@ -144,7 +145,7 @@ function determineTemporalContext(records) {
   }
   
   if (minDate && maxDate) {
-    const diffTime = Math.abs(maxDate - minDate);
+    const diffTime = Math.abs(maxDate.getTime() - minDate.getTime());
     // Inclusif : +1 jour pour éviter la division par zéro si un seul jour de données
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     return {
@@ -217,7 +218,13 @@ function _aggregateRawField(canonicalKey, records, fieldSemantics) {
         value: sum,
         unit: matchingObs[0].unit || null,
         formula: "Agrégation d'Observations Sémantiques",
-        sources: [{ entity: "Observation", field: "value", canonicalKey, records: matchingObs.length, qualityScore: matchingObs[0].confidence ? matchingObs[0].confidence * 100 : 100 }],
+        sources: [buildLineageSource({
+          entity: "Observation",
+          field: "value",
+          canonicalKey,
+          records: matchingObs,
+          qualityScore: matchingObs[0].confidence ? matchingObs[0].confidence * 100 : 100,
+        })],
         status: sum === 0 ? KPI_STATUS.VALID_ZERO : KPI_STATUS.MEASURED
       });
     }

@@ -118,7 +118,7 @@ export function validateKpiForDisplay(kpiLineage, qualityThreshold = 60) {
     return { displaySafe: false, warnings: ["Aucune donnée de lignage"], cssClass: "kpi-unavailable" };
   }
 
-  if (kpiLineage.status === KPI_STATUS.UNAVAILABLE || kpiLineage.status === KPI_STATUS.INVALID) {
+  if (kpiLineage.status === KPI_STATUS.NOT_MEASURED || kpiLineage.status === KPI_STATUS.INVALID) {
     return { 
       displaySafe: false, 
       warnings: ["Calcul impossible ou invalide"], 
@@ -134,13 +134,8 @@ export function validateKpiForDisplay(kpiLineage, qualityThreshold = 60) {
     cssClass = "kpi-warning";
   }
 
-  if (kpiLineage.status === KPI_STATUS.ESTIMATED) {
-    warnings.push("Valeur estimée, à utiliser avec précaution");
-    cssClass = "kpi-warning";
-  }
-
-  if (kpiLineage.status === KPI_STATUS.REVIEW) {
-    warnings.push("En attente de validation manuelle");
+  if (kpiLineage.status === KPI_STATUS.UNKNOWN) {
+    warnings.push("Valeur partiellement estimée, à utiliser avec précaution");
     cssClass = "kpi-warning";
   }
 

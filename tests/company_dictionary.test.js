@@ -10,7 +10,7 @@
 // rien d'autre.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeRow, buildCompanyDictionaryIndex, detectEntityByHeaders } from "../base44/shared/importUtils.ts";
+import { normalizeRow, buildCompanyDictionaryIndex, detectEntityByHeaders, construirePrompt } from "../base44/shared/importUtils.ts";
 import { getSchema } from "../base44/shared/entitySchemas.ts";
 import { missingRequired } from "../base44/shared/bulkInsert.ts";
 
@@ -88,6 +88,25 @@ test("Phase 2 — PME fictive « Menuiserie du Fjord » : détection de FEUILLE 
   const dict = buildCompanyDictionaryIndex({ "Réf. Vte": "order_id", "Client N°": "customer_id" });
   assert.equal(detectEntityByHeaders(headers, undefined), null, "sans dictionnaire, la feuille ne doit toujours pas être reconnue (pas de faux souvenir)");
   assert.equal(detectEntityByHeaders(headers, dict), "Order", "avec le dictionnaire, la feuille doit être reconnue comme Order");
+});
+
+test("Phase 5 — le prompt IA reste inchangé sans dictionnaire d'entreprise", () => {
+  const prompt = construirePrompt("l1\nl2", "ventes.xlsx", ["Order", "Campaign"]);
+  assert.ok(!prompt.includes("deja corrige"), "aucun bloc dictionnaire ne doit apparaître sans dictionnaire");
+  assert.ok(prompt.includes("Order, Campaign"));
+});
+
+test("Phase 5 — le prompt IA inclut le dictionnaire d'entreprise quand il existe", () => {
+  const dict = buildCompanyDictionaryIndex({ "Réf. Vte": "order_id" });
+  const prompt = construirePrompt("l1\nl2", "ventes.xlsx", ["Order"], dict);
+  assert.ok(prompt.includes("ref_vte"), "l'entrée du dictionnaire doit apparaître dans le prompt");
+  assert.ok(prompt.includes("order_id"));
+});
+
+test("Phase 5 — le prompt autorise explicitement le rapprochement sémantique d'un identifiant, sans autoriser l'invention de champs", () => {
+  const prompt = construirePrompt("l1\nl2", "ventes.xlsx", ["Order"]);
+  assert.ok(prompt.includes("transaction_id"), "l'exemple doit citer le cas réel déjà rencontré");
+  assert.ok(prompt.includes("N'invente jamais un nom de champ"), "le garde-fou contre l'invention de champs doit rester présent");
 });
 
 test("Dictionnaire vide ou absent : comportement inchangé (pas de régression sur les entreprises sans dictionnaire)", () => {

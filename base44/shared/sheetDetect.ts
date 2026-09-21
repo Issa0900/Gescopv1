@@ -11,13 +11,13 @@ import { stripAccents } from "./importUtils.ts";
 const NAME_ENTITY_MAP = [
   { pattern: /campaign.*(daily|jour)|marketing.*(daily|jour)|(daily|jour).*campaign|campagne.*(jour|quotidien)/i, entity: "CampaignDaily" },
   { pattern: /interaction|service.?client|support|ticket/i, entity: "Interaction" },
+  { pattern: /order|commande|vente|sale/i, entity: "Order" },
   { pattern: /transaction|ecriture|grand.?livre|releve|bancaire/i, entity: "Transaction" },
   { pattern: /inventaire|inventory|stock/i, entity: "Inventory" },
-  { pattern: /order|commande|vente|sale/i, entity: "Order" },
   { pattern: /customer|client|acheteur/i, entity: "Customer" },
   { pattern: /product|produit|article|catalogue|sku/i, entity: "Product" },
-  { pattern: /supplier|fournisseur|vendor/i, entity: "Supplier" },
   { pattern: /purchase|achat|approvisionnement/i, entity: "Purchase" },
+  { pattern: /supplier|fournisseur|vendor/i, entity: "Supplier" },
   { pattern: /campaign|campagne|publicite|ads|marketing/i, entity: "Campaign" },
   { pattern: /employee|employe|personnel|effectif|staff|rh/i, entity: "Employee" },
   { pattern: /payroll|paie|paye|salaire|remuneration/i, entity: "Payroll" },
@@ -27,6 +27,8 @@ const NAME_ENTITY_MAP = [
   { pattern: /signal|radar|veille|actualite/i, entity: "ExternalSignal" },
   { pattern: /goal|objectif|cible|target/i, entity: "Goal" },
   { pattern: /event|evenement|journal/i, entity: "Event" },
+  { pattern: /immobilisation|actif|asset/i, entity: "Asset" },
+  { pattern: /sommaire.*executif|executive.*summary|tableau.*bord.*executif/i, entity: "ExecutiveSummary" },
 ];
 
 export function detectEntityByName(name: string): string | null {

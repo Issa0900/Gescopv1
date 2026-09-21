@@ -28,6 +28,8 @@ const acceptedTypes = ".csv,.xlsx,.xls,.tsv,.pdf";
 const ENTITY_OPTIONS = [
   { value: "Transaction", label: "Transactions (revenus/dépenses)" },
   { value: "Order", label: "Commandes (orders)" },
+  { value: "ExecutiveSummary", label: "Sommaire exécutif" },
+  { value: "Asset", label: "Immobilisations (actifs)" },
   { value: "Customer", label: "Clients (customers)" },
   { value: "Product", label: "Produits (products)" },
   { value: "Inventory", label: "Stocks (inventory)" },
@@ -82,7 +84,7 @@ export default function ImportPage() {
     try {
       const uploadedFiles = [];
       for (const file of files) {
-        const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+        const { file_url } = await base44.integrations.Core.UploadFile({ file });
         uploadedFiles.push({ file_url, file_name: file.name });
       }
       setUploading(false);
@@ -235,6 +237,9 @@ export default function ImportPage() {
       await base44.entities.Payroll.deleteMany({});
       await base44.entities.Expense.deleteMany({});
       await base44.entities.Cashflow.deleteMany({});
+      await base44.entities.Asset.deleteMany({});
+      await base44.entities.ExecutiveSummary.deleteMany({});
+      await base44.entities.Observation.deleteMany({});
       await base44.entities.Interaction.deleteMany({});
       await base44.entities.Competitor.deleteMany({});
       await base44.entities.Goal.deleteMany({});

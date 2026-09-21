@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Brain, CheckCircle2, ShieldCheck, Sparkles, Eye, ChevronRight } from "lucide-react";
+import { Brain, CheckCircle2, ShieldCheck, Sparkles, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function UnderstandingPanel({ company }) {
+export default function UnderstandingPanel() {
   const [showDetailedUnderstanding, setShowDetailedUnderstanding] = useState(false);
 
   return (

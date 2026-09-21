@@ -23,11 +23,15 @@
     --border: 0 0% 88%;
     --input: 0 0% 88%;
     --ring: 113 70% 37%;
-    --chart-1: 113 70% 37%;
-    --chart-2: 177 100% 35%;
-    --chart-3: 30 92% 54%;
-    --chart-4: 177 100% 25%;
-    --chart-5: 74 100% 36%;
+    /* Palette catégorielle validée CVD (skill dataviz) : ordre fixe, jamais
+       réassigné par série. L'ancienne palette avait chart-2/chart-4 sur la
+       même teinte (177°) et chart-1/chart-5 quasi voisines (113°/74°) — deux
+       paires de séries indiscernables en deutéranopie/protanopie. */
+    --chart-1: 213 68% 50%;
+    --chart-2: 17 82% 56%;
+    --chart-3: 159 73% 40%;
+    --chart-4: 41 100% 46%;
+    --chart-5: 337 70% 70%;
     --radius: 0.75rem;
     --font-heading: ui-sans-serif, system-ui, sans-serif;
     --font-body: ui-sans-serif, system-ui, sans-serif;
@@ -63,11 +67,11 @@
     --border: 0 0% 22%;
     --input: 0 0% 22%;
     --ring: 113 70% 42%;
-    --chart-1: 113 70% 42%;
-    --chart-2: 177 100% 40%;
-    --chart-3: 30 92% 54%;
-    --chart-4: 177 100% 30%;
-    --chart-5: 74 100% 41%;
+    --chart-1: 213 77% 56%;
+    --chart-2: 17 70% 50%;
+    --chart-3: 159 73% 36%;
+    --chart-4: 40 100% 39%;
+    --chart-5: 338 61% 58%;
     --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 0 0% 65%;
     --sidebar-primary: 113 70% 42%;

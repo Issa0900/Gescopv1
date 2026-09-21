@@ -16,7 +16,7 @@ export default function TimeFilter({ period, onChange }) {
           key={p.key}
           onClick={() => onChange(p.key)}
           className={cn(
-            "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-150 ease-in-out",
+            "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-150 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             period === p.key
               ? "bg-[#10B981]/10 text-[#10B981]"
               : "text-muted-foreground hover:text-foreground"

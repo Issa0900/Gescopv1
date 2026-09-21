@@ -15,6 +15,12 @@ function formatMonth(m) {
   return monthLabels[mm] || m;
 }
 
+/**
+ * @param {Object} props
+ * @param {boolean} [props.active]
+ * @param {Array<{name?: string, value?: number, color?: string, fill?: string}>} [props.payload]
+ * @param {string} [props.label]
+ */
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload || !payload.length) return null;
   return (
@@ -42,7 +48,8 @@ export default function ProductSalesTrend({ orders }) {
       if (!m || m === cm) return;
       if (!map[m]) map[m] = { month: m, quantite: 0, revenu: 0, commandes: 0 };
       map[m].quantite += Number(o.quantity) || 0;
-      map[m].revenu += Number(o.total) || 0;
+      // total_revenue is the field the import pipeline actually populates.
+      map[m].revenu += Number(o.total_revenue) || Number(o.total) || 0;
       map[m].commandes += 1;
     });
     return Object.values(map)
@@ -59,28 +66,49 @@ export default function ProductSalesTrend({ orders }) {
     );
   }
 
+  // Quantité et revenu vivent sur des échelles différentes (unités vs $) : les
+  // superposer sur un graphique à double axe rend l'un des deux illisible et
+  // oblige à deviner quelle courbe appartient à quel axe. Deux petits
+  // multiples côte à côte, un axe chacun, se lisent sans ambiguïté.
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <AreaChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
-        <defs>
-          <linearGradient id="qtyGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.35} />
-            <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0.02} />
-          </linearGradient>
-          <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={0.25} />
-            <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0.02} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-        <XAxis dataKey="monthLabel" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
-        <YAxis yAxisId="left" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} width={45} />
-        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} width={50}
-          tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-        <Tooltip content={<ChartTooltip />} cursor={{ stroke: "hsl(var(--border))" }} />
-        <Area yAxisId="left" type="monotone" dataKey="quantite" name="Quantité vendue" stroke="hsl(var(--chart-1))" strokeWidth={2.5} fill="url(#qtyGrad)" />
-        <Area yAxisId="right" type="monotone" dataKey="revenu" name="Revenu ($)" stroke="hsl(var(--chart-2))" strokeWidth={2} fill="url(#revGrad)" strokeDasharray="5 5" />
-      </AreaChart>
-    </ResponsiveContainer>
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div>
+        <p className="mb-2 text-xs font-medium text-muted-foreground">Quantité vendue</p>
+        <ResponsiveContainer width="100%" height={220}>
+          <AreaChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+            <defs>
+              <linearGradient id="qtyGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#2a78d6" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#2a78d6" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <XAxis dataKey="monthLabel" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
+            <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} width={40} />
+            <Tooltip content={<ChartTooltip />} cursor={{ stroke: "hsl(var(--border))" }} />
+            <Area type="monotone" dataKey="quantite" name="Quantité vendue" stroke="#2a78d6" strokeWidth={2.5} fill="url(#qtyGrad)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <div>
+        <p className="mb-2 text-xs font-medium text-muted-foreground">Revenu ($)</p>
+        <ResponsiveContainer width="100%" height={220}>
+          <AreaChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+            <defs>
+              <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#1baf7a" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#1baf7a" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <XAxis dataKey="monthLabel" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
+            <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} width={50}
+              tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+            <Tooltip content={<ChartTooltip />} cursor={{ stroke: "hsl(var(--border))" }} />
+            <Area type="monotone" dataKey="revenu" name="Revenu ($)" stroke="#1baf7a" strokeWidth={2.5} fill="url(#revGrad)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   );
 }

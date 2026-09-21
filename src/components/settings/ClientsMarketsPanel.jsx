@@ -1,7 +1,7 @@
 import React from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Users, Globe2, ShoppingBag } from "lucide-react";
+import { Users } from "lucide-react";
 
 export default function ClientsMarketsPanel({ form, setForm }) {
   const handleChange = (field, val) => {

@@ -11,6 +11,7 @@ import { financialMonthlySeries } from "@/lib/financialData";
 import { isIncome } from "@/lib/transactionClassifier";
 import { useCompany } from "@/hooks/useCompany";
 import { computeLiveAlerts } from "@/lib/liveAlerts";
+import FeatureGate from "@/components/FeatureGate";
 
 export default function Simulateur() {
   const [priceChange, setPriceChange] = useState(0);
@@ -18,35 +19,45 @@ export default function Simulateur() {
   const [expenseChange, setExpenseChange] = useState(0);
   const [variableShare, setVariableShare] = useState(60);
 
-  const { data: transactions, isLoading } = useQuery({
+  const { data: transactions, isLoading: loadingTxn } = useQuery({
     queryKey: ["transactions-summary"],
     queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
+  });
+  const { data: orders, isLoading: loadingOrders } = useQuery({
+    queryKey: ["orders-summary"],
+    queryFn: () => fetchAll(base44.entities.Order, "-date"),
+  });
+  const { data: executiveSummary, isLoading: loadingExecutiveSummary } = useQuery({
+    queryKey: ["executive-summary"],
+    queryFn: () => fetchAll(base44.entities.ExecutiveSummary, "-date"),
   });
   const { data: expenses } = useQuery({
     queryKey: ["expenses-summary"],
     queryFn: () => fetchAll(base44.entities.Expense, "-date"),
   });
 
+  const hasFinancialData = (transactions && transactions.length > 0) || (orders && orders.length > 0) || (executiveSummary && executiveSummary.length > 0);
+
   // Phase 7: Fetch live alerts to provide contextual recommendations
   const { company } = useCompany();
   const { data: liveAlerts } = useQuery({
     queryKey: ["sim-alerts"],
     queryFn: async () => {
-      const [customers, orders, campaignDaily, inventory, products, cashflow] = await Promise.all([
+      const [customers, rawOrders, campaignDaily, inventory, products, cashflow] = await Promise.all([
         fetchAll(base44.entities.Customer, "-created_date"),
-        fetchAll(base44.entities.Order, "-date"),
+        orders || fetchAll(base44.entities.Order, "-date"),
         fetchAll(base44.entities.CampaignDaily, "-date"),
         fetchAll(base44.entities.Inventory, "-date"),
         fetchAll(base44.entities.Product),
         fetchAll(base44.entities.Cashflow, "-date")
       ]);
-      return computeLiveAlerts({ transactions, orders, customers, campaignDaily, products, inventory, cashflow, expenses, company });
+      return computeLiveAlerts({ transactions, orders: rawOrders, customers, campaignDaily, products, inventory, cashflow, expenses, company, executiveSummary });
     },
-    enabled: !!transactions
+    enabled: hasFinancialData
   });
 
   const current = useMemo(() => {
-    const series = financialMonthlySeries(transactions || [], expenses || []);
+    const series = financialMonthlySeries(transactions || [], expenses || [], orders || [], executiveSummary || []);
     if (series.length === 0) return null;
     const last = series[series.length - 1];
     const baseMonth = last.month;
@@ -55,11 +66,12 @@ export default function Simulateur() {
     const margin = income - expense;
 
     const baseTxns = (transactions || []).filter((t) => (t.date || "").startsWith(baseMonth) && isIncome(t));
-    const volume = baseTxns.length || 1;
+    const baseOrders = (orders || []).filter((o) => (o.date || "").startsWith(baseMonth));
+    const volume = baseTxns.length > 0 ? baseTxns.length : (baseOrders.length > 0 ? baseOrders.length : 1);
     const avgPrice = income / volume;
     
     return { income, expense, margin, volume, avgPrice, baseMonth };
-  }, [transactions, expenses]);
+  }, [transactions, expenses, orders, executiveSummary]);
 
   const sim = useMemo(() => {
     if (!current) return null;
@@ -83,8 +95,8 @@ export default function Simulateur() {
     };
   }, [current, priceChange, volumeChange, expenseChange, variableShare]);
 
-  if (isLoading) return <div className="flex h-96 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800" /></div>;
-  if (!transactions || transactions.length === 0) return <EmptyState icon={Upload} title="Aucune donnée à simuler" description="Importez vos transactions pour tester l'impact de vos décisions sur vos résultats." action={<Link to="/importer" className="text-primary hover:underline">Importer des données →</Link>} />;
+  if (loadingTxn || loadingOrders || loadingExecutiveSummary) return <div className="flex h-96 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800" /></div>;
+  if (!hasFinancialData) return <EmptyState icon={Upload} title="Aucune donnée à simuler" description="Importez vos transactions ou commandes de ventes pour tester l'impact de vos décisions sur vos résultats." action={<Link to="/importer" className="text-primary hover:underline">Importer des données →</Link>} />;
   if (!current || !sim) return <EmptyState icon={Calculator} title="Données insuffisantes pour simuler" description="Il faut au moins un mois complet de données." action={<Link to="/importer" className="text-primary hover:underline">Vérifier l'import →</Link>} />;
 
   const fmt = (v) => `${Math.round(v).toLocaleString("fr-CA")} $`;
@@ -102,16 +114,17 @@ export default function Simulateur() {
   const positive = sim.profitChange >= 0;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-2">
-          <Calculator className="h-5 w-5 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Simulateur « Et si ? »</h1>
+    <FeatureGate feature="simulator">
+      <div className="space-y-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <Calculator className="h-5 w-5 text-primary" />
+            <h1 className="text-2xl font-bold tracking-tight">Simulateur « Et si ? »</h1>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Testez l'impact de vos décisions avant de les prendre. Base de calcul : {current.baseMonth} (dernier mois complet).
+          </p>
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Testez l'impact de vos décisions avant de les prendre. Base de calcul : {current.baseMonth} (dernier mois complet).
-        </p>
-      </div>
 
       <div className="grid grid-cols-1 gap-6 rounded-2xl border border-border bg-card p-6 md:grid-cols-2 lg:grid-cols-4">
         <SliderControl label="Variation du prix" value={priceChange} onChange={setPriceChange} />
@@ -174,6 +187,7 @@ export default function Simulateur() {
           <p className="mt-1 text-xs text-emerald-700">Ce scénario corrige l'alerte actuelle concernant la dégradation de votre marge nette. Poursuivez cette stratégie.</p>
         </div>
       )}
-    </div>
+      </div>
+    </FeatureGate>
   );
 }

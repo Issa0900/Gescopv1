@@ -2,8 +2,11 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, AlertTriangle, Info, ScanLine, Table2, Brain } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Info, ScanLine, Table2, Brain, Check, ChevronsUpDown } from "lucide-react";
 import { motion } from "@/lib/fake-framer-motion.jsx";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 /**
  * « Voici ce que j'ai compris de votre fichier. »
@@ -18,6 +21,92 @@ const TON_CONFIANCE = {
   haute: { libelle: "Lecture sûre", classe: "bg-emerald-50 text-emerald-700 border-emerald-200", Icone: CheckCircle2 },
   moyenne: { libelle: "À vérifier", classe: "bg-amber-50 text-amber-700 border-amber-200", Icone: Info },
   faible: { libelle: "Peu sûre — vérifiez", classe: "bg-rose-50 text-rose-700 border-rose-200", Icone: AlertTriangle },
+};
+
+const CHAMP_LABELS = {
+  // Generiques
+  date: "Date", status: "Statut", description: "Description",
+  // Commandes
+  order_id: "ID Commande", customer_id: "ID Client", customer_name: "Nom du client", channel: "Canal",
+  product_id: "ID Produit", product_name: "Nom du produit", quantity: "Quantité", price: "Prix unitaire", unit_price: "Prix unitaire",
+  unit_cost: "Coût unitaire", category: "Catégorie", subtotal: "Sous-total", discount: "Remise", tax: "Taxes",
+  unit_cost: "Coût unitaire", category: "Catégorie", subtotal: "Sous-total", discount: "Remise", tax: "Taxes (Globales)",
+  shipping: "Livraison", total: "Total", cost: "Coût", total_revenue: "Revenu total", total_cost: "Coût total",
+  gross_margin: "Marge brute", gross_profit: "Bénéfice brut", employee_id: "ID Employé", employee_name: "Nom de l'employé",
+  department: "Département", payment_method: "Mode de paiement", location_id: "ID Succursale", succursale: "Succursale", store: "Magasin",
+  payment_status: "Statut paiement", fulfillment_status: "Statut expédition", return_status: "Statut retour",
+  region: "Région", province: "Province", tax_federal: "Taxe fédérale", tax_provincial: "Taxe provinciale",
+  region: "Région", province: "Province", tax_federal: "Taxe fédérale (TPS)", tax_provincial: "Taxe provinciale (TVQ)",
+  // Inventaire
+  inventory_id: "ID Inventaire", opening_stock: "Stock d'ouverture", purchases: "Achats", units_sold: "Unités vendues",
+  returns: "Retours", damaged: "Endommagés", closing_stock: "Stock final", qte_en_stock: "Quantité en stock", inventory_level: "Niveau de stock",
+  quantite_disponible: "Quantité disponible", available_qty: "Qté disponible", inventory_value: "Valeur du stock", selling_inventory_value: "Valeur stock (vente)",
+  valeur_stock_vente: "Valeur stock (vente)", days_in_inventory: "Jours en inventaire", selling_price: "Prix de vente",
+  stock_status: "Statut du stock", warehouse_id: "ID Entrepôt", warehouse_name: "Nom de l'entrepôt", reserved_qty: "Qté réservée",
+  in_transit_qty: "Qté en transit", reorder_qty_eoq: "Qté réappro", reorder_point: "Point de commande", origin_country: "Pays d'origine",
+  customs_code: "Code douanier", supplier_id: "ID Fournisseur", supplier_name: "Nom du fournisseur",
+  // Clients
+  full_name: "Nom complet", name: "Nom", first_name: "Prénom", last_name: "Nom de famille", email: "Email", city: "Ville",
+  customer_type: "Type de client", acquisition_date: "Date d'acquisition", first_purchase_date: "Date 1er achat",
+  last_purchase_date: "Date dernier achat", total_orders: "Commandes totales", average_order_value: "Panier moyen",
+  segment: "Segment", lifetime_value: "Valeur à vie (LTV)", churn_risk: "Risque de départ (%)", postal_code: "Code postal",
+  loyalty_points: "Points fidélité", language: "Langue", address: "Adresse", tax_exemption_number: "Numéro exemption taxe", credit_limit: "Limite de crédit",
+  // Fournisseurs
+  country: "Pays", contact_name: "Nom du contact", payment_terms: "Conditions de paiement", average_delivery_days: "Délai livraison moyen (j)",
+  purchase_volume: "Volume d'achat", quality_score: "Score de qualité", reliability_score: "Score de fiabilité",
+  price_change_last_12_months: "Évolution prix (12m)", neq_number: "Numéro NEQ", gst_number: "Numéro TPS", qst_number: "Numéro TVQ",
+  purchase_currency: "Devise d'achat", esg_score: "Score ESG",
+  // Sommaire exécutif
+  summary_id: "ID Sommaire", period: "Période", gross_margin_rate: "Taux de marge brute", indicator_name: "Nom de l'indicateur",
+  metric_value: "Valeur de la métrique", unit_formula: "Unité / Formule", notes: "Notes",
+  // Produits
+  sku: "SKU", subcategory: "Sous-catégorie", purchase_cost: "Coût d'achat", launch_date: "Date de lancement", monthly_sales: "Ventes mensuelles",
+  // Employés / RH
+  role: "Rôle", hire_date: "Date d'embauche", employment_type: "Type d'emploi", hourly_rate: "Taux horaire", weekly_hours: "Heures hebdo",
+  commission_rate: "Taux commission", annual_salary: "Salaire annuel", salary: "Salaire", branch: "Succursale", union_status: "Statut syndical",
+  cpp_employer: "RRQ employeur", qpip_employer: "RQAP employeur", cnesst: "CNESST", fss_qc: "FSS (QC)", group_insurance: "Assurance collective",
+  rrsp_employer: "REER employeur", total_social_charges: "Charges sociales totales", total_employer_cost: "Coût employeur total",
+  seniority_years: "Années d'ancienneté",
+  // Transactions
+  amount: "Montant", currency: "Devise", source: "Source", client: "Client", product: "Produit", recurring: "Récurrent",
+  // Marketing / Campagnes
+  campaign_id: "ID Campagne", campaign_name: "Nom de la campagne", spend: "Dépense", revenue: "Revenu",
+  roas: "ROAS", cac: "CAC", cpc: "CPC", cout_clic: "Coût par clic", cost_per_click: "Coût par clic",
+  ctr: "Taux de clic (CTR)", clicks: "Clics", impressions: "Impressions", reach: "Portée",
+  conversions: "Conversions", conversion_rate: "Taux de conversion", new_customers: "Nouveaux clients",
+  // Trésorerie
+  opening_cash: "Solde d'ouverture", closing_cash: "Solde de clôture", cash_in: "Entrées de fonds",
+  cash_out: "Sorties de fonds", net_cash_flow: "Flux net de trésorerie",
+  // Immobilisations
+  asset_id: "ID Immobilisation", dpa_class: "Classe DPA", dpa_rate: "Taux d'amortissement",
+  initial_cost: "Coût initial", accumulated_depreciation: "Amortissement cumulé", net_book_value: "Valeur nette comptable",
+  historical_comment: "Commentaire historique", location: "Emplacement",
+  // Paie
+  payroll_id: "ID Paie", regular_pay: "Salaire régulier", overtime: "Heures supplémentaires",
+  bonus: "Bonus", hours: "Heures", employer_cost: "Coût employeur",
+  // Dépenses
+  expense_id: "ID Dépense",
+  // Objectifs
+  goal_id: "ID Objectif", target: "Cible", current: "Valeur actuelle", metric: "Indicateur",
+  // Risques / Opportunités
+  title: "Titre", impact_area: "Domaine d'impact", recommended_action: "Action recommandée",
+  relevance_score: "Score de pertinence", relevance_reason: "Motif de pertinence", estimated_revenue: "Revenu estimé",
+  // Événements
+  event_id: "ID Événement", event_type: "Type d'événement",
+  // Interactions
+  interaction_id: "ID Interaction", subject: "Sujet", resolved: "Résolu",
+  resolution_time: "Délai de résolution", satisfaction_score: "Score de satisfaction",
+  // Concurrents
+  competitor_id: "ID Concurrent", average_rating: "Note moyenne", website: "Site web",
+  sector: "Secteur", employee_count: "Nombre d'employés",
+  // Achats fournisseurs
+  purchase_id: "ID Achat", delay_days: "Jours de retard", expected_delivery: "Livraison prévue", actual_delivery: "Livraison réelle",
+  // Entreprise
+  budget: "Budget", accounts_payable: "Comptes fournisseurs", accounts_receivable: "Comptes clients",
+  // Générique
+  start_date: "Date de début", end_date: "Date de fin", url: "URL", supplier: "Fournisseur",
+  // Champs internes (normalement jamais proposés au mapping)
+  fingerprint: "Empreinte (interne)", original_data: "Données brutes (interne)",
 };
 
 const ORIGINE = {
@@ -230,9 +319,60 @@ export default function PlanConfirmation({ analyses, champsParEntite, entityOpti
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value={IGNOREE}>Ignorer cette colonne</SelectItem>
-                            {champs.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                            {champs.map((f) => <SelectItem key={f} value={f}>{CHAMP_LABELS[f] || f}</SelectItem>)}
                           </SelectContent>
                         </Select>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className={`w-full sm:w-64 justify-between bg-white font-normal ${isMapped ? "border-emerald-200" : "border-slate-300"}`}
+                            >
+                              <span className="truncate">
+                                {c.champ ? CHAMP_LABELS[c.champ] || c.champ : "Ignorer cette colonne"}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[300px] p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Rechercher un champ..." />
+                              <CommandList>
+                                <CommandEmpty>Aucun champ trouvé.</CommandEmpty>
+                                <CommandGroup>
+                                  <CommandItem
+                                    value="Ignorer cette colonne"
+                                    onSelect={() => majColonne(a.file_name, c.colonne, IGNOREE)}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        !c.champ ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    Ignorer cette colonne
+                                  </CommandItem>
+                                  {champs.map((f) => (
+                                    <CommandItem
+                                      key={f}
+                                      value={CHAMP_LABELS[f] || f}
+                                      onSelect={() => majColonne(a.file_name, c.colonne, f)}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          c.champ === f ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {CHAMP_LABELS[f] || f}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         
                         <div className="flex items-center gap-2 shrink-0 min-w-[120px]">
                           {isManual && (

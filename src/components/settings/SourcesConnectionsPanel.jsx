@@ -4,8 +4,6 @@ import {
   Database,
   FileSpreadsheet,
   CheckCircle2,
-  AlertCircle,
-  ExternalLink,
   RefreshCw,
   Layers,
   ArrowRight,
@@ -219,7 +217,7 @@ export default function SourcesConnectionsPanel({ form, setForm }) {
                               <span className="text-[11px] text-muted-foreground">{src.lastSync}</span>
                             </div>
                           </div>
-                          <Badge variant={src.badgeVariant} className="text-[10px]">
+                          <Badge variant={/** @type {'default'|'secondary'} */ (src.badgeVariant)} className="text-[10px]">
                             {src.badgeText}
                           </Badge>
                         </div>

@@ -19,25 +19,31 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
     properties: {
       order_id: S, customer_id: S, customer_name: S, date: D,
       channel: E("shopify", "boutique", "b2b", "instagram", "web", "en_ligne", "magasin", "autre"),
-      product_id: S, product_name: S, quantity: N, unit_price: N, unit_cost: N, category: S, subtotal: N, discount: N, tax: N,
-      shipping: N, total: N, cost: N, total_revenue: N, total_cost: N, gross_margin: N, gross_profit: N, employee_id: S,
+      product_id: S, product_name: S, quantity: N, price: N, unit_price: N, unit_cost: N, category: S, subtotal: N, discount: N, tax: N,
+      shipping: N, total: N, cost: N, total_revenue: N, total_cost: N, gross_margin: N, gross_profit: N, employee_id: S, employee_name: S,
       department: S, payment_method: S, location_id: S, succursale: S, store: S,
       payment_status: E("paye", "en_attente", "echoue", "rembourse"),
       fulfillment_status: E("expedie", "en_preparation", "livre", "annule", "retourne"),
       return_status: E("aucun", "demande", "approuve", "refuse"),
-      region: S, status: S, import_id: S, fingerprint: S, original_data: S,
+      region: S, status: S, province: S, tax_federal: N, tax_provincial: N,
+      import_id: S, fingerprint: S, original_data: S,
     },
     required: ["order_id", "date"],
   },
   Customer: {
     properties: {
-      customer_id: S, first_name: S, last_name: S, email: S, city: S, region: S,
+      customer_id: S, full_name: S, name: S, first_name: S, last_name: S, email: S, city: S, region: S, province: S,
       customer_type: E("particulier", "entreprise", "b2b"),
+      customer_type: S,
       acquisition_date: D, first_purchase_date: D, last_purchase_date: D,
       total_orders: N, total_revenue: N, average_order_value: N,
       status: E("actif", "inactif", "perdu"),
       segment: E("nouveau", "regulier", "vip", "inactif", "b2b", "haute_valeur", "a_risque"),
-      lifetime_value: N, churn_risk: N, import_id: S, fingerprint: S, original_data: S,
+      status: S,
+      segment: S,
+      lifetime_value: N, churn_risk: N, postal_code: S, loyalty_points: N,
+      language: S, address: S, tax_exemption_number: S, credit_limit: N,
+      import_id: S, fingerprint: S, original_data: S,
     },
     required: ["customer_id"],
   },
@@ -45,7 +51,8 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
     properties: {
       product_id: S, sku: S, product_name: S,
       category: E("decoration", "cuisine", "maison", "accessoires", "cadeaux", "lifestyle", "équipement", "accessoire", "piece", "entretien"),
-      subcategory: S, supplier_id: S, purchase_cost: N, selling_price: N, gross_margin: N,
+      category: S,
+      subcategory: S, supplier_id: S, supplier_name: S, purchase_cost: N, selling_price: N, gross_margin: N,
       launch_date: D,
       status: E("actif", "discontinue", "rupture", "nouveau", "dormant"),
       monthly_sales: N, inventory_level: N, reorder_point: N, import_id: S, fingerprint: S, original_data: S,
@@ -55,9 +62,12 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
   Inventory: {
     properties: {
       inventory_id: S, date: D, product_id: S, product_name: S, category: S, opening_stock: N, purchases: N,
-      units_sold: N, returns: N, damaged: N, closing_stock: N, inventory_value: N,
+      units_sold: N, returns: N, damaged: N, closing_stock: N, qte_en_stock: N, inventory_level: N, quantite_disponible: N, available_qty: N, inventory_value: N,
+      selling_inventory_value: N, valeur_stock_vente: N,
       days_in_inventory: N, unit_cost: N, selling_price: N,
       stock_status: E("optimal", "rupture", "surstock", "dormant", "faible", "proche_rupture"),
+      warehouse_id: S, warehouse_name: S, reserved_qty: N, in_transit_qty: N,
+      reorder_qty_eoq: N, reorder_point: N, origin_country: S, customs_code: S, supplier_id: S, supplier_name: S,
       import_id: S, fingerprint: S, original_data: S,
     },
     required: ["product_id"],
@@ -87,11 +97,15 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
     properties: {
       employee_id: S, name: S, first_name: S, last_name: S, location: S,
       department: E("direction", "ventes", "marketing", "logistique", "administration", "service_client", "atelier", "autre"),
+      department: S,
       role: S, hire_date: D,
       employment_type: E("temps_plein", "temps_partiel", "contractuel", "stagiaire"),
-      hourly_rate: N, weekly_hours: N,
-      full_name: S, name: S, annual_salary: N, salary: N, branch: S, location: S,
+      hourly_rate: N, weekly_hours: N, commission_rate: N,
+      full_name: S, annual_salary: N, salary: N, branch: S,
       status: E("actif", "depart", "conge", "essai"),
+      union_status: S, cpp_employer: N, qpip_employer: N, cnesst: N, fss_qc: N,
+      group_insurance: N, rrsp_employer: N, total_social_charges: N, total_employer_cost: N,
+      seniority_years: N,
       import_id: S, fingerprint: S, original_data: S,
     },
     required: ["employee_id"],
@@ -104,8 +118,9 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
         "linkedin", "youtube", "display", "web", "partenariat",
         "affiliation", "influenceurs", "sms", "print", "autre"
       ),
+      channel: S,
       start_date: D, end_date: D, budget: N, spend: N, impressions: N, clicks: N,
-      conversions: N, revenue: N, new_customers: N, cac: N, roas: N,
+      conversions: N, revenue: N, new_customers: N, cac: N, roas: N, cpc: N, cout_clic: N, cost_per_click: N,
       status: E("active", "terminee", "pause", "planifiee"),
       import_id: S, fingerprint: S, original_data: S,
     },
@@ -120,10 +135,11 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
   },
   Supplier: {
     properties: {
-      supplier_id: S, supplier_name: S, country: S, category: S, payment_terms: S,
+      supplier_id: S, supplier_name: S, country: S, city: S, contact_name: S, email: S, category: S, payment_terms: S,
       average_delivery_days: N, purchase_volume: N, quality_score: N,
       reliability_score: N, price_change_last_12_months: N,
       status: E("actif", "inactif", "problematique"),
+      neq_number: S, gst_number: S, qst_number: S, purchase_currency: S, esg_score: N,
       import_id: S, fingerprint: S, original_data: S,
     },
     required: ["supplier_id", "supplier_name"],
@@ -162,8 +178,10 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
     properties: {
       goal_id: S,
       domain: E("finance", "ventes", "tresorerie", "clients", "operations", "marketing"),
+      domain: E("finance", "ventes", "tresorerie", "clients", "operations", "marketing", "rh", "achats", "autre"),
       metric: S, target: N, current: N, period: S,
       priority: E("faible", "moyenne", "elevee", "urgente"),
+      priority: E("faible", "moyenne", "elevee", "urgente", "strategique"),
       status: E("en_cours", "atteint", "depasse", "non_atteint"),
       import_id: S, fingerprint: S, original_data: S,
     },
@@ -197,10 +215,25 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
   ExecutiveSummary: {
     properties: {
       summary_id: S, location_id: S, succursale: S, store: S, period: S, date: D,
-      total_revenue: N, total_cost: N, gross_profit: N, gross_margin: N, total_orders: N,
+      total_revenue: N, total: N, total_cost: N, cost: N, gross_profit: N, gross_margin: N, gross_margin_rate: N, total_orders: N,
+      indicator_name: S, metric_value: S, unit_formula: S,
       notes: S, import_id: S, fingerprint: S, original_data: S,
     },
-    required: ["location_id"],
+    // Un sommaire exécutif consolidé (toute l'entreprise, pas de ventilation
+    // par succursale) est un fichier légitime : exiger location_id rejetait
+    // systématiquement 100% de ses lignes. Voir ExecutiveSummary.jsonc, dont
+    // le "required" a été corrigé de la même façon — ce fichier-ci porte la
+    // définition réellement utilisée à l'exécution, séparée du .jsonc.
+    required: [],
+  },
+  Asset: {
+    properties: {
+      asset_id: S, description: S, acquisition_date: D, dpa_class: S, dpa_rate: N,
+      initial_cost: N, accumulated_depreciation: N, net_book_value: N,
+      location_id: S, historical_comment: S,
+      import_id: S, fingerprint: S, original_data: S,
+    },
+    required: ["asset_id"],
   },
 };
 

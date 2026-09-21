@@ -22,6 +22,12 @@ function formatMonth(m) {
   return monthLabels[mm] || m;
 }
 
+/**
+ * @param {Object} props
+ * @param {boolean} [props.active]
+ * @param {Array<{name?: string, value?: number, color?: string, fill?: string, dataKey?: string}>} [props.payload]
+ * @param {string} [props.label]
+ */
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload || !payload.length) return null;
   return (
@@ -46,31 +52,49 @@ export default function KpiTrendChart({ data }) {
 
   const chartData = data.map((d) => ({ ...d, monthLabel: formatMonth(d.month) }));
 
+  // Revenus/panier moyen ($) et marge (%) ne partagent pas d'échelle : les
+  // forcer sur un même graphique à double axe rendait l'une des deux courbes
+  // illisible. Deux panneaux à axe unique, l'un pour les montants, l'autre
+  // pour le pourcentage.
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <h2 className="mb-1 font-semibold">Tendance des indicateurs clés</h2>
-      <p className="mb-4 text-sm text-muted-foreground">Revenus et panier moyen ($, axe gauche) - marge brute (%, axe droit)</p>
-      <ResponsiveContainer width="100%" height={300}>
-        <ComposedChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
-          <defs>
-            <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.25} />
-              <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0.02} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-          <XAxis dataKey="monthLabel" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
-          <YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} width={50}
-            tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-          <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} width={40}
-            tickFormatter={(v) => `${v}%`} />
-          <Tooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
-          <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
-          <Bar yAxisId="left" dataKey="revenue" name="Revenus" fill="url(#revGrad)" stroke="hsl(var(--chart-1))" strokeWidth={1.5} radius={[4, 4, 0, 0]} barSize={24} />
-          <Line yAxisId="left" type="monotone" dataKey="aov" stroke="hsl(var(--chart-2))" strokeWidth={2.5} dot={{ r: 3 }} name="Panier moyen" />
-          <Line yAxisId="right" type="monotone" dataKey="margin" stroke="hsl(var(--chart-3))" strokeWidth={2.5} dot={{ r: 3 }} name="Marge (%)" strokeDasharray="5 5" />
-        </ComposedChart>
-      </ResponsiveContainer>
+      <p className="mb-4 text-sm text-muted-foreground">Revenus, panier moyen et marge brute</p>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <ResponsiveContainer width="100%" height={260}>
+            <ComposedChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+              <defs>
+                <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#2a78d6" stopOpacity={0.25} />
+                  <stop offset="100%" stopColor="#2a78d6" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis dataKey="monthLabel" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} width={50}
+                tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
+              <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
+              <Bar dataKey="revenue" name="Revenus" fill="url(#revGrad)" stroke="#2a78d6" strokeWidth={1.5} radius={[4, 4, 0, 0]} barSize={24} />
+              <Line type="monotone" dataKey="aov" stroke="#eb6834" strokeWidth={2.5} dot={{ r: 3 }} name="Panier moyen" />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+        <div>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Marge (%)</p>
+          <ResponsiveContainer width="100%" height={260}>
+            <ComposedChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis dataKey="monthLabel" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} width={40}
+                tickFormatter={(v) => `${v}%`} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
+              <Line type="monotone" dataKey="margin" stroke="#1baf7a" strokeWidth={2.5} dot={{ r: 3 }} name="Marge (%)" />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   );
 }

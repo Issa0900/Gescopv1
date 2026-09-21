@@ -13,7 +13,10 @@
         "tresorerie",
         "clients",
         "operations",
-        "marketing"
+        "marketing",
+        "rh",
+        "achats",
+        "autre"
       ]
     },
     "metric": {
@@ -34,7 +37,8 @@
         "faible",
         "moyenne",
         "elevee",
-        "urgente"
+        "urgente",
+        "strategique"
       ]
     },
     "status": {

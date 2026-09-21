@@ -7,7 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import DataTable from "@/components/ui/DataTable";
+import BadgeStatus from "@/components/ui/BadgeStatus";
+import { formatNumber } from "@/lib/utils";
 import { Target, Plus, X } from "lucide-react";
+
+const goalColumns = [
+  { key: "metric", header: "Métrique", searchValue: (g) => g.metric || "", sortValue: (g) => g.metric || "" },
+  { key: "domain", header: "Domaine", render: (g) => g.domain || "-" },
+  { key: "period", header: "Période", render: (g) => g.period || "-" },
+  { key: "target", header: "Cible", align: "right", sortValue: (g) => Number(g.target) || 0, render: (g) => g.target != null ? formatNumber(g.target) : "-" },
+  { key: "current", header: "Actuel", align: "right", sortValue: (g) => Number(g.current) || 0, render: (g) => g.current != null ? formatNumber(g.current) : "-" },
+  {
+    key: "status",
+    header: "Statut",
+    sortValue: (g) => g.status || "",
+    render: (g) => (
+      <BadgeStatus status={g.status === "atteint" || g.status === "depasse" ? "good" : g.status === "non_atteint" ? "critical" : "warning"}>
+        {g.status || "-"}
+      </BadgeStatus>
+    ),
+  },
+];
 
 export default function Decisions() {
   const { toast } = useToast();
@@ -122,36 +143,7 @@ export default function Decisions() {
       {goals && goals.length > 0 && (
         <div>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Objectifs ({goals.length})</h2>
-          <div className="overflow-x-auto rounded-xl border border-border">
-            <table className="w-full min-w-[600px] text-sm">
-              <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Métrique</th>
-                  <th className="px-4 py-3 font-medium">Domaine</th>
-                  <th className="px-4 py-3 font-medium">Période</th>
-                  <th className="px-4 py-3 font-medium">Cible</th>
-                  <th className="px-4 py-3 font-medium">Actuel</th>
-                  <th className="px-4 py-3 font-medium">Statut</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {goals.map((g) => (
-                  <tr key={g.id} className="hover:bg-muted/30">
-                    <td className="px-4 py-3 font-medium">{g.metric}</td>
-                    <td className="px-4 py-3">{g.domain || "-"}</td>
-                    <td className="px-4 py-3">{g.period || "-"}</td>
-                    <td className="px-4 py-3">{g.target != null ? g.target.toLocaleString() : "-"}</td>
-                    <td className="px-4 py-3">{g.current != null ? g.current.toLocaleString() : "-"}</td>
-                    <td className="px-4 py-3">
-                      <span className={g.status === "atteint" || g.status === "depasse" ? "text-emerald-600" : g.status === "non_atteint" ? "text-red-600" : "text-amber-600"}>
-                        {g.status || "-"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable columns={goalColumns} data={goals} rowKey={(g, i) => g.id || i} searchPlaceholder="Rechercher un objectif…" emptyTitle="Aucun objectif" />
         </div>
       )}
     </div>

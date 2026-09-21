@@ -10,6 +10,16 @@ const statusStyles = {
 
 const fmt = (v) => (v != null ? `${v > 0 ? "+" : ""}${Math.round(v).toLocaleString("fr-CA")} $` : "-");
 
+/**
+ * @param {Object} props
+ * @param {Object} props.decision
+ * @param {() => void} [props.onDecide]
+ * @param {() => void} [props.onAddResult]
+ * @param {boolean} [props.editing]
+ * @param {string|number} [props.resultValue]
+ * @param {(v: string) => void} [props.setResultValue]
+ * @param {() => void} [props.submitResult]
+ */
 export default function DecisionCard({ decision, onDecide, onAddResult, editing, resultValue, setResultValue, submitResult }) {
   const perf = decision.actual_impact != null && decision.predicted_impact
     ? Math.round((decision.actual_impact / decision.predicted_impact) * 100) : null;

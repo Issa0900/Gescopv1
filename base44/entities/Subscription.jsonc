@@ -1,0 +1,67 @@
+{
+  "name": "Subscription",
+  "type": "object",
+  "properties": {
+    "company_id": {
+      "type": "string",
+      "description": "ID de l'entreprise associée"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "ID de l'utilisateur souscripteur"
+    },
+    "plan_id": {
+      "type": "string",
+      "enum": [
+        "PLAN_FREE",
+        "PLAN_GESCOP",
+        "PLAN_PRO"
+      ],
+      "default": "PLAN_FREE",
+      "description": "Identifiant du plan commercial actif"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "trialing",
+        "active",
+        "past_due",
+        "canceled",
+        "incomplete",
+        "unpaid"
+      ],
+      "default": "active",
+      "description": "Statut de l'abonnement"
+    },
+    "provider": {
+      "type": "string",
+      "default": "stripe",
+      "description": "Fournisseur de paiement"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Stripe Customer ID"
+    },
+    "subscription_id": {
+      "type": "string",
+      "description": "Stripe Subscription ID"
+    },
+    "current_period_start": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "current_period_end": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "cancel_at_period_end": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "plan_id",
+    "status"
+  ]
+}
+

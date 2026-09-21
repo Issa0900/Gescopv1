@@ -41,19 +41,19 @@ export default function Taches() {
     await base44.entities.Task.create({ ...form, status: "a_faire" });
     setForm({ title: "", category: "strategique", priority: "moyenne", due_date: "" });
     setShowForm(false);
-    qc.invalidateQueries(["tasks"]);
+    qc.invalidateQueries({ queryKey: ["tasks"] });
     toast({ title: "Tâche créée" });
   };
 
   const toggleStatus = async (t) => {
     const next = t.status === "terminee" ? "a_faire" : "terminee";
     await base44.entities.Task.update(t.id, { status: next });
-    qc.invalidateQueries(["tasks"]);
+    qc.invalidateQueries({ queryKey: ["tasks"] });
   };
 
   const remove = async (id) => {
     await base44.entities.Task.delete(id);
-    qc.invalidateQueries(["tasks"]);
+    qc.invalidateQueries({ queryKey: ["tasks"] });
   };
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Chargement…</p>;

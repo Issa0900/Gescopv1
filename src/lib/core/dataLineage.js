@@ -63,7 +63,7 @@ export function buildKpiLineage({
   formulaCode = null,
   methodology = null,
   sources = [],
-  status = KPI_STATUS.AVAILABLE,
+  status = KPI_STATUS.MEASURED,
 }) {
   // Determine period from sources
   const allStarts = sources
@@ -89,17 +89,16 @@ export function buildKpiLineage({
       ? Math.round(qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length)
       : 0;
 
-  // Determine evidence tag
+  // Determine evidence tag. A KPI value is always the result of
+  // kpiDef.calculate() - never raw untouched data - so "FAIT" never applies
+  // here; the real KPI_STATUS values (semanticTypes.js) map to how much of
+  // that calculation could actually be trusted.
   const evidenceTag =
-    status === KPI_STATUS.VERIFIED
-      ? "FAIT"
-      : status === KPI_STATUS.AVAILABLE
-        ? "CALCUL"
-        : status === KPI_STATUS.ESTIMATED
-          ? "INFÉRENCE"
-          : status === KPI_STATUS.CONDITIONAL
-            ? "CALCUL"
-            : "HYPOTHÈSE";
+    status === KPI_STATUS.MEASURED || status === KPI_STATUS.VALID_ZERO
+      ? "CALCUL"
+      : status === KPI_STATUS.UNKNOWN
+        ? "INFÉRENCE"
+        : "HYPOTHÈSE";
 
   // Warnings
   const warnings = [];
@@ -109,11 +108,11 @@ export function buildKpiLineage({
   if (sources.some((s) => s.recordCount === 0)) {
     warnings.push("Certaines sources ne contiennent aucun enregistrement.");
   }
-  if (status === KPI_STATUS.ESTIMATED) {
-    warnings.push("Valeur estimée - données incomplètes.");
+  if (status === KPI_STATUS.UNKNOWN) {
+    warnings.push("Valeur partiellement estimée - certaines sources sont indisponibles.");
   }
-  if (status === KPI_STATUS.CONDITIONAL) {
-    warnings.push("Données optionnelles manquantes - résultat partiel.");
+  if (status === KPI_STATUS.INVALID) {
+    warnings.push("Calcul invalide (résultat non numérique).");
   }
 
   return Object.freeze({

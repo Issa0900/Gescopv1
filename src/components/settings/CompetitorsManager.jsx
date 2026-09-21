@@ -64,7 +64,7 @@ export default function CompetitorsManager() {
         market_position: form.market_position,
         price_position: form.price_position,
       });
-      qc.invalidateQueries(["competitors"]);
+      qc.invalidateQueries({ queryKey: ["competitors"] });
       toast({ title: "Concurrent ajouté", description: "GESCOP surveillera ce concurrent." });
       resetForm();
     } catch (e) {
@@ -78,7 +78,7 @@ export default function CompetitorsManager() {
     if (!window.confirm("Supprimer ce concurrent ?")) return;
     try {
       await base44.entities.Competitor.delete(id);
-      qc.invalidateQueries(["competitors"]);
+      qc.invalidateQueries({ queryKey: ["competitors"] });
       toast({ title: "Concurrent supprimé" });
     } catch (e) {
       toast({ title: "Erreur: " + e.message, variant: "destructive" });

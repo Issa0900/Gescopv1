@@ -2,7 +2,7 @@ import React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Package, Sparkles, CheckCircle2 } from "lucide-react";
+import { Package, Sparkles } from "lucide-react";
 
 export default function ProductsServicesPanel({ form, setForm }) {
   const handleChange = (field, val) => {

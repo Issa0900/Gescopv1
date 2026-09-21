@@ -100,10 +100,15 @@ export const DOMAINS = Object.freeze({
   RH: "rh",
   TRESORERIE: "tresorerie",
   CLIENTS: "clients",
+  ACHATS: "achats",
 });
 
 /**
  * Grain types - the level of detail of each record.
+ */
+/**
+ * @typedef {"transaction"|"order"|"customer"|"product"|"employee"|"campaign"|"campaign_daily"|"day"|"week"|"month"|"quarter"|"year"|"supplier"|"purchase"|"interaction"|"event"} GrainType
+ * @typedef {"day"|"week"|"month"|"quarter"|"year"} TemporalGrain
  */
 export const GRAIN_TYPES = Object.freeze({
   TRANSACTION: "transaction",
@@ -123,6 +128,10 @@ export const GRAIN_TYPES = Object.freeze({
   INTERACTION: "interaction",
   EVENT: "event",
 });
+
+/**
+ * @typedef {"MEASURED"|"VALID_ZERO"|"NOT_MEASURED"|"UNKNOWN"|"INVALID"|"NOT_APPLICABLE"} KpiStatus
+ */
 
 /**
  * KPI status - the reliability state of a computed indicator.

@@ -3,6 +3,12 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
+/**
+ * @param {Object} props
+ * @param {string} [props.title]
+ * @param {string} [props.description]
+ * @param {() => any} [props.onRetry]
+ */
 export default function DataErrorState({ title = "Données indisponibles", description, onRetry }) {
   return (
     <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50/70 p-6 text-center">

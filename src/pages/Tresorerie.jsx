@@ -24,27 +24,28 @@ export default function Tresorerie() {
     queryKey: ["payroll-summary"],
     queryFn: () => fetchAll(base44.entities.Payroll, "-period"),
   });
+  const { data: transactions, isLoading: ltx } = useQuery({
+    queryKey: ["transactions-summary"],
+    queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
+  });
 
   // GESCOP Phase 4 SSOT
-  const { kpis: engineKpis } = useKpiEngine({ cashflow: cashflow || [] }, ["cash_closing"]);
+  const { kpis: engineKpis } = useKpiEngine({ cashflow: cashflow || [], transactions: transactions || [] }, ["cash_closing"]);
 
   // These query keys are shared with the Dashboard, so this page can render
   // instantly if the user just navigated from there.
-  const isLoading = lcf || lex || lp;
+  const isLoading = lcf || lex || lp || ltx;
   
   if (isLoading) return <p className="text-sm text-muted-foreground">Chargement...</p>;
-  if (!cashflow?.length && !expenses?.length && !payroll?.length) {
+  if (!cashflow?.length && !expenses?.length && !payroll?.length && !transactions?.length) {
     return (
       <EmptyState
         icon={Wallet}
         title="Aucune donnée de trésorerie"
-        description="Importez vos données de flux de trésorerie, dépenses ou paie pour suivre votre position et vos tendances."
+        description="Importez vos données de flux de trésorerie, transactions, dépenses ou paie pour suivre votre position et vos tendances."
       />
     );
   }
-
-  // Consommation officielle SSOT
-  const currentCash = engineKpis.get("cash_closing")?.value || 0;
 
   const expenseRows = expenses || [];
   const payrollRows = payroll || [];
@@ -69,7 +70,35 @@ export default function Tresorerie() {
     byMonthCash[m].solde = Number(c.closing_cash) || 0;
   });
 
+  if ((!cashflow || cashflow.length === 0) && transactions && transactions.length > 0) {
+    const sortedTx = [...transactions].sort((a, b) => ((a.date || "") < (b.date || "") ? -1 : 1));
+    let runningBalance = 0;
+    sortedTx.forEach((t) => {
+      const m = (t.date || "").slice(0, 7);
+      if (!byMonthCash[m]) {
+        byMonthCash[m] = { in: 0, out: 0, solde: 0, net: 0 };
+      }
+      const amt = Number(t.amount) || 0;
+      const type = (t.type || "").toLowerCase();
+      const isInc = ["income", "entree", "credit", "revenu"].includes(type) || amt > 0;
+      const isExp = ["expense", "sortie", "debit", "depense"].includes(type) || amt < 0;
+      const posAmt = Math.abs(amt);
+      if (isInc && !isExp) {
+        byMonthCash[m].in += posAmt;
+        byMonthCash[m].net += posAmt;
+        runningBalance += posAmt;
+      } else {
+        byMonthCash[m].out += posAmt;
+        byMonthCash[m].net -= posAmt;
+        runningBalance -= posAmt;
+      }
+      byMonthCash[m].solde = runningBalance;
+    });
+  }
+
   const monthsCash = Object.keys(byMonthCash).sort();
+  // Consommation officielle SSOT avec fallback sur le solde calculé
+  const currentCash = engineKpis.get("cash_closing")?.value || (monthsCash.length > 0 ? byMonthCash[monthsCash[monthsCash.length - 1]]?.solde : 0);
   // A raw sum over the whole imported history (positive = cash grew) presented
   // as a MONTHLY figure overstated it by the number of months covered, and a
   // stale assumption about the engine's sign convention flipped it negative on
@@ -134,15 +163,15 @@ export default function Tresorerie() {
           <AreaChart data={chartData} margin={{ left: 10, right: 10 }}>
             <defs>
               <linearGradient id="cashGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                <stop offset="5%" stopColor="#2a78d6" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#2a78d6" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="mois" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 11 }} />
             <Tooltip formatter={(v) => `${v.toLocaleString()} $`} />
-            <Area type="monotone" dataKey="solde" stroke="#3b82f6" strokeWidth={2} fill="url(#cashGrad)" name="Solde" />
+            <Area type="monotone" dataKey="solde" stroke="#2a78d6" strokeWidth={2} fill="url(#cashGrad)" name="Solde" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -157,8 +186,8 @@ export default function Tresorerie() {
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => `${v.toLocaleString()} $`} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="entrées" fill="#10b981" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="sorties" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="entrées" fill="#15803d" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="sorties" fill="#b45309" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -172,7 +201,7 @@ export default function Tresorerie() {
                 <XAxis dataKey="mois" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v) => `${v.toLocaleString()} $`} />
-                <Bar dataKey="paie" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="paie" fill="#4a3aa7" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (

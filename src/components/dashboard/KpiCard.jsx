@@ -7,14 +7,19 @@ function Sparkline({ data, color = "hsl(var(--primary))" }) {
   const max = Math.max(...data);
   const min = Math.min(...data);
   const range = max - min || 1;
-  const pts = data.map((v, i) => {
+  const points = data.map((v, i) => {
     const x = (i / (data.length - 1)) * 100;
     const y = 100 - ((v - min) / range) * 90 - 5;
-    return `${x},${y}`;
+    return { x, y, v };
   });
+  const pts = points.map((p) => `${p.x},${p.y}`);
   const areaPts = `0,100 ${pts.join(" ")} 100,100`;
   const gid = `sl-${Math.random().toString(36).slice(2, 8)}`;
+  const maxIdx = data.indexOf(max);
+  const minIdx = data.indexOf(min);
   return (
+    // preserveAspectRatio="none" étire le tracé sans étirer les marqueurs :
+    // vectorEffect="non-scaling-stroke" garde leur rayon/épaisseur constants.
     <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-10 w-full">
       <defs>
         <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
@@ -24,6 +29,24 @@ function Sparkline({ data, color = "hsl(var(--primary))" }) {
       </defs>
       <polygon points={areaPts} fill={`url(#${gid})`} />
       <polyline points={pts.join(" ")} fill="none" stroke={color} strokeWidth={1.5} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+      {points.map((p, i) => {
+        const isExtreme = i === maxIdx || i === minIdx;
+        return (
+          <circle
+            key={i}
+            cx={p.x}
+            cy={p.y}
+            r={isExtreme ? 2.2 : 1.4}
+            fill={isExtreme ? color : "transparent"}
+            stroke={isExtreme ? "white" : "transparent"}
+            strokeWidth={isExtreme ? 0.8 : 0}
+            vectorEffect="non-scaling-stroke"
+            pointerEvents="all"
+          >
+            <title>{p.v.toLocaleString("fr-CA")}{isExtreme ? (i === maxIdx ? " (max)" : " (min)") : ""}</title>
+          </circle>
+        );
+      })}
     </svg>
   );
 }

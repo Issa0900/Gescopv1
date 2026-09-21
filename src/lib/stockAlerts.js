@@ -33,7 +33,7 @@ function soldRecently(orders, months) {
     const m = (o.date || "").slice(0, 7);
     if (!o.product_id || !m) return;
     if (m < cutoff || m >= currentMonthKey()) return;
-    if ((Number(o.quantity) || 0) <= 0 && (Number(o.total) || 0) <= 0) return;
+    if ((Number(o.quantity) || 0) <= 0 && (Number(o.total_revenue) || Number(o.total) || 0) <= 0) return;
     sold.add(o.product_id);
   });
   return sold;

@@ -7,7 +7,6 @@
 import {
   ECONOMIC_ROLES,
   TEMPORAL_TYPES,
-  DATA_TYPES,
   ADDITIVE_COMPATIBILITY,
   COMPARISON_COMPATIBILITY
 } from './semanticTypes';
@@ -46,7 +45,7 @@ export function validateComposition(fieldSemantics) {
   const groups = _groupFields(fieldSemantics);
   
   // Rates/Ratios check
-  const rates = fieldSemantics.filter(f => f.dataType === DATA_TYPES.RATE || f.dataType === DATA_TYPES.RATIO);
+  const rates = fieldSemantics.filter(f => f.economicRole === ECONOMIC_ROLES.RATE || f.economicRole === ECONOMIC_ROLES.RATIO);
   if (rates.length > 0) {
     return {
       valid: false,
@@ -58,7 +57,7 @@ export function validateComposition(fieldSemantics) {
 
   // Temporal type conflict
   const flowFields = fieldSemantics.filter(f => f.temporalType === TEMPORAL_TYPES.FLOW);
-  const stockFields = fieldSemantics.filter(f => f.temporalType === TEMPORAL_TYPES.STOCK || f.temporalType === TEMPORAL_TYPES.BALANCE);
+  const stockFields = fieldSemantics.filter(f => f.temporalType === TEMPORAL_TYPES.STOCK || f.economicRole === ECONOMIC_ROLES.BALANCE);
   
   if (flowFields.length > 0 && stockFields.length > 0) {
     return {
@@ -114,17 +113,17 @@ export function validateAggregation(fieldSemantic, method) {
     return { valid: false, reason: 'Champ ou méthode manquant.', suggestedMethod: null };
   }
 
-  const { temporalType, dataType } = fieldSemantic;
-  
+  const { temporalType, economicRole } = fieldSemantic;
+
   if (method === 'sum') {
-    if (temporalType === TEMPORAL_TYPES.STOCK || temporalType === TEMPORAL_TYPES.BALANCE) {
+    if (temporalType === TEMPORAL_TYPES.STOCK || economicRole === ECONOMIC_ROLES.BALANCE) {
       return {
         valid: false,
         reason: 'Les soldes ne peuvent pas être sommés dans le temps.',
         suggestedMethod: 'last'
       };
     }
-    if (dataType === DATA_TYPES.RATE || dataType === DATA_TYPES.RATIO) {
+    if (economicRole === ECONOMIC_ROLES.RATE || economicRole === ECONOMIC_ROLES.RATIO) {
       return {
         valid: false,
         reason: 'Les taux doivent être moyennés, pas sommés.',
@@ -146,7 +145,7 @@ export function validateAggregation(fieldSemantic, method) {
   }
   
   if (method === 'last') {
-    if (temporalType === TEMPORAL_TYPES.STOCK || temporalType === TEMPORAL_TYPES.BALANCE) {
+    if (temporalType === TEMPORAL_TYPES.STOCK || economicRole === ECONOMIC_ROLES.BALANCE) {
       return { valid: true, reason: null, suggestedMethod: null };
     }
   }
@@ -282,7 +281,7 @@ export function explainIncompatibility(fieldA, fieldB) {
     return `Le champ "${fieldA.name || 'A'}" (${aTypeDesc}) et le champ "${fieldB.name || 'B'}" (${bTypeDesc}) ne peuvent pas être additionnés car ils représentent des concepts économiques fondamentalement différents.`;
   }
   
-  if (fieldA.dataType === DATA_TYPES.RATE || fieldB.dataType === DATA_TYPES.RATE) {
+  if (fieldA.economicRole === ECONOMIC_ROLES.RATE || fieldB.economicRole === ECONOMIC_ROLES.RATE) {
     return "L'un des champs est un taux. Les taux ne peuvent pas être additionnés directement.";
   }
 

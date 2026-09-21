@@ -1,6 +1,15 @@
 import React from "react";
-import { Sparkles, ShieldCheck, TrendingUp, Brain } from "lucide-react";
+import { ShieldCheck, TrendingUp, Brain, Activity, Target, Zap } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 
+/**
+ * @param {Object} props
+ * @param {React.ElementType} props.icon
+ * @param {string} props.title
+ * @param {string} [props.subtitle]
+ * @param {React.ReactNode} [props.footer]
+ * @param {React.ReactNode} [props.children]
+ */
 export default function AuthLayout({ icon: Icon, title, subtitle, footer, children }) {
   return (
     <div className="min-h-screen flex bg-background">
@@ -10,12 +19,16 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
         <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-sidebar-primary/20 blur-3xl" />
         <div className="absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-blue-500/10 blur-3xl" />
         <div className="absolute top-1/3 left-1/2 h-64 w-64 rounded-full bg-chart-4/10 blur-3xl" />
+        {/* Grille de fond discrète : rappelle le tableau de bord sans distraire. */}
+        <div
+          className="absolute inset-0 opacity-[0.07]"
+          style={{ backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)", backgroundSize: "40px 40px" }}
+          aria-hidden="true"
+        />
 
         {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-sidebar-primary to-blue-500 shadow-lg shadow-sidebar-primary/30">
-            <Sparkles className="h-6 w-6 text-white" />
-          </div>
+          <BrandLogo className="h-11 w-11 shrink-0 shadow-lg shadow-black/20" />
           <div>
             <p className="text-xl font-bold tracking-tight text-sidebar-accent-foreground">GESCOP</p>
             <p className="text-[11px] uppercase tracking-wider text-sidebar-foreground/50">Pilotage intelligent</p>
@@ -23,25 +36,32 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
         </div>
 
         {/* Hero content */}
-        <div className="relative z-10 space-y-8">
+        <div className="relative z-10 space-y-8 pb-10">
           <div>
             <h2 className="text-3xl font-bold leading-tight text-sidebar-accent-foreground">
-              Le copilote stratégique<br />de votre entreprise
+              Ne subissez plus vos données.<br />Prenez les devants.
             </h2>
             <p className="mt-4 text-base leading-relaxed text-sidebar-foreground/70 max-w-md">
-              Anticipez les risques, saisissez les opportunités et prenez les bonnes décisions - propulsé par l'intelligence artificielle.
+              GESCOP analyse l'information pour vous : comprenez vos performances, détectez les failles et prenez les bonnes décisions.
+              <br /><br />
+              <strong className="text-sidebar-foreground/90">Aucune expertise technique requise.</strong> Importez vos fichiers, l'IA s'occupe du reste.
             </p>
           </div>
 
-          <div className="space-y-4 max-w-md">
+          <div className="space-y-3 max-w-md">
+            <p className="text-sm font-medium text-sidebar-accent-foreground mb-4 uppercase tracking-wider">
+              En quelques minutes, GESCOP vous permet de :
+            </p>
             {[
-              { icon: Brain, label: "Insights IA en temps réel sur votre santé financière" },
-              { icon: TrendingUp, label: "Prévisions de trésorerie et simulateur de décisions" },
-              { icon: ShieldCheck, label: "Données hébergées au Canada · Conforme Loi 25" },
+              { icon: Activity, label: "Surveiller vos performances et KPI stratégiques" },
+              { icon: Target, label: "Détecter les anomalies et identifier les risques" },
+              { icon: TrendingUp, label: "Maximiser votre rentabilité et anticiper la trésorerie" },
+              { icon: Zap, label: "Transformer la donnée brute en actions concrètes" },
+              { icon: ShieldCheck, label: "Vos données. Votre entreprise. Vos décisions." },
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-3 animate-fade-in" style={{ animationDelay: `${0.1 + i * 0.1}s` }}>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary/15">
-                  <item.icon className="h-4.5 w-4.5 text-sidebar-primary" />
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary/15">
+                  <item.icon className="h-4 w-4 text-sidebar-primary" />
                 </div>
                 <p className="pt-1.5 text-sm leading-snug text-sidebar-foreground/80">{item.label}</p>
               </div>
@@ -60,9 +80,7 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="flex lg:hidden items-center justify-center gap-2.5 mb-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-blue-500 shadow-lg shadow-primary/20">
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
+            <BrandLogo className="h-10 w-10 shrink-0 shadow-lg shadow-primary/20" />
             <div>
               <p className="text-lg font-bold tracking-tight">GESCOP</p>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Pilotage intelligent</p>

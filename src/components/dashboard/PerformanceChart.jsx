@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { cn } from "@/lib/utils";
 
+/** @type {Array<{key: string, label: string, format: 'currency'|'percent'|'count'}>} */
 const metrics = [
   { key: "revenue", label: "Chiffre d'affaires", format: "currency" },
   { key: "margin", label: "Marge", format: "percent" },
@@ -34,6 +35,13 @@ function formatValue(v, format) {
   return `${Math.round(v).toLocaleString("fr-CA")} $`;
 }
 
+/**
+ * @param {Object} props
+ * @param {boolean} [props.active]
+ * @param {Array<{name?: string, value?: number, color?: string, fill?: string}>} [props.payload]
+ * @param {string} [props.label]
+ * @param {'currency'|'percent'|'count'} [props.format]
+ */
 function CustomTooltip({ active, payload, label, format }) {
   if (!active || !payload || !payload.length) return null;
   return (

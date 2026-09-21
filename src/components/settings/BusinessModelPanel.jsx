@@ -1,5 +1,4 @@
 import React from "react";
-import { Label } from "@/components/ui/label";
 import { Target, Check, HelpCircle } from "lucide-react";
 
 const BUSINESS_MODELS = [

@@ -19,7 +19,7 @@ export default function Anomalies() {
 
   const markResolved = async (id) => {
     await base44.entities.Anomaly.update(id, { status: "resolu" });
-    qc.invalidateQueries(["anomalies"]);
+    qc.invalidateQueries({ queryKey: ["anomalies"] });
   };
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Chargement…</p>;
@@ -79,7 +79,7 @@ export default function Anomalies() {
                         status: "a_faire",
                       });
                       toast({ title: "Action créée", description: "Tâche ajoutée pour investigation." });
-                      qc.invalidateQueries(["tasks"]);
+                      qc.invalidateQueries({ queryKey: ["tasks"] });
                     } catch(e) {
                       toast({ title: "Erreur", variant: "destructive" });
                     }

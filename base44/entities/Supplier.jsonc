@@ -11,6 +11,15 @@
     "country": {
       "type": "string"
     },
+    "city": {
+      "type": "string"
+    },
+    "contact_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
     "category": {
       "type": "string"
     },
@@ -39,6 +48,21 @@
         "inactif",
         "problematique"
       ]
+    },
+    "neq_number": {
+      "type": "string"
+    },
+    "gst_number": {
+      "type": "string"
+    },
+    "qst_number": {
+      "type": "string"
+    },
+    "purchase_currency": {
+      "type": "string"
+    },
+    "esg_score": {
+      "type": "number"
     },
     "import_id": {
       "type": "string"

@@ -19,6 +19,10 @@ const FALLBACK_IMAGE_URL =
  * original swaps to the generic fallback image.
  */
 const Image = React.forwardRef(
+  /**
+   * @param {React.ComponentPropsWithoutRef<'img'> & { fittingType?: 'fill'|'fit', originWidth?: number, originHeight?: number, focalPointX?: number, focalPointY?: number, quality?: number }} props
+   * @param {React.Ref<HTMLImageElement>} ref
+   */
   (
     {
       src: source,

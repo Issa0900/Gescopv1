@@ -64,9 +64,9 @@ export const FIELD_ALIASES: Record<string, string> = {
   "premiere_commande": "first_purchase_date", "premiere_achat": "first_purchase_date",
   "derniere_commande": "last_purchase_date", "dernier_achat": "last_purchase_date",
   "date_acquisition": "acquisition_date", "date_d_acquisition": "acquisition_date",
-  "id_produit": "product_id", "nom_campagne": "campaign_name",
+  "nom_campagne": "campaign_name",
   "id_concurrent": "competitor_id",
-  "cout_unitaire": "unit_cost", "cout_total": "total_cost",
+  "cout_unitaire": "unit_cost",
   "prix_unitaire": "unit_price", "quantite_vendue": "quantity",
   "marge_brute": "gross_margin", "taux_clic": "ctr",
   "taux_conversion": "conversion_rate", "cout_par_clic": "cpc",
@@ -83,6 +83,33 @@ export const FIELD_ALIASES: Record<string, string> = {
   "position_prix": "price_position", "position_marche": "market_position",
   "chiffre_affaire_estime": "estimated_revenue", "nombre_employes": "employee_count",
   "note_moyenne": "average_rating",
+  "cout_clic": "cpc", "cost_per_click": "cpc",
+  "seuil_d_alerte": "reorder_point", "seuil_alerte": "reorder_point",
+  "contact_principal": "contact_name", "conditions_paiement": "payment_terms", "condition_paiement": "payment_terms",
+  "termes_paiement": "payment_terms", "code_postal": "postal_code", "budget_cad": "budget",
+  "role_poste": "role", "poste": "role", "titre_poste": "role", "taux_commission": "commission_rate",
+  "nb_transactions": "total_orders", "points_fidelite": "loyalty_points", "points_de_fidelite": "loyalty_points",
+  "valeur_stock_cout": "inventory_value", "valeur_stock_vente": "selling_inventory_value",
+  // Alias de la feuille Ventes/Commandes, liés au fix de collision unit_price
+  // de cette session (voir normalizeKeys ci-dessous) : sans eux, ces colonnes
+  // ne résolvent plus du tout et le revenu retombe à 0 $ par une autre voie.
+  "valeur_stock_cout_cad": "inventory_value", "qte_en_stock": "inventory_level", "quantite_en_stock": "inventory_level",
+  "quantite_disponible": "available_qty", "seuil_reapprovisionnement": "reorder_point",
+  "taxe_federale_tps": "tax_federal", "taxe_provinciale_tvq_tvh": "tax_provincial",
+  "montant_taxes_total": "tax", "total_ttc_cad": "total", "prix_unitaire_brut": "unit_price",
+  "sous_total_ht": "subtotal", "province_livraison": "region",
+  "prix_net": "unit_price", "sous_total_ht": "subtotal", "province_livraison": "region",
+  "id_transaction": "order_id", "canal_vente": "channel",
+  "nom_du_fournisseur": "supplier_name", "fournisseur": "supplier_name",
+  "nom_du_contact": "contact_name", "contact": "contact_name",
+  "id_immobilisation": "asset_id", "description_actif": "description",
+  "classe_dpa": "dpa_class", "classe_dpa_fiscale": "dpa_class",
+  "taux_amortissement_dpa": "dpa_rate", "taux_dpa": "dpa_rate",
+  "cout_acquisition_initial_cad": "initial_cost", "cout_acquisition_initial": "initial_cost", "cout_acquisition": "initial_cost",
+  "amortissement_cumule_cad": "accumulated_depreciation", "amortissement_cumule": "accumulated_depreciation",
+  "valeur_nette_comptable_cad": "net_book_value", "valeur_nette_comptable": "net_book_value", "vnc": "net_book_value",
+  "commentaire_historique": "historical_comment",
+  "province": "province", "prov": "province", "province_client": "province", "etat_province": "province", "state_province": "province",
 };
 
 /**
@@ -96,10 +123,162 @@ export function cleCanonique(k: string): string {
     .replace(/^_+|_+$/g, "");
 }
 
+/**
+ * Calcule la similarité de Levenshtein normalisée (entre 0.0 et 1.0) entre deux chaînes.
+ * Utilisé pour rattraper avec prudence les fautes de frappe courantes dans les en-têtes.
+ */
+export function stringSimilarity(s1: string, s2: string): number {
+  if (s1 === s2) return 1.0;
+  if (!s1 || !s2) return 0.0;
+  const l1 = s1.length;
+  const l2 = s2.length;
+  const matrix: number[][] = [];
+  for (let i = 0; i <= l1; i++) matrix[i] = [i];
+  for (let j = 0; j <= l2; j++) matrix[0][j] = j;
+  for (let i = 1; i <= l1; i++) {
+    for (let j = 1; j <= l2; j++) {
+      const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      );
+    }
+  }
+  const dist = matrix[l1][l2];
+  const maxLen = Math.max(l1, l2);
+  return (maxLen - dist) / maxLen;
+}
+
+const ABBREVIATION_EXPANSIONS: Record<string, string[]> = {
+  qte: ["quantite", "quantity"],
+  qty: ["quantite", "quantity"],
+  quantite: ["qte", "quantity"],
+  nb: ["nombre", "number"],
+  nbr: ["nombre", "number"],
+  nombre: ["nb", "number"],
+  num: ["numero", "number", "id"],
+  no: ["numero", "number", "id"],
+  numero: ["no", "num", "id"],
+  mnt: ["montant", "amount"],
+  mtt: ["montant", "amount"],
+  montant: ["mnt", "mtt", "amount"],
+  tx: ["taux", "rate"],
+  taux: ["tx", "rate"],
+  ca: ["chiffre_affaires", "revenue", "ventes", "total_revenue"],
+  desc: ["description"],
+  description: ["desc", "product_name"],
+  cpc: ["cout_clic", "cost_per_click"],
+  cp: ["code_postal", "postal_code"],
+  zip: ["code_postal", "postal_code"],
+  fourn: ["fournisseur", "supplier"],
+  fournisseur: ["supplier", "supplier_name"],
+  emp: ["employe", "employee"],
+  empl: ["employe", "employee"],
+  art: ["article", "produit", "product"],
+  prod: ["produit", "product"],
+  produit: ["product", "product_name"],
+  cmd: ["commande", "order"],
+  cmde: ["commande", "order"],
+  commande: ["order", "order_id"],
+  fact: ["facture", "invoice"],
+  facture: ["order_id", "invoice"],
+  trans: ["transaction"],
+  txn: ["transaction", "order_id"],
+  adr: ["adresse", "address"],
+  addr: ["adresse", "address"],
+  tel: ["telephone", "phone"],
+};
+
+/**
+ * Génère toutes les variantes canoniques plausibles d'un en-tête de colonne
+ * pour résister aux variations d'écriture, abréviations, devises, unités,
+ * ponctuations, pluriels/singuliers et mots de liaison.
+ */
+export function variantesCanoniques(k: string): string[] {
+  if (!k) return [];
+  const raw = String(k).trim();
+  const variants = new Set<string>();
+
+  // 1. Clef canonique standard
+  const base = cleCanonique(raw);
+  if (base) variants.add(base);
+
+  // 2. Nettoyage des parenthèses/crochets d'unités ou devises
+  // ex: "Coût / Clic ($)" -> "cout_clic", "Budget (CAD)" -> "budget", "Ventes Totales ($ CAD)" -> "ventes_totales"
+  const sansUnites = raw
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\[[^\]]*\]/g, " ")
+    .replace(/[\$€£%]/g, " ")
+    .replace(/\b(cad|usd|eur|dollars?|pct|pourcentage|unites?|ans|heures?|jours?)\b/gi, " ");
+  const canonSansUnites = cleCanonique(sansUnites);
+  if (canonSansUnites && canonSansUnites !== base) variants.add(canonSansUnites);
+
+  // 3. Sans mots de liaison français/anglais courants (de, du, d, des, le, la, les, en, par, au, aux, of, the, in, per, for)
+  for (const v of Array.from(variants)) {
+    const sansLiaison = v.replace(/(^|_)(de|du|d|des|le|la|les|en|par|au|aux|of|the|in|per|for)(_|$)/g, "_").replace(/^_+|_+$/g, "").replace(/_+/g, "_");
+    if (sansLiaison && sansLiaison !== v) variants.add(sansLiaison);
+  }
+
+  // 4. Formes singulières courantes (ventes -> vente, commandes -> commande, clics -> clic, transactions -> transaction)
+  for (const v of Array.from(variants)) {
+    const tokens = v.split("_");
+    let changed = false;
+    const singTokens = tokens.map((t) => {
+      if (t.endsWith("s") && t.length > 3 && !t.endsWith("ss") && t !== "frais" && t !== "mois" && t !== "prix") {
+        changed = true;
+        return t.slice(0, -1);
+      }
+      if (t.endsWith("aux") && t.length > 4) {
+        changed = true;
+        return t.slice(0, -3) + "al";
+      }
+      return t;
+    });
+    if (changed) {
+      const sing = singTokens.join("_");
+      if (sing) variants.add(sing);
+    }
+  }
+
+  // 5. Inversion des mots clés (ex: "total_ventes" <-> "ventes_totales", "nb_transactions" <-> "nombre_transactions")
+  for (const v of Array.from(variants)) {
+    if (v.startsWith("total_")) {
+      variants.add(v.replace(/^total_/, "") + "_total");
+    } else if (v.endsWith("_total")) {
+      variants.add("total_" + v.replace(/_total$/, ""));
+    }
+    if (v.startsWith("nb_")) {
+      variants.add("nombre_" + v.replace(/^nb_/, ""));
+    } else if (v.startsWith("nombre_")) {
+      variants.add("nb_" + v.replace(/^nombre_/, ""));
+    }
+  }
+
+  // 6. Substitution et expansion des abréviations
+  for (const v of Array.from(variants)) {
+    const tokens = v.split("_");
+    for (let idx = 0; idx < tokens.length; idx++) {
+      const tok = tokens[idx];
+      const expansions = ABBREVIATION_EXPANSIONS[tok];
+      if (expansions) {
+        for (const exp of expansions) {
+          const replaced = [...tokens];
+          replaced[idx] = exp;
+          variants.add(replaced.join("_"));
+        }
+      }
+    }
+  }
+
+  return Array.from(variants);
+}
+
 // La table d'alias est elle-meme indexee sous forme canonique : ses cles sont
 // ecrites avec des espaces ("date d acquisition") et ne matchaient donc jamais
 // une colonne ponctuee ("Date d'acquisition").
 export const ALIAS_CANONIQUES: Record<string, string> = {
+
   "chiffre_d_affaires": "revenue",
   "chiffre_affaire": "revenue",
   "chiffre_affaires": "revenue",
@@ -240,7 +419,6 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "cost_of_goods": "cogs",
   "product_cost_sold": "cogs",
   "marge_brute_en_montant": "gross_profit",
-  "profit_brut": "gross_profit",
   "benefice_brut": "gross_profit",
   "resultat_brut": "gross_profit",
   "gain_brut": "gross_profit",
@@ -683,9 +861,7 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "products": "product_count",
   "id_produit": "product_id",
   "identifiant_produit": "product_id",
-  "code_produit": "product_id",
   "reference_produit": "product_id",
-  "sku": "product_id",
   "code_sku": "product_id",
   "product_id": "product_id",
   "product_code": "product_id",
@@ -696,7 +872,6 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "produit": "product_name",
   "designation": "product_name",
   "libelle_produit": "product_name",
-  "description_produit": "product_name",
   "product_name": "product_name",
   "item_name": "product_name",
   "product_description": "product_name",
@@ -1006,7 +1181,6 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "week": "week",
   "fiscal_week": "week",
   "weekly_period": "week",
-  "id_transaction": "transaction_id",
   "identifiant_transaction": "transaction_id",
   "numero_transaction": "transaction_id",
   "no_transaction": "transaction_id",
@@ -1073,7 +1247,6 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "market_country": "country",
   "magasin": "store",
   "boutique": "store",
-  "succursale": "store",
   "point_de_vente": "store",
   "magasin_physique": "store",
   "store": "store",
@@ -1098,17 +1271,13 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "budget_campagne": "budget",
   "depenses_reelles": "spend",
   "depense_reelle": "spend",
-  "depense": "spend",
-  "depenses": "spend",
   "cout_campagne": "spend",
-  "frais_marketing": "spend",
   "revenu_ventes": "revenue",
   "revenus_ventes": "revenue",
   "chiffre_affaires_campagne": "revenue",
   "ca_genere": "revenue",
   "ventes_generees": "revenue",
   "cout_achat": "unit_cost",
-  "cout_unitaire": "unit_cost",
   "prix_achat": "unit_cost",
   "purchase_cost": "unit_cost",
   "statut_paiement": "payment_status",
@@ -1275,15 +1444,10 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   // Kaggle Superstore / E-Commerce
   "ship_date": "shipping_date",
   "ship_mode": "shipping_method",
-  "customer_name": "customer_id", // Fallback to id or name
+  "customer_name": "customer_id",
   "segment": "customer_type",
-  "country": "country",
-  "city": "city",
-  "state": "region",
   "postal_code": "zip_code",
-  "region": "region",
   "sub_category": "category",
-  "sales": "revenue",
   "profit": "gross_margin",
   "discount": "discount",
   "quantity": "sales_quantity",
@@ -1328,8 +1492,6 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   
   // Kaggle Marketing / Ads
   "campaign_id": "campaign_id",
-  "clicks": "clicks",
-  "impressions": "impressions",
   "cost": "spend",
   "conversions": "conversions",
 
@@ -1338,24 +1500,13 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "tps": "tax_amount",
   "tvq": "tax_amount",
   "taxes": "tax_amount",
-  "rabais": "discount",
   "escompte": "discount",
   "no_facture": "order_id",
-  "date_vente": "date",
   "article": "product_name",
   "qte": "quantity",
-  "succursale": "location_id",
   
   // Finance / Accounting Data (Accounts receivable/payable, Cash flow)
-  "accounts_receivable": "amount", // Contextual mapping for debts
-  "creances": "amount",
-  "comptes_clients": "amount",
-  "accounts_payable": "expense_amount",
-  "comptes_fournisseurs": "expense_amount",
   "encours": "balance",
-  "solde_bancaire": "closing_cash",
-  "available_cash": "closing_cash",
-  "cash_flow": "amount", // General money movement
   
   // Inventory & Supply Chain
   "inventory": "inventory_level",
@@ -1363,26 +1514,19 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "stock_on_hand": "inventory_level",
   "qte_en_stock": "inventory_level",
   "qte_stock": "inventory_level",
-  "quantite_en_stock": "inventory_level",
-  "stock_quantity": "inventory_level",
   "stock_disponible": "inventory_level",
   "seuil_d_alerte": "reorder_point",
   "seuil_alerte": "reorder_point",
-  "seuil_reapprovisionnement": "reorder_point",
-  "point_de_commande": "reorder_point",
-  "reorder_point": "reorder_point",
   "valeur_du_stock_cout": "inventory_value",
   "valeur_stock_cout": "inventory_value",
   "valeur_stock_vente": "inventory_value",
   "valeur_du_stock": "inventory_value",
-  "valeur_stock": "inventory_value",
   "prix_de_vente": "selling_price",
   "prix_vente": "selling_price",
   "ugs": "sku",
   "fournisseur": "supplier_name",
   "supplier": "supplier_name",
   "lead_time": "delivery_time",
-  "cogs": "cogs", // Cost of Goods Sold
   "cout_des_marchandises": "cogs",
   "coutant": "unit_cost",
   
@@ -1392,6 +1536,69 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "demand_forecast": "predicted_sales",
   "economic_indicator": "external_metric",
   "competitor_price": "competitor_price",
+
+  // Quebec & Canadian Payroll & HR
+  "statut_syndical": "union_status",
+  "taux_horaire": "hourly_rate",
+  "taux_horaire_cad": "hourly_rate",
+  "salaire_base_annuel": "annual_salary",
+  "salaire_base_annuel_cad": "annual_salary",
+  "cotisation_rrq_patronale": "cpp_employer",
+  "rrq": "cpp_employer",
+  "rrq_patronale": "cpp_employer",
+  "cotisation_rqap_patronale": "qpip_employer",
+  "rqap": "qpip_employer",
+  "rqap_patronale": "qpip_employer",
+  "cotisation_cnesst": "cnesst",
+  "cnesst": "cnesst",
+  "cotisation_fss_qc": "fss_qc",
+  "fss_qc": "fss_qc",
+  "fss": "fss_qc",
+  "assurance_collective_part_patronale": "group_insurance",
+  "assurance_collective": "group_insurance",
+  "regime_reer_collectif_employeur": "rrsp_employer",
+  "reer_collectif": "rrsp_employer",
+  "reer_employeur": "rrsp_employer",
+
+  // Warehousing & Multi-Depot Inventory
+  "code_cup_upc": "sku",
+  "upc": "sku",
+  "cup": "sku",
+  "id_depot": "warehouse_id",
+  "nom_depot": "warehouse_name",
+  "quantite_disponible": "closing_stock",
+  "qte_disponible": "closing_stock",
+  "cout_moyen_pondere_cad": "unit_cost",
+  "cout_moyen_pondere": "unit_cost",
+  "cout_moyen": "unit_cost",
+  "prix_vente_cad": "selling_price",
+  "origine_fabrication": "origin_country",
+  "pays_origine": "origin_country",
+  "code_sh_douane": "customs_code",
+  "code_sh": "customs_code",
+  "code_douane": "customs_code",
+
+  // Suppliers & Procurement
+  "province_pays": "country",
+  "devise_achat": "purchase_currency",
+  "modalites_paiement": "payment_terms",
+  "modalite_paiement": "payment_terms",
+
+  // Customers & CRM
+  "langue_communication": "language",
+  "langue": "language",
+  "adresse": "address",
+  "statut_compte": "status",
+  "total_achats_ttc_cad": "total_revenue",
+
+  // Sales Orders & Retail
+  "date_heure": "date",
+  "canal_vente": "channel",
+  "id_vendeur": "employee_id",
+  "remise_ligne": "discount",
+  "province_livraison": "province",
+  "mode_paiement": "payment_method",
+  "id_ligne": "notes",
 
   // Genere depuis le registre unique (registry/conceptRegistry.ts, spec v2
   // section 3) : concepts de mesure (revenu, couts, marketing...), y compris
@@ -1425,17 +1632,7 @@ const REVENUE_LANDING_FIELDS = ["revenue", "total_revenue", "amount", "gross_rev
 export function normalizeKeys(
   row: Record<string, any>,
   properties?: Record<string, any>,
-  // Filled with the ORIGINAL column names (not aliases) that could not be
-  // matched to any field of the target entity — a financial or business
-  // column must never disappear from a column that isn't in the schema
-  // without the user being told which one and why (sec6 of the audit).
   unmapped?: Set<string>,
-  // Vocabulaire propre a CETTE entreprise (Company.company_dictionary),
-  // deja indexe sous forme canonique par l'appelant (cf. cleCanonique) :
-  // terme du fichier -> nom de concept. Consulte avant les tables generiques
-  // (FIELD_ALIASES/ALIAS_CANONIQUES) : le mot qu'une entreprise a deja
-  // corrige une fois ne doit plus jamais redemander la meme correction,
-  // meme quand ce mot n'existe dans aucune liste generique.
   companyDictionary?: Record<string, string>,
 ): Record<string, any> {
   const out: Record<string, any> = {};
@@ -1443,29 +1640,98 @@ export function normalizeKeys(
   for (const [k, v] of Object.entries(row || {})) {
     const lower = k.toLowerCase().trim();
     const canon = cleCanonique(k);
-    const direct = schemaFields.includes(k) ? k
-      : schemaFields.includes(lower) ? lower
-        : schemaFields.includes(canon) ? canon
-          : null;
-    const alias = direct
-      || (companyDictionary && companyDictionary[canon])
-      || FIELD_ALIASES[lower]
-      || FIELD_ALIASES[lower.replace(/[\s-]/g, "_")]
-      || FIELD_ALIASES[canon]
-      || ALIAS_CANONIQUES[canon]
-      || (schemaFields.includes(canon) ? canon : lower);
+    const variants = variantesCanoniques(k);
+
+    // 1. Recherche directe dans les champs du schéma
+    let targetField: string | null = null;
+    if (schemaFields.includes(k)) targetField = k;
+    else if (schemaFields.includes(lower)) targetField = lower;
+    else if (schemaFields.includes(canon)) targetField = canon;
+    else {
+      for (const vr of variants) {
+        if (schemaFields.includes(vr)) {
+          targetField = vr;
+          break;
+        }
+      }
+    }
+
+    // 2. Recherche dans le dictionnaire d'entreprise
+    if (!targetField && companyDictionary) {
+      if (companyDictionary[canon] && schemaFields.includes(companyDictionary[canon])) {
+        targetField = companyDictionary[canon];
+      } else {
+        for (const vr of variants) {
+          if (companyDictionary[vr] && schemaFields.includes(companyDictionary[vr])) {
+            targetField = companyDictionary[vr];
+            break;
+          }
+        }
+      }
+    }
+
+    // 3. Recherche via FIELD_ALIASES et ALIAS_CANONIQUES
+    let alias: string | null = targetField;
+    if (!targetField) {
+      for (const vr of variants) {
+        const mapped = FIELD_ALIASES[vr] || ALIAS_CANONIQUES[vr];
+        if (mapped) {
+          if (schemaFields.includes(mapped)) {
+            targetField = mapped;
+            break;
+          }
+          if (!alias) alias = mapped;
+        }
+      }
+    }
+
+    if (!alias) {
+      alias = (companyDictionary && companyDictionary[canon])
+        || FIELD_ALIASES[lower]
+        || FIELD_ALIASES[lower.replace(/[\s-]/g, "_")]
+        || FIELD_ALIASES[canon]
+        || ALIAS_CANONIQUES[canon]
+        || (schemaFields.includes(canon) ? canon : lower);
+    }
+
+    // Si on a un targetField valide direct, on l'écrit — sauf si une colonne
+    // precedente a deja pose une vraie valeur sur ce meme champ et que celle-ci
+    // est vide : deux colonnes source distinctes peuvent partager un alias
+    // (ex. Prix_Unitaire_Brut et Prix_Net -> unit_price), et une colonne vide
+    // traitee apres ne doit jamais effacer la valeur reelle deja ecrite.
+    if (targetField && schemaFields.includes(targetField)) {
+      const existing = out[targetField];
+      const isEmpty = (val: any) => val === null || val === undefined || val === "";
+      if (isEmpty(existing) || !isEmpty(v)) {
+        out[targetField] = v;
+      }
+      continue;
+    }
+
     // If alias is not a schema field, try fuzzy match against schema field names or contextual adaptations
     if (schemaFields.length > 0 && !schemaFields.includes(alias)) {
-      const fuzzyMatch = schemaFields.find((f) => cleCanonique(f) === canon);
+      let fuzzyMatch: string | undefined = schemaFields.find((f) => variants.includes(cleCanonique(f)));
+      if (!fuzzyMatch) {
+        let bestScore = 0;
+        let bestField: string | undefined;
+        for (const f of schemaFields) {
+          const canonF = cleCanonique(f);
+          for (const vr of variants) {
+            const sim = stringSimilarity(vr, canonF);
+            if (sim >= 0.85 && sim > bestScore) {
+              bestScore = sim;
+              bestField = f;
+            }
+          }
+        }
+        if (bestField) fuzzyMatch = bestField;
+      }
       if (fuzzyMatch) {
         out[fuzzyMatch] = v;
         continue;
       }
-      // Last resort: a revenue-family column with nowhere else to go. Land it
-      // on the first revenue-carrying field this entity actually declares,
-      // in priority order, instead of losing the value under an alias name
-      // that isn't one of this entity's fields.
-      if (REVENUE_CONCEPT_ALIASES.has(alias) || REVENUE_CONCEPT_ALIASES.has(canon)) {
+      // Last resort: a revenue-family column with nowhere else to go.
+      if (REVENUE_CONCEPT_ALIASES.has(alias) || REVENUE_CONCEPT_ALIASES.has(canon) || variants.some((vr) => REVENUE_CONCEPT_ALIASES.has(vr))) {
         const landing = REVENUE_LANDING_FIELDS.find((f) => schemaFields.includes(f) && out[f] === undefined);
         if (landing) {
           out[landing] = v;
@@ -1480,10 +1746,85 @@ export function normalizeKeys(
         out["total"] = v;
         continue;
       }
+      if (alias === "total" && schemaFields.includes("total_revenue") && !schemaFields.includes("total")) {
+        out["total_revenue"] = v;
+        continue;
+      }
+      if ((alias === "nb_transactions" || alias === "total_orders" || variants.includes("nb_transactions")) && schemaFields.includes("total_orders")) {
+        out["total_orders"] = v;
+        continue;
+      }
+      // Customer: Nom complet -> prénom/nom
+      if ((alias === "full_name" || alias === "nom_complet" || alias === "name" || alias === "client" || alias === "customer_name" || variants.includes("nom_complet")) && schemaFields.includes("first_name")) {
+        if (schemaFields.includes("full_name")) out["full_name"] = v;
+        if (!out["first_name"]) {
+          const strVal = String(v ?? "").trim();
+          if (strVal.includes(",")) {
+            const [lName, fName] = strVal.split(",").map((s) => s.trim());
+            out["first_name"] = fName || lName;
+            out["last_name"] = lName;
+          } else {
+            const parts = strVal.split(/\s+/);
+            out["first_name"] = parts[0] || "";
+            if (parts.length > 1) out["last_name"] = parts.slice(1).join(" ");
+          }
+        }
+        continue;
+      }
       if (alias === "customer_name" && schemaFields.includes("customer_id") && !schemaFields.includes("customer_name")) {
         out["customer_id"] = v;
         continue;
       }
+      // Campaign
+      if ((alias === "cout_clic" || alias === "cost_per_click" || alias === "cpc" || variants.includes("cout_clic")) && schemaFields.includes("cpc")) {
+        out["cpc"] = v;
+        continue;
+      }
+      if ((alias === "budget_cad" || alias === "budget" || variants.includes("budget_cad")) && schemaFields.includes("budget")) {
+        out["budget"] = v;
+        continue;
+      }
+      // Inventory
+      if ((alias === "qte_en_stock" || alias === "inventory_level" || alias === "stock_quantity" || variants.includes("qte_en_stock")) && schemaFields.includes("closing_stock")) {
+        out["closing_stock"] = v;
+        continue;
+      }
+      if ((alias === "seuil_d_alerte" || alias === "seuil_alerte" || alias === "reorder_point" || variants.includes("seuil_d_alerte") || variants.includes("seuil_alerte")) && schemaFields.includes("reorder_point")) {
+        out["reorder_point"] = v;
+        continue;
+      }
+      if ((alias === "fournisseur" || alias === "supplier_name") && (schemaFields.includes("supplier_id") || schemaFields.includes("supplier_name"))) {
+        if (schemaFields.includes("supplier_name")) out["supplier_name"] = v;
+        else out["supplier_id"] = v;
+        continue;
+      }
+      if ((alias === "valeur_stock_cout" || alias === "valeur_stock_cout_cad" || variants.includes("valeur_stock_cout")) && schemaFields.includes("inventory_value")) {
+        out["inventory_value"] = v;
+        continue;
+      }
+      if ((alias === "description" || variants.includes("description")) && schemaFields.includes("product_name") && !schemaFields.includes("description")) {
+        out["product_name"] = v;
+        continue;
+      }
+      // Supplier
+      if ((alias === "contact_principal" || alias === "contact_name" || variants.includes("contact_principal")) && schemaFields.includes("contact_name")) {
+        out["contact_name"] = v;
+        continue;
+      }
+      if ((alias === "conditions_paiement" || alias === "condition_paiement" || alias === "payment_terms" || variants.includes("conditions_paiement")) && schemaFields.includes("payment_terms")) {
+        out["payment_terms"] = v;
+        continue;
+      }
+      // Employee
+      if ((alias === "role_poste" || alias === "poste" || alias === "role" || variants.includes("role_poste")) && schemaFields.includes("role")) {
+        out["role"] = v;
+        continue;
+      }
+      if ((alias === "taux_commission" || alias === "commission_rate" || variants.includes("taux_commission")) && schemaFields.includes("commission_rate")) {
+        out["commission_rate"] = v;
+        continue;
+      }
+      // Expenses
       if (alias === "expense" && schemaFields.includes("expense_amount") && !schemaFields.includes("expense")) {
         out["expense_amount"] = v;
         continue;
@@ -1492,23 +1833,18 @@ export function normalizeKeys(
         out["amount"] = v;
         continue;
       }
-      // Beaucoup d'exports PME appellent leur identifiant de vente
-      // "transaction_id" (ou équivalent : "V-10002") plutôt que "order_id".
-      // Order.jsonc exige order_id et n'a pas de champ transaction_id : sans
-      // ce repli, chaque ligne d'un tel export était rejetée en bloc pour
-      // "order_id manquant" alors que l'identifiant était bien présent, juste
-      // sous un autre nom.
       if (alias === "transaction_id" && schemaFields.includes("order_id") && !schemaFields.includes("transaction_id")) {
         out["order_id"] = v;
         continue;
       }
-      // Aucune retombée n'a de champ à offrir sur CETTE entité : la colonne
-      // est reellement non mappee. On le signale et on n'ecrit PAS out[alias]
-      // — avant ce garde-fou, la ligne suivante ecrivait quand meme un champ
-      // absent du schema (ex. "total_revenue" sur Campaign, qui ne declare
-      // que "revenue"), silencieusement perdu a l'enregistrement sans que la
-      // colonne n'apparaisse jamais comme non mappee dans l'aperçu.
-      if (unmapped) unmapped.add(k);
+      // Ignorer les colonnes fantômes / artificielles de grille vide (ex: "col_7", "col_8", "__EMPTY_1")
+      if (unmapped) {
+        const isArtificialCol = /^(col_?\d+|colonne_?\d+|column_?\d+|__empty)/i.test(k);
+        const isEmptyVal = v === null || v === undefined || String(v).trim() === "";
+        if (!isArtificialCol || !isEmptyVal) {
+          unmapped.add(k);
+        }
+      }
       continue;
     }
     out[alias] = v;
@@ -1527,6 +1863,18 @@ const ENUM_TRANSLATIONS: Record<string, string[]> = {
   // Levels, Priorities, Risks
   "low": ["faible", "bas", "basse", "inferieur"], "medium": ["moyenne", "modere", "moyen", "egal"], "high": ["elevee", "eleve", "important", "superieur", "haute"], "urgent": ["urgente", "critique"],
   "critical": ["critique", "urgente"],
+  "low": ["faible", "bas", "basse", "inferieur"], "basse": ["faible"], "bas": ["faible"], "faible": ["faible"],
+  "medium": ["moyenne", "modere", "moyen", "egal"], "moyenne": ["moyenne"], "moyen": ["moyenne"], "normale": ["moyenne"], "normal": ["moyenne"], "standard": ["moyenne"], "modere": ["moyenne"], "moderee": ["moyenne"],
+  "high": ["elevee", "eleve", "important", "superieur", "haute"], "haute": ["elevee"], "haut": ["elevee"], "eleve": ["elevee"], "elevee": ["elevee"], "important": ["elevee"], "importante": ["elevee"], "majeure": ["elevee"],
+  "urgent": ["urgente", "critique"], "urgente": ["urgente"], "critical": ["critique", "urgente"], "critique": ["urgente", "elevee"], "immediate": ["urgente"],
+  "strategique": ["strategique", "elevee", "urgente"], "strategic": ["strategique", "elevee", "urgente"],
+  "prioritaire": ["elevee", "urgente"], "vital": ["urgente", "elevee"], "vitale": ["urgente", "elevee"],
+  "p1": ["urgente", "elevee"], "p2": ["elevee"], "p3": ["moyenne"], "p4": ["faible"],
+
+  // Goals & KPIs statuses
+  "atteint": ["atteint"], "atteinte": ["atteint"], "achieved": ["atteint"], "reached": ["atteint"], "realise": ["atteint"], "realisee": ["atteint"], "succes": ["atteint"], "reussi": ["atteint"],
+  "depasse": ["depasse"], "depassee": ["depasse"], "exceeded": ["depasse"], "surpassed": ["depasse"], "surperforme": ["depasse"],
+  "non_atteint": ["non_atteint"], "non atteint": ["non_atteint"], "non-atteint": ["non_atteint"], "not achieved": ["non_atteint"], "missed": ["non_atteint"], "echoue": ["non_atteint", "echoue"], "retard": ["non_atteint"], "en retard": ["non_atteint"],
 
   // States
   "new": ["nouveau", "nouvelle"], "seen": ["vu", "lue"], "resolved": ["resolu"], "archived": ["archivee", "archive"],
@@ -1969,9 +2317,11 @@ export function buildCompanyDictionaryIndex(raw: Record<string, string> | null |
 const HEADER_SIGNATURES: { entity: string; must: string[] }[] = [
   { entity: "CampaignDaily", must: ["campaign_id", "date"] },
   { entity: "Campaign", must: ["campaign_id"] },
+  { entity: "Inventory", must: ["inventory_id"] },
   { entity: "Inventory", must: ["product_id", "closing_stock"] },
   { entity: "Inventory", must: ["product_id", "opening_stock"] },
-  { entity: "Purchase", must: ["supplier_id", "product_id"] },
+  { entity: "Purchase", must: ["purchase_id"] },
+  { entity: "Purchase", must: ["date", "supplier_id", "product_id"] },
   { entity: "Order", must: ["order_id"] },
   { entity: "Customer", must: ["customer_id"] },
   { entity: "Product", must: ["product_id"] },
@@ -1979,6 +2329,7 @@ const HEADER_SIGNATURES: { entity: string; must: string[] }[] = [
   { entity: "Payroll", must: ["employee_id", "period"] },
   { entity: "Employee", must: ["employee_id"] },
   { entity: "Cashflow", must: ["closing_cash"] },
+  { entity: "Cashflow", must: ["opening_cash", "net_cash_flow"] },
   { entity: "Cashflow", must: ["cash_in", "cash_out"] },
   { entity: "Expense", must: ["expense_id"] },
   { entity: "Interaction", must: ["interaction_id"] },
@@ -1996,12 +2347,18 @@ const HEADER_ALIASES: Record<string, string> = {
   "id_employe": "employee_id", "employe_id": "employee_id",
   "id_campagne": "campaign_id", "campagne_id": "campaign_id",
   "id_depense": "expense_id", "depense_id": "expense_id",
+  "id_achat": "purchase_id", "achat_id": "purchase_id", "no_achat": "purchase_id",
+  "id_inventaire": "inventory_id", "inventaire_id": "inventory_id",
   "montant": "amount", "date_operation": "date", "periode": "period",
-  "stock_cloture": "closing_stock", "stock_final": "closing_stock",
+  "stock_cloture": "closing_stock", "stock_final": "closing_stock", "quantite_en_stock": "closing_stock", "qte_en_stock": "closing_stock",
   "stock_ouverture": "opening_stock", "stock_initial": "opening_stock",
-  "solde_cloture": "closing_cash", "solde_final": "closing_cash",
+  "solde_cloture": "closing_cash", "solde_final": "closing_cash", "solde_de_cloture": "closing_cash",
+  "solde_ouverture": "opening_cash", "solde_d_ouverture": "opening_cash",
+  "flux_net_de_tresorerie": "net_cash_flow", "flux_net": "net_cash_flow",
   "encaissements": "cash_in", "decaissements": "cash_out",
   "entrees": "cash_in", "sorties": "cash_out",
+  "entrees_de_fonds": "cash_in", "sorties_de_fonds": "cash_out",
+  "numero_neq": "neq_number", "numero_tps": "gst_number", "numero_tvq": "qst_number",
 };
 
 function normalizeHeader(h: string, companyDictionary?: Record<string, string>): string {
@@ -2068,6 +2425,98 @@ export function detectEntityByHeaders(headers: string[], companyDictionary?: Rec
   return null;
 }
 
+// construirePrompt/SCHEMA_REPONSE, deplaces depuis importPlan.ts (18 sept
+// 2026) : fonctions pures, sans dependance a XLSX — importPlan.ts les
+// ré-exporte, aucun appelant existant ne change.
+//
+// Phase 5 du chantier "reconnaissance universelle" : la consigne interdisait
+// jusqu'ici tout rapprochement au-dela du nom exact ("mets champ: null
+// plutot que de forcer un rapprochement"), ce qui empechait l'IA de faire le
+// lien evident entre une colonne "transaction_id" et le champ order_id d'une
+// entite qui n'a pas de champ transaction_id — exactement le genre de cas
+// que le rattrapage deterministe doit ensuite deviner sans le contexte de
+// l'IA. La consigne autorise maintenant explicitement ce raisonnement pour
+// les identifiants, sans autoriser l'invention de champs pour le reste.
+export function construirePrompt(
+  echantillon: string,
+  nomFichier: string,
+  entites: string[],
+  // Vocabulaire deja connu de CETTE entreprise (Company.company_dictionary) :
+  // le donner a l'IA en contexte evite qu'elle redecouvre a l'aveugle un mot
+  // deja corrige une fois, et lui montre le format de reponse attendu.
+  companyDictionary?: Record<string, string>,
+): string {
+  const dictEntries = companyDictionary ? Object.entries(companyDictionary) : [];
+  const dictBlock = dictEntries.length > 0
+    ? [
+      "",
+      "Cette entreprise a deja corrige ces correspondances par le passe — reutilise-les telles quelles si tu revois ces intitules (ou un intitule tres proche) :",
+      ...dictEntries.map(([terme, concept]) => `- "${terme}" -> ${concept}`),
+    ]
+    : [];
+  return [
+    "Tu analyses un fichier exporte par une PME (comptabilite, caisse, tableur maison).",
+    "Ta tache est de DECRIRE comment lire ce fichier. Tu ne recopies aucune valeur.",
+    "",
+    `Nom du fichier : ${nomFichier}`,
+    `Types de donnees possibles : ${entites.join(", ")}`,
+    ...dictBlock,
+    "",
+    "Voici les premieres lignes, telles quelles, numerotees a partir de 0 :",
+    "```",
+    echantillon,
+    "```",
+    "",
+    "Reponds en indiquant :",
+    "- entite : le type de donnees, parmi la liste ci-dessus (null si aucun ne convient).",
+    "- ligne_entetes : le numero de la ligne qui contient les intitules de colonnes.",
+    "  Attention, un export commence souvent par un titre de rapport sur plusieurs lignes.",
+    "- lignes_ignorees : les numeros des lignes qui ne sont pas des donnees (totaux, sous-totaux, commentaires).",
+    "- colonnes : pour chaque intitule, le champ vise (ou null si la colonne ne correspond a rien).",
+    "  * convention_date : si la colonne contient des dates ecrites en chiffres, precise JJ/MM ou MM/JJ.",
+    "  * valeurs : si la colonne utilise des codes, donne leur traduction, ex. {\"D\": \"expense\", \"C\": \"income\"}.",
+    "- confiance : haute, moyenne ou faible.",
+    "- explication : une phrase en francais, adressee au proprietaire de l'entreprise,",
+    "  decrivant ce que tu as compris du fichier. Pas de jargon technique.",
+    "",
+    "N'invente jamais un nom de champ : utilise uniquement ceux du type de donnees choisi.",
+    "Si une colonne ne correspond vraiment a rien, mets champ: null plutot que de forcer un rapprochement.",
+    "Exception delibérée : si le type de donnees choisi a un identifiant obligatoire",
+    "(ex. order_id, campaign_id) et qu'aucune colonne ne porte ce nom exact, mais qu'une",
+    "colonne sert clairement de reference/numero unique a chaque ligne (ex. \"transaction_id\",",
+    "\"Ref. Vente\", \"No Bon\"), rapproche-la de cet identifiant plutot que de repondre null —",
+    "c'est le meme champ, seulement nomme differemment par cette entreprise.",
+  ].join("\n");
+}
+
+export const SCHEMA_REPONSE = {
+  type: "object",
+  properties: {
+    entite: { type: ["string", "null"] },
+    ligne_entetes: { type: "integer" },
+    lignes_ignorees: { type: "array", items: { type: "integer" } },
+    colonnes: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          colonne: { type: "string" },
+          champ: { type: ["string", "null"] },
+          convention_date: { type: ["string", "null"], enum: ["JJ/MM", "MM/JJ", null] },
+          valeurs: { type: ["object", "null"], additionalProperties: { type: "string" } },
+        },
+        required: ["colonne"],
+      },
+    },
+    confiance: { type: "string", enum: ["haute", "moyenne", "faible"] },
+    explication: { type: "string" },
+  },
+  required: ["entite", "ligne_entetes", "colonnes"],
+};
+
+/** Signature minimale attendue : permet de tester sans reseau. */
+export type InvocateurLLM = (args: { prompt: string; response_json_schema: any }) => Promise<any>;
+
 export function normalizeRow(
   entityName: string,
   row: Record<string, any>,
@@ -2095,13 +2544,33 @@ export function normalizeRow(
     if (rawCategory !== undefined) r.category = rawCategory;
   }
 
-  // A single "name"/"nom" column on an entity that stores first + last name would
+  // A single "name"/"nom"/"full_name" column on an entity that stores first + last name would
   // otherwise be dropped entirely, leaving nameless records.
-  if (schemaProps?.first_name && r.name && !r.first_name) {
-    const parts = String(r.name).trim().split(/\s+/);
-    r.first_name = parts[0];
-    if (parts.length > 1) r.last_name = parts.slice(1).join(" ");
-    delete r.name;
+  if (schemaProps?.first_name && (r.name || r.full_name) && !r.first_name) {
+    const rawN = String(r.full_name || r.name).trim();
+    if (rawN.includes(",")) {
+      const [lName, fName] = rawN.split(",").map((s) => s.trim());
+      r.first_name = fName || lName;
+      r.last_name = lName;
+    } else {
+      const parts = rawN.split(/\s+/);
+      r.first_name = parts[0];
+      if (parts.length > 1) r.last_name = parts.slice(1).join(" ");
+    }
+  }
+
+  if (entityName === "Customer") {
+    const CANADIAN_PROVINCES = new Set([
+      "QC", "ON", "BC", "AB", "MB", "SK", "NS", "NB", "NL", "PE", "YT", "NT", "NU",
+      "QUEBEC", "QUÉBEC", "ONTARIO", "ALBERTA"
+    ]);
+    const rawStatus = stripAccents(String(r.status || "")).toUpperCase().trim();
+    if (CANADIAN_PROVINCES.has(rawStatus)) {
+      if (!r.province) {
+        r.province = r.status;
+      }
+      r.status = "actif";
+    }
   }
 
   if (entityName === "Transaction") {
@@ -2197,6 +2666,54 @@ export function normalizeRow(
     }
   }
 
+  // --- GOAL RESCUE HOOKS ---
+  if (entityName === "Goal") {
+    if (r.priority) {
+      const pRaw = stripAccents(String(r.priority).toLowerCase().trim());
+      if (["strategique", "strategic", "strategie"].includes(pRaw)) {
+        r.priority = "strategique";
+      } else if (["critique", "urgent", "urgente", "critical", "p1", "immediate"].includes(pRaw)) {
+        r.priority = "urgente";
+      } else if (["eleve", "elevee", "high", "haute", "haut", "important", "importante", "majeur", "majeure", "p2", "prioritaire"].includes(pRaw)) {
+        r.priority = "elevee";
+      } else if (["moyen", "moyenne", "medium", "normal", "normale", "standard", "modere", "moderee", "p3"].includes(pRaw)) {
+        r.priority = "moyenne";
+      } else if (["faible", "low", "bas", "basse", "mineur", "mineure", "p4"].includes(pRaw)) {
+        r.priority = "faible";
+      }
+    }
+    if (r.status) {
+      const sRaw = stripAccents(String(r.status).toLowerCase().trim());
+      if (["atteint", "atteinte", "achieved", "reached", "completed", "realise", "realisee", "succes", "reussi"].includes(sRaw)) {
+        r.status = "atteint";
+      } else if (["depasse", "depassee", "exceeded", "surpassed", "surperforme"].includes(sRaw)) {
+        r.status = "depasse";
+      } else if (["non_atteint", "non atteint", "non-atteint", "not achieved", "failed", "missed", "echoue", "retard", "en retard"].includes(sRaw)) {
+        r.status = "non_atteint";
+      } else if (["en_cours", "en cours", "in progress", "in_progress", "ongoing", "actif", "active", "en attente"].includes(sRaw)) {
+        r.status = "en_cours";
+      }
+    }
+    if (r.domain) {
+      const dRaw = stripAccents(String(r.domain).toLowerCase().trim());
+      if (["finance", "financier", "comptabilite", "tresorerie"].includes(dRaw)) {
+        r.domain = dRaw === "tresorerie" ? "tresorerie" : "finance";
+      } else if (["ventes", "vente", "sales", "commercial"].includes(dRaw)) {
+        r.domain = "ventes";
+      } else if (["marketing", "mktg", "acquisition", "communication"].includes(dRaw)) {
+        r.domain = "marketing";
+      } else if (["clients", "client", "customer", "crm", "service client"].includes(dRaw)) {
+        r.domain = "clients";
+      } else if (["operations", "operation", "logistique", "atelier", "supply", "chaine"].includes(dRaw)) {
+        r.domain = "operations";
+      } else if (["rh", "ressources humaines", "personnel", "staff"].includes(dRaw)) {
+        r.domain = "rh";
+      } else if (["achats", "approvisionnement", "fournisseurs", "procurement"].includes(dRaw)) {
+        r.domain = "achats";
+      }
+    }
+  }
+
   // --- ORDER RESCUE HOOKS ---
   if (entityName === "Order") {
     if (!r.order_id) {
@@ -2208,34 +2725,119 @@ export function normalizeRow(
     }
     if (!r.date) {
       r.date = new Date().toISOString().slice(0, 10);
+    } else if (typeof r.date === "number") {
+      const d = new Date(Math.round((r.date - 25569) * 86400 * 1000));
+      if (!isNaN(d.getTime())) r.date = d.toISOString().slice(0, 10);
+    } else if (typeof r.date === "string" && r.date.includes(" ")) {
+      r.date = r.date.split(" ")[0];
     }
+
+    // Déduction succursale / canal
+    const channelRaw = String(r.channel || "");
+    if (!r.location_id) {
+      if (/l[ée]vis/i.test(channelRaw)) {
+        r.location_id = "Lévis";
+        r.channel = "magasin";
+      } else if (/sainte[- ]foy|ste[- ]foy/i.test(channelRaw)) {
+        r.location_id = "Sainte-Foy";
+        r.channel = "magasin";
+      } else if (/chicoutimi/i.test(channelRaw)) {
+        r.location_id = "Chicoutimi";
+        r.channel = "magasin";
+      } else if (/shopify|web|en[- ]ligne/i.test(channelRaw)) {
+        r.location_id = "Web / E-Commerce";
+        r.channel = "web";
+      } else if (/b2b|grossiste|commercial/i.test(channelRaw)) {
+        r.location_id = "Siège social";
+        r.channel = "b2b";
+      }
+    }
+    if (!r.succursale && r.location_id) r.succursale = r.location_id;
+
+    // Prix, remises et sous-total HT
     const qty = parseNumber(r.quantity) || 1;
-    const price = parseNumber(r.unit_price) || 0;
-    const cost = parseNumber(r.unit_cost) || 0;
-    if (r.total_revenue == null || r.total_revenue === "") {
-      if (price > 0) r.total_revenue = Math.round(qty * price * 100) / 100;
+    const discount = parseNumber(r.discount) || 0;
+    const grossPrice = parseNumber(r.price);
+    let netPrice = parseNumber(r.unit_price);
+
+    if ((netPrice == null || netPrice === 0) && grossPrice != null && grossPrice > 0) {
+      netPrice = Math.round(grossPrice * (1 - discount) * 100) / 100;
+      r.unit_price = netPrice;
     }
+    if ((grossPrice == null || grossPrice === 0) && netPrice != null && netPrice > 0) {
+      r.price = discount > 0 ? Math.round((netPrice / (1 - discount)) * 100) / 100 : netPrice;
+    }
+    const unitP = netPrice || grossPrice || 0;
+
+    if (r.subtotal == null || r.subtotal === "") {
+      r.subtotal = Math.round(qty * unitP * 100) / 100;
+    }
+    const subtot = parseNumber(r.subtotal) || 0;
+
+    // Calcul automatique fiscalité pancanadienne (TPS + TVQ / TVH / PST)
+    const isExempt = /wendake|s[ée]paq/i.test(String(r.customer_name || "")) ||
+      r.customer_id === "CL-00623" || r.customer_id === "CL-00945";
+
+    if (r.tax_federal == null || r.tax_federal === "") {
+      r.tax_federal = isExempt ? 0 : Math.round(subtot * 0.05 * 100) / 100;
+    }
+
+    if (r.tax_provincial == null || r.tax_provincial === "") {
+      if (isExempt) {
+        r.tax_provincial = 0;
+      } else {
+        const prov = String(r.province || "QC").toUpperCase().trim();
+        if (prov === "QC") {
+          r.tax_provincial = Math.round(subtot * 0.09975 * 100) / 100;
+        } else if (prov === "ON") {
+          r.tax_provincial = Math.round(subtot * 0.08 * 100) / 100;
+        } else if (["NB", "NS", "NL", "PE"].includes(prov)) {
+          r.tax_provincial = Math.round(subtot * 0.10 * 100) / 100;
+        } else if (["BC", "MB"].includes(prov)) {
+          r.tax_provincial = Math.round(subtot * 0.07 * 100) / 100;
+        } else if (prov === "SK") {
+          r.tax_provincial = Math.round(subtot * 0.06 * 100) / 100;
+        } else {
+          r.tax_provincial = 0;
+        }
+      }
+    }
+
+    if (r.tax == null || r.tax === "") {
+      const fedTax = parseNumber(r.tax_federal) || 0;
+      const provTax = parseNumber(r.tax_provincial) || 0;
+      r.tax = Math.round((fedTax + provTax) * 100) / 100;
+    }
+
+    if (r.total == null || r.total === "") {
+      r.total = Math.round((subtot + (parseNumber(r.tax) || 0)) * 100) / 100;
+    }
+
+    if (r.total_revenue == null || r.total_revenue === "") {
+      r.total_revenue = subtot;
+    }
+    const cost = parseNumber(r.unit_cost) || 0;
     if (r.total_cost == null || r.total_cost === "") {
       if (cost > 0) r.total_cost = Math.round(qty * cost * 100) / 100;
     }
     if (r.gross_profit == null || r.gross_profit === "") {
-      const totRev = parseNumber(r.total_revenue);
-      const totCost = parseNumber(r.total_cost);
-      if (totRev != null && totCost != null) r.gross_profit = Math.round((totRev - totCost) * 100) / 100;
+      const totRev = parseNumber(r.total_revenue) || 0;
+      const totCost = parseNumber(r.total_cost) || 0;
+      r.gross_profit = Math.round((totRev - totCost) * 100) / 100;
     }
     if (r.gross_margin == null || r.gross_margin === "") {
-      const totRev = parseNumber(r.total_revenue);
-      const profit = parseNumber(r.gross_profit);
-      if (totRev && profit != null) r.gross_margin = Math.round((profit / totRev) * 10000) / 100;
+      const totRev = parseNumber(r.total_revenue) || 0;
+      const profit = parseNumber(r.gross_profit) || 0;
+      if (totRev > 0) r.gross_margin = Math.round((profit / totRev) * 10000) / 100;
     }
   }
 
   // --- EXECUTIVE SUMMARY RESCUE HOOKS ---
   if (entityName === "ExecutiveSummary") {
     if (!r.location_id) {
-      r.location_id = r.succursale || r.store || r.location || r.ville || r.site || r.id;
+      r.location_id = r.succursale || r.store || r.location || r.ville || r.site || "SIEGE";
     }
-    if (!r.summary_id && r.location_id) {
+    if (!r.summary_id) {
       r.summary_id = `SUM-${stripAccents(String(r.location_id)).toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
     }
     const rev = parseNumber(r.total_revenue);
@@ -2251,6 +2853,31 @@ export function normalizeRow(
 
   // --- EMPLOYEE RESCUE HOOKS ---
   if (entityName === "Employee") {
+    const sal = parseNumber(r.annual_salary) || 0;
+    if (sal > 0) {
+      if (r.total_social_charges == null || r.total_social_charges === "") {
+        const rrq = parseNumber(r.cpp_employer) || 0;
+        const rqap = parseNumber(r.qpip_employer) || 0;
+        const cnesst = parseNumber(r.cnesst) || 0;
+        const fss = parseNumber(r.fss_qc) || 0;
+        const assurance = parseNumber(r.group_insurance) || 0;
+        const reer = parseNumber(r.rrsp_employer) || 0;
+        const totalRate = rrq + rqap + cnesst + fss + assurance + reer;
+        if (totalRate > 0) {
+          r.total_social_charges = Math.round(sal * totalRate * 100) / 100;
+        }
+      }
+      if (r.total_employer_cost == null || r.total_employer_cost === "") {
+        const charges = parseNumber(r.total_social_charges) || 0;
+        r.total_employer_cost = Math.round((sal + charges) * 100) / 100;
+      }
+    }
+    if (r.seniority_years == null && r.hire_date) {
+      const hireY = new Date(r.hire_date).getFullYear();
+      if (!isNaN(hireY)) {
+        r.seniority_years = Math.max(0, 2026 - hireY);
+      }
+    }
     const deptRaw = String(r.department || "").trim();
     const allowedDepts = ["direction", "ventes", "marketing", "logistique", "administration", "service_client", "atelier"];
     const deptNorm = stripAccents(deptRaw.toLowerCase());
@@ -2288,6 +2915,46 @@ export function normalizeRow(
     }
     if (r.purchase_cost == null && r.unit_cost != null) {
       r.purchase_cost = r.unit_cost;
+    }
+    if (r.gross_margin == null || r.gross_margin === "") {
+      const price = parseNumber(r.selling_price);
+      const cost = parseNumber(r.purchase_cost);
+      if (price && cost != null) {
+        r.gross_margin = Math.round(((price - cost) / price) * 10000) / 100;
+      }
+    }
+  }
+
+  // --- INVENTORY RESCUE HOOKS ---
+  if (entityName === "Inventory") {
+    if (r.closing_stock == null && r.inventory_level != null) {
+      r.closing_stock = r.inventory_level;
+    }
+    const closing = parseNumber(r.closing_stock) || 0;
+    const cost = parseNumber(r.unit_cost) || parseNumber(r.purchase_cost) || 0;
+    if (r.inventory_value == null || r.inventory_value === "") {
+      if (closing > 0 && cost > 0) {
+        r.inventory_value = Math.round(closing * cost * 100) / 100;
+      }
+    }
+  }
+
+  // --- ASSET RESCUE HOOKS ---
+  if (entityName === "Asset") {
+    if (!r.asset_id && r.description) {
+      r.asset_id = `AST-${stripAccents(String(r.description)).toUpperCase().replace(/[^A-Z0-9]/g, "_").slice(0, 20)}`;
+    }
+    if ((r.net_book_value == null || r.net_book_value === "" || isNaN(Number(r.net_book_value))) && r.initial_cost != null && r.accumulated_depreciation != null) {
+      const initial = parseNumber(r.initial_cost) || 0;
+      const accum = parseNumber(r.accumulated_depreciation) || 0;
+      r.net_book_value = Math.max(0, initial - accum);
+    }
+    if (!r.location_id) {
+      const text = `${r.description || ""} ${r.historical_comment || ""}`;
+      if (/l[ée]vis/i.test(text)) r.location_id = "Lévis";
+      else if (/sainte[- ]foy|ste[- ]foy/i.test(text)) r.location_id = "Sainte-Foy";
+      else if (/b[ée]cancour/i.test(text)) r.location_id = "Bécancour";
+      else r.location_id = "Siège social";
     }
   }
 

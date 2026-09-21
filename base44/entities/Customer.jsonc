@@ -5,6 +5,12 @@
     "customer_id": {
       "type": "string"
     },
+    "full_name": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
     "first_name": {
       "type": "string"
     },
@@ -20,13 +26,11 @@
     "region": {
       "type": "string"
     },
+    "province": {
+      "type": "string"
+    },
     "customer_type": {
-      "type": "string",
-      "enum": [
-        "particulier",
-        "entreprise",
-        "b2b"
-      ]
+      "type": "string"
     },
     "acquisition_date": {
       "type": "string",
@@ -50,29 +54,33 @@
       "type": "number"
     },
     "status": {
-      "type": "string",
-      "enum": [
-        "actif",
-        "inactif",
-        "perdu"
-      ]
+      "type": "string"
     },
     "segment": {
-      "type": "string",
-      "enum": [
-        "nouveau",
-        "regulier",
-        "vip",
-        "inactif",
-        "b2b",
-        "haute_valeur",
-        "a_risque"
-      ]
+      "type": "string"
     },
     "lifetime_value": {
       "type": "number"
     },
     "churn_risk": {
+      "type": "number"
+    },
+    "postal_code": {
+      "type": "string"
+    },
+    "loyalty_points": {
+      "type": "number"
+    },
+    "language": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "tax_exemption_number": {
+      "type": "string"
+    },
+    "credit_limit": {
       "type": "number"
     },
     "import_id": {

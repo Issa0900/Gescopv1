@@ -9,7 +9,7 @@ import { analyzeColumn } from "./recognition/mappingDecisionEngine.ts";
 import type { ColumnRecognitionRequest } from "./recognition/mappingDecisionEngine.ts";
 
 export * from "./ontology/types.ts";
-export { Registry } from "./ontology/index.ts";
+export { Registry, ALL_CONCEPTS } from "./ontology/index.ts";
 export { analyzeColumn } from "./recognition/mappingDecisionEngine.ts";
 
 export interface SheetAnalysisParams {

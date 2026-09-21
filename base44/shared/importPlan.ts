@@ -19,8 +19,8 @@
 // la preuve gagne. Voir verifierAvecPreuves().
 
 import { getSchema } from "./entitySchemas.ts";
-import { parseDate, stripAccents, FIELD_ALIASES, cleCanonique, ALIAS_CANONIQUES, isSummaryOrTotalRow, type ConventionDate } from "./importUtils.ts";
-import { trouverLigneEntetes, detectEntityByHeaders, detectEntityByFieldOverlap } from "./sheetDetect.ts";
+import { parseDate, stripAccents, FIELD_ALIASES, cleCanonique, ALIAS_CANONIQUES, variantesCanoniques, isSummaryOrTotalRow, type ConventionDate, type InvocateurLLM } from "./importUtils.ts";
+import { trouverLigneEntetes, detectEntityByHeaders, detectEntityByFieldOverlap, detectEntityByName } from "./sheetDetect.ts";
 import { recognizeAllColumns } from "./core/contextualRecognition.ts";
 import { classifyDocumentSheet, type SheetClassificationResult } from "./core/documentClassifier.ts";
 import { calculateQualityProfile, type QualityProfile } from "./core/qualityEngine.ts";
@@ -169,25 +169,67 @@ export function validerPlan(brut: any, matrix: any[][]): { plan: PlanImport | nu
   for (const c of Array.isArray(brut.colonnes) ? brut.colonnes : []) {
     if (!c || typeof c.colonne !== "string") continue;
     let champ = typeof c.champ === "string" && c.champ.trim() !== "" ? c.champ.trim() : null;
+    
+    // Sauvetage contextuel si l'IA a proposé un synonyme ou nom légèrement différent
     if (champ && champsConnus.length > 0 && !champsConnus.includes(champ)) {
-      // L'IA a invente un champ : on garde la colonne, mais on va tenter le rattrapage.
-      refus.push(`champ inconnu ignore : ${c.colonne} -> ${champ}`);
-      champ = null;
+      const rescued = FIELD_ALIASES[champ] || ALIAS_CANONIQUES[champ];
+      if (rescued && champsConnus.includes(rescued)) {
+        champ = rescued;
+      } else if (entite === "Campaign" && (champ === "cout_clic" || champ === "cost_per_click" || champ === "cout_par_clic") && champsConnus.includes("cpc")) {
+        champ = "cpc";
+      } else if (entite === "Campaign" && (champ === "budget_cad" || champ === "budget_total") && champsConnus.includes("budget")) {
+        champ = "budget";
+      } else if (entite === "Inventory" && (champ === "qte_en_stock" || champ === "inventory_level" || champ === "stock_quantity") && champsConnus.includes("closing_stock")) {
+        champ = "closing_stock";
+      } else if (entite === "Inventory" && (champ === "seuil_d_alerte" || champ === "seuil_alerte") && champsConnus.includes("reorder_point")) {
+        champ = "reorder_point";
+      } else if (entite === "Inventory" && (champ === "fournisseur" || champ === "supplier_name") && champsConnus.includes("supplier_id")) {
+        champ = champsConnus.includes("supplier_name") ? "supplier_name" : "supplier_id";
+      } else if (entite === "Customer" && (champ === "nom_complet" || champ === "full_name" || champ === "nom_client") && (champsConnus.includes("first_name") || champsConnus.includes("full_name"))) {
+        champ = champsConnus.includes("full_name") ? "full_name" : "first_name";
+      } else if (entite === "Customer" && champ === "code_postal" && champsConnus.includes("postal_code")) {
+        champ = "postal_code";
+      } else if (entite === "ExecutiveSummary" && (champ === "total" || champ === "ventes_totales") && champsConnus.includes("total_revenue")) {
+        champ = "total_revenue";
+      } else if (entite === "ExecutiveSummary" && (champ === "nb_transactions" || champ === "nombre_transactions") && champsConnus.includes("total_orders")) {
+        champ = "total_orders";
+      } else if (entite === "Supplier" && champ === "contact_principal" && champsConnus.includes("contact_name")) {
+        champ = "contact_name";
+      } else if (entite === "Supplier" && (champ === "conditions_paiement" || champ === "condition_paiement") && champsConnus.includes("payment_terms")) {
+        champ = "payment_terms";
+      } else if (entite === "Employee" && (champ === "role_poste" || champ === "poste") && champsConnus.includes("role")) {
+        champ = "role";
+      } else if (entite === "Employee" && champ === "taux_commission" && champsConnus.includes("commission_rate")) {
+        champ = "commission_rate";
+      } else if (entite === "Asset" && (champ === "amortissement_cumule" || champ === "amortissement_cumule_cad") && champsConnus.includes("accumulated_depreciation")) {
+        champ = "accumulated_depreciation";
+      } else if (entite === "Asset" && (champ === "cout_acquisition_initial" || champ === "cout_acquisition_initial_cad") && champsConnus.includes("initial_cost")) {
+        champ = "initial_cost";
+      } else if (entite === "Asset" && (champ === "valeur_nette_comptable" || champ === "valeur_nette_comptable_cad" || champ === "vnc") && champsConnus.includes("net_book_value")) {
+        champ = "net_book_value";
+      } else if (entite === "Asset" && (champ === "classe_dpa" || champ === "classe_dpa_fiscale") && champsConnus.includes("dpa_class")) {
+        champ = "dpa_class";
+      } else if (entite === "Asset" && (champ === "taux_amortissement_dpa" || champ === "taux_dpa") && champsConnus.includes("dpa_rate")) {
+        champ = "dpa_rate";
+      } else {
+        refus.push(`champ inconnu ignore : ${c.colonne} -> ${champ}`);
+        champ = null;
+      }
     }
     
-    // Rattrapage : si l'IA n'a pas su rattacher (ou s'est trompee), on cherche 
-    // une correspondance exacte ou via dictionnaire.
+    // Rattrapage multi-variantes si l'IA n'a pas su rattacher
     if (!champ && champsConnus.length > 0) {
-      const cleanC = c.colonne.toLowerCase().trim();
-      const noAccentC = cleanC.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_");
-      
-      if (champsConnus.includes(c.colonne)) champ = c.colonne;
-      else if (champsConnus.includes(cleanC)) champ = cleanC;
-      else if (champsConnus.includes(noAccentC)) champ = noAccentC;
-      else {
-          const canon = cleCanonique(c.colonne);
-          const alias = FIELD_ALIASES[cleanC] || FIELD_ALIASES[cleanC.replace(/[\s-]/g, "_")] || FIELD_ALIASES[noAccentC] || ALIAS_CANONIQUES[canon];
-          if (alias && champsConnus.includes(alias)) champ = alias;
+      const vars = variantesCanoniques(c.colonne);
+      for (const vr of vars) {
+        if (champsConnus.includes(vr)) {
+          champ = vr;
+          break;
+        }
+        const alias = FIELD_ALIASES[vr] || ALIAS_CANONIQUES[vr];
+        if (alias && champsConnus.includes(alias)) {
+          champ = alias;
+          break;
+        }
       }
     }
     
@@ -266,63 +308,13 @@ export function verifierAvecPreuves(plan: PlanImport, matrix: any[][]): PlanImpo
 // 5. L'appel a l'IA
 // ---------------------------------------------------------------------------
 
-export function construirePrompt(echantillon: string, nomFichier: string, entites: string[]): string {
-  return [
-    "Tu analyses un fichier exporte par une PME (comptabilite, caisse, tableur maison).",
-    "Ta tache est de DECRIRE comment lire ce fichier. Tu ne recopies aucune valeur.",
-    "",
-    `Nom du fichier : ${nomFichier}`,
-    `Types de donnees possibles : ${entites.join(", ")}`,
-    "",
-    "Voici les premieres lignes, telles quelles, numerotees a partir de 0 :",
-    "```",
-    echantillon,
-    "```",
-    "",
-    "Reponds en indiquant :",
-    "- entite : le type de donnees, parmi la liste ci-dessus (null si aucun ne convient).",
-    "- ligne_entetes : le numero de la ligne qui contient les intitules de colonnes.",
-    "  Attention, un export commence souvent par un titre de rapport sur plusieurs lignes.",
-    "- lignes_ignorees : les numeros des lignes qui ne sont pas des donnees (totaux, sous-totaux, commentaires).",
-    "- colonnes : pour chaque intitule, le champ vise (ou null si la colonne ne correspond a rien).",
-    "  * convention_date : si la colonne contient des dates ecrites en chiffres, precise JJ/MM ou MM/JJ.",
-    "  * valeurs : si la colonne utilise des codes, donne leur traduction, ex. {\"D\": \"expense\", \"C\": \"income\"}.",
-    "- confiance : haute, moyenne ou faible.",
-    "- explication : une phrase en francais, adressee au proprietaire de l'entreprise,",
-    "  decrivant ce que tu as compris du fichier. Pas de jargon technique.",
-    "",
-    "N'invente jamais un nom de champ : utilise uniquement ceux du type de donnees choisi.",
-    "Si une colonne ne correspond a rien, mets champ: null plutot que de forcer un rapprochement.",
-  ].join("\n");
-}
-
-export const SCHEMA_REPONSE = {
-  type: "object",
-  properties: {
-    entite: { type: ["string", "null"] },
-    ligne_entetes: { type: "integer" },
-    lignes_ignorees: { type: "array", items: { type: "integer" } },
-    colonnes: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          colonne: { type: "string" },
-          champ: { type: ["string", "null"] },
-          convention_date: { type: ["string", "null"], enum: ["JJ/MM", "MM/JJ", null] },
-          valeurs: { type: ["object", "null"], additionalProperties: { type: "string" } },
-        },
-        required: ["colonne"],
-      },
-    },
-    confiance: { type: "string", enum: ["haute", "moyenne", "faible"] },
-    explication: { type: "string" },
-  },
-  required: ["entite", "ligne_entetes", "colonnes"],
-};
-
-/** Signature minimale attendue : permet de tester sans reseau. */
-export type InvocateurLLM = (args: { prompt: string; response_json_schema: any }) => Promise<any>;
+// construirePrompt/SCHEMA_REPONSE deplaces vers importUtils.ts (18 sept
+// 2026) : fonctions pures, aucune dependance a XLSX — les y laisser via
+// l'import de sheetDetect.ts (qui, lui, importe npm:xlsx@0.18.5) empechait
+// de les tester sous le test runner Node du repo, meme probleme deja
+// rencontre avec deriveFallbackIdentity et les fonctions de detection.
+export { construirePrompt, SCHEMA_REPONSE, type InvocateurLLM } from "./importUtils.ts";
+import { construirePrompt, SCHEMA_REPONSE } from "./importUtils.ts";
 
 /**
  * Produit le plan de lecture d'un fichier.
@@ -339,15 +331,16 @@ export async function analyserFichier(
     nomFichier: string;
     entitesPossibles: string[];
     planDeSecours: PlanImport;
+    companyDictionary?: Record<string, string>;
   },
 ): Promise<{ plan: PlanImport; refus: string[]; erreur?: string }> {
-  const { matrix, nomFichier, entitesPossibles, planDeSecours } = options;
+  const { matrix, nomFichier, entitesPossibles, planDeSecours, companyDictionary } = options;
   if (matrix.length === 0) return { plan: planDeSecours, refus: ["fichier vide"] };
 
   let brut: any;
   try {
     brut = await invoquer({
-      prompt: construirePrompt(construireEchantillon(matrix), nomFichier, entitesPossibles),
+      prompt: construirePrompt(construireEchantillon(matrix), nomFichier, entitesPossibles, companyDictionary),
       response_json_schema: SCHEMA_REPONSE,
     });
   } catch (e: any) {
@@ -421,7 +414,7 @@ export function planParRegles(
   });
 
   // 2. Détection de l'entité
-  let entite = entiteConnue || detectEntityByHeaders(entetes) || detectEntityByFieldOverlap(entetes) || null;
+  let entite = entiteConnue || detectEntityByName(nomFichier) || detectEntityByHeaders(entetes) || detectEntityByFieldOverlap(entetes) || null;
   if (!entite && classification.isAggregatedSummary) {
     entite = "ExecutiveSummary";
   }
@@ -478,35 +471,237 @@ export function planParRegles(
     if (!champ && entite) {
         const schema = getSchema(entite);
         if (schema) {
-            const canon = cleCanonique(c);
-            const alias = FIELD_ALIASES[cleanC] || FIELD_ALIASES[cleanC.replace(/[\s-]/g, "_")] || FIELD_ALIASES[noAccentC] || ALIAS_CANONIQUES[canon];
-            if (alias && Object.keys(schema.properties).includes(alias)) champ = alias;
+            const vars = variantesCanoniques(c);
+            for (const vr of vars) {
+              if (Object.keys(schema.properties).includes(vr)) {
+                champ = vr;
+                break;
+              }
+              const alias = FIELD_ALIASES[vr] || ALIAS_CANONIQUES[vr];
+              if (alias && Object.keys(schema.properties).includes(alias)) {
+                champ = alias;
+                break;
+              }
+            }
         }
     }
 
-    // 3. Adaptations ciblées par entité (Order, Product, Employee, ExecutiveSummary)
+    // 3. Adaptations ciblées par entité (Order, Product, Inventory, Customer, Campaign, Supplier, Employee, ExecutiveSummary)
     if (entite === 'Order') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
       if (champ === 'transaction_id') champ = 'order_id';
-      if (champ === 'succursale' || champ === 'store') champ = 'location_id';
+      if (champ === 'taxe_federale_tps' || normC.includes('taxe_fed') || normC.includes('tps')) champ = 'tax_federal';
+      if (champ === 'taxe_provinciale_tvq_tvh' || normC.includes('taxe_prov') || normC.includes('tvq')) champ = 'tax_provincial';
+      if (normC === 'succursale' || normC === 'store') champ = 'succursale';
+      if (normC.includes('id_succursale') || normC.includes('succursale_id')) champ = 'location_id';
+      if (normC.includes('livraison')) champ = 'fulfillment_status';
+      if (normC.includes('nom') && normC.includes('employe')) champ = 'employee_name';
+      if (normC.includes('departement')) champ = 'department';
+      const mot = (s: string) => new RegExp(`(^|_)${s}(_|$)`).test(normC);
+      if (mot("profit") || (mot("benefice") && mot("brut"))) champ = 'gross_profit';
+      else if (mot("marge") || mot("margin") || mot("pct")) champ = 'gross_margin';
     }
     if (entite === 'Product') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
       if (champ === 'closing_stock' || champ === 'stock_quantity') champ = 'inventory_level';
-      if (champ === 'unit_cost') champ = 'purchase_cost';
+      if (champ === 'unit_cost' || normC.includes('cout_d_achat')) champ = 'purchase_cost';
+      if (champ === 'unit_price' || normC.includes('prix_de_vente')) champ = 'selling_price';
+      if (champ === 'qte_en_stock' || champ === 'quantity_on_hand') champ = 'inventory_level';
+      if (champ === 'description') champ = 'product_name';
+      if (normC.includes('sous_cat') || normC.includes('subcat')) champ = 'subcategory';
     }
-    if (entite === 'Employee' && (champ === 'store' || champ === 'location_id' || champ === 'succursale')) {
-      champ = 'location';
+    if (entite === 'Inventory') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      if (normC.includes('id_inventaire') || normC.includes('inventaire_id')) champ = 'inventory_id';
+      if (normC.includes('id_entrepot') || normC.includes('entrepot_id')) champ = 'warehouse_id';
+      if (normC.includes('nom') && normC.includes('entrepot')) champ = 'warehouse_name';
+      if (champ === 'inventory_level' || champ === 'stock_quantity' || champ === 'qte_en_stock') champ = 'closing_stock';
+      if (champ === 'valeur_stock_cout_cad' || champ === 'valeur_stock_cout' || champ === 'valeur_stock') champ = 'inventory_value';
+      if (champ === 'unit_price' || normC.includes('prix_de_vente')) champ = 'selling_price';
+      if (champ === 'seuil_d_alerte' || champ === 'seuil_alerte') champ = 'reorder_point';
+      if (champ === 'fournisseur' || champ === 'supplier_name') champ = 'supplier_id';
+      if (champ === 'description') champ = 'product_name';
+    }
+    if (entite === 'Customer') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      if (champ === 'nom_complet' || champ === 'nom_client' || champ === 'client') champ = 'full_name';
+      if (champ === 'code_postal') champ = 'postal_code';
+      if (champ === 'points_fidelite') champ = 'loyalty_points';
+      if (normC.includes('1er_achat') || normC.includes('premier_achat')) champ = 'first_purchase_date';
+      if (normC.includes('dernier_achat')) champ = 'last_purchase_date';
+      if (normC.includes('commandes_totales') || normC.includes('total_commandes')) champ = 'total_orders';
+      if (normC.includes('risque') || normC.includes('depart') || normC.includes('churn')) champ = 'churn_risk';
+    }
+    if (entite === 'Supplier') {
+      const normCol = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      if ((normCol.includes('id') || normCol.includes('num') || normCol.includes('code')) && (normCol.includes('fourn') || normCol.includes('suppl'))) {
+        champ = 'supplier_id';
+      } else if (normCol.includes('nom') && (normCol.includes('fourn') || normCol.includes('suppl'))) {
+        champ = 'supplier_name';
+      } else if (champ === 'supplier' || champ === 'supplier_id') {
+        champ = (normCol.includes('id') || normCol.includes('code')) ? 'supplier_id' : 'supplier_name';
+      }
+      if (champ === 'contact_principal' || champ === 'contact' || champ === 'nom_du_contact' || normCol.includes('contact')) champ = 'contact_name';
+      if (champ === 'conditions_paiement' || champ === 'condition_paiement' || champ === 'termes_paiement' || normCol.includes('condition') || normCol.includes('paiement')) champ = 'payment_terms';
+      if (champ === 'ville' || normCol === 'ville') champ = 'city';
+      if (champ === 'pays' || normCol === 'pays') champ = 'country';
+      if (champ === 'courriel' || normCol === 'email' || normCol === 'courriel') champ = 'email';
+      if (normCol.includes('neq')) champ = 'neq_number';
+      if (normCol.includes('tps') || normCol.includes('gst')) champ = 'gst_number';
+      if (normCol.includes('tvq') || normCol.includes('qst')) champ = 'qst_number';
+      if (normCol.includes('delai') || normCol.includes('livraison')) champ = 'average_delivery_days';
+      if (normCol.includes('evolution') || normCol.includes('prix')) champ = 'price_change_last_12_months';
+      if (normCol.includes('fiabilite')) champ = 'reliability_score';
+      if (normCol.includes('qualite')) champ = 'quality_score';
+      if (normCol.includes('esg')) champ = 'esg_score';
+      if (normCol.includes('devise')) champ = 'purchase_currency';
+      if (normCol.includes('volume')) champ = 'purchase_volume';
+    }
+    if (entite === 'Purchase') {
+      const normCol = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      if ((normCol.includes('id') || normCol.includes('num') || normCol.includes('code') || normCol.includes('no')) && normCol.includes('achat')) champ = 'purchase_id';
+      if (normCol.includes('date') && !normCol.includes('livraison')) champ = 'date';
+      if ((normCol.includes('id') || normCol.includes('num') || normCol.includes('code')) && (normCol.includes('fourn') || normCol.includes('suppl'))) champ = 'supplier_id';
+      if ((normCol.includes('id') || normCol.includes('num') || normCol.includes('code') || normCol.includes('sku')) && (normCol.includes('prod') || normCol.includes('art'))) champ = 'product_id';
+      if (normCol.includes('prevu') || (normCol.includes('livraison') && normCol.includes('attendu'))) champ = 'expected_delivery';
+      if (normCol.includes('reel') || (normCol.includes('livraison') && normCol.includes('effectiv'))) champ = 'actual_delivery';
+      if (normCol.includes('retard')) champ = 'delay_days';
+      if (normCol.includes('cout_total') || normCol.includes('montant_total') || normCol.includes('total')) champ = 'total_cost';
+      if (normCol.includes('cout_unit') || normCol.includes('prix_unit')) champ = 'unit_cost';
+      if (normCol.includes('qte') || normCol.includes('quantite')) champ = 'quantity';
+    }
+    if (entite === 'Campaign') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      if (champ === 'cout_clic' || champ === 'cout_par_clic' || champ === 'cost_per_click') champ = 'cpc';
+      if (champ === 'budget_cad' || champ === 'budget_total') champ = 'budget';
+      if (normC.includes('date_de_debut') || normC.includes('date_debut') || normC.includes('start_date')) champ = 'start_date';
+      if (normC.includes('date_de_fin') || normC.includes('date_fin') || normC.includes('end_date')) champ = 'end_date';
+      if (normC === 'depense' || normC === 'depenses' || champ === 'amount') champ = 'spend';
+      if (normC.includes('nouveaux_clients') || normC.includes('new_customers')) champ = 'new_customers';
+    }
+    if (entite === 'Employee') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      if (champ === 'store' || champ === 'location_id' || normC === 'emplacement') champ = 'location';
+      if (normC === 'succursale') champ = 'branch';
+      if (champ === 'category' || normC.includes('departement')) champ = 'department';
+      if (champ === 'role_poste' || champ === 'poste' || champ === 'titre_poste') champ = 'role';
+      if (champ === 'taux_commission') champ = 'commission_rate';
+      if (normC.includes('heures_hebdo')) champ = 'weekly_hours';
+      if (normC === 'salaire') champ = 'salary';
+      if (normC.includes('salaire_annuel')) champ = 'annual_salary';
+      if (normC.includes('rrq')) champ = 'cpp_employer';
+      if (normC.includes('rqap')) champ = 'qpip_employer';
+      if (normC.includes('charges_sociales')) champ = 'total_social_charges';
+      if (normC.includes('cout_employeur')) champ = 'total_employer_cost';
+    }
+    if (entite === 'Expense') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      if (normC.includes('departement')) champ = 'department';
+      if (normC.includes('categorie')) champ = 'category';
+      if (normC.includes('recurrent')) champ = 'recurring';
+    }
+    if (entite === 'Cashflow') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      if (normC.includes('entree')) champ = 'cash_in';
+      if (normC.includes('sortie')) champ = 'cash_out';
+      if (normC.includes('cloture')) champ = 'closing_cash';
+      if (normC.includes('ouverture')) champ = 'opening_cash';
+      if (normC.includes('flux_net')) champ = 'net_cash_flow';
     }
     if (entite === 'ExecutiveSummary') {
       const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
-      if (normC.includes("succursale") || normC.includes("store") || normC.includes("location") || normC.includes("ville")) champ = 'location_id';
-      else if (normC.includes("cout") || normC.includes("cost") || normC.includes("charge")) champ = 'total_cost';
-      else if (normC.includes("profit") || normC.includes("benefice")) champ = 'gross_profit';
-      else if (normC.includes("marge") || normC.includes("margin") || normC.includes("pct")) champ = 'gross_margin';
-      else if (normC.includes("vente") || normC.includes("revenue") || normC.includes("ca")) champ = 'total_revenue';
+      const mot = (s: string) => new RegExp(`(^|_)${s}(_|$)`).test(normC);
+      if (mot("indicateur") || mot("kpi") || mot("performance") || mot("label")) champ = 'indicator_name';
+      else if (mot("valeur") || mot("metrique")) champ = 'metric_value';
+      else if (mot("unite") || mot("formule")) champ = 'unit_formula';
+      else if (mot("commentaire") || mot("strategique") || mot("note") || mot("notes")) champ = 'notes';
+      else if (mot("succursale") || mot("store") || mot("location") || mot("ville")) champ = 'location_id';
+      else if (mot("transaction") || mot("transactions") || mot("commande") || mot("commandes") || mot("nb_transactions")) champ = 'total_orders';
+      else if (mot("cout") || mot("cost") || mot("charge")) champ = 'total_cost';
+      else if (mot("profit") || mot("benefice")) champ = 'gross_profit';
+      else if (mot("marge") || mot("margin") || mot("pct")) champ = 'gross_margin';
+      else if (mot("vente") || mot("ventes") || mot("revenue") || mot("ca")) champ = 'total_revenue';
+    }
+    if (entite === 'Asset') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      const mot = (s: string) => new RegExp(`(^|_)${s}(_|$)`).test(normC);
+      if (mot("cumule") || mot("accumule") || (mot("amortissement") && (mot("cumul") || !mot("taux")))) champ = 'accumulated_depreciation';
+      else if (mot("taux") || (mot("dpa") && mot("taux")) || (mot("amortissement") && mot("taux"))) champ = 'dpa_rate';
+      else if (mot("initial") || (mot("cout") && mot("acquisition")) || (mot("valeur") && mot("acquisition"))) champ = 'initial_cost';
+      else if (mot("nette") || mot("comptable") || mot("vnc")) champ = 'net_book_value';
+      else if (mot("classe") || (mot("dpa") && mot("classe"))) champ = 'dpa_class';
+      else if (mot("commentaire") || mot("historique")) champ = 'historical_comment';
+      else if (mot("succursale") || mot("store") || mot("magasin") || mot("location")) champ = 'location_id';
+      else if (mot("immobilisation") || mot("actif_id") || (mot("id") && mot("actif"))) champ = 'asset_id';
+      else if (mot("description") || (mot("actif") && !mot("id") && !mot("valeur"))) champ = 'description';
+    }
+
+    // Filet de sécurité général : la reconnaissance sémantique (étape 1,
+    // ci-dessus) gagne souvent la course avant que FIELD_ALIASES/
+    // ALIAS_CANONIQUES (étape 2) ne soit consultée, laissant `champ` sur le
+    // nom d'en-tête canonicalisé brut ("cout_clic", "qte_en_stock"...) au
+    // lieu du vrai champ du schéma ("cpc", "inventory_level"...) — c'est la
+    // cause commune à la plupart des bugs de colonnes ignorées identifiés
+    // (voir dictionnaire technique, section « Diagnostic des Rejets
+    // d'Ingestion »). Les correctifs ciblés par entité ci-dessus couvrent
+    // les cas déjà repérés ; ce filet rattrape génériquement tout champ final
+    // qui n'existe pas dans le schéma cible mais que ces mêmes tables savent
+    // pourtant traduire. Ne s'active que sur un champ déjà invalide : ne peut
+    // pas dégrader un champ qui résolvait correctement.
+    if (entite && champ) {
+      const schema = getSchema(entite);
+      if (schema && !Object.keys(schema.properties).includes(champ)) {
+        const rescued = FIELD_ALIASES[champ] || ALIAS_CANONIQUES[champ];
+        if (rescued && Object.keys(schema.properties).includes(rescued)) {
+          champ = rescued;
+        }
+      }
     }
 
     return { colonne: c, champ };
   });
+
+  // 3bis. Dédoublonnage des champs cibles : deux colonnes sources ne doivent
+  // jamais écrire sur le même champ. appliquerPlan construit l'objet ligne en
+  // affectant `obj[champ] = valeur` colonne par colonne — un deuxième
+  // affectation au même champ écrase silencieusement la première, sans erreur
+  // ni ligne de quarantaine, et l'utilisateur ne voit jamais qu'une colonne a
+  // disparu. Repéré en testant Clients_CRM (ID_Client ET Nom_Client mappés
+  // tous deux vers customer_id : l'identifiant réel se faisait remplacer par
+  // le nom) et Stocks_MultiEntrepots (Quantite_En_Stock ET Quantite_Disponible
+  // vers inventory_level). La colonne dont l'en-tête ressemble à un
+  // identifiant (contient "id") gagne le champ. Le repli vers un champ "nom"
+  // libre ne s'applique qu'au conflit sur un champ "_id" (le cas customer_id
+  // / customer_name) : pour tout autre champ (une quantité, un montant...),
+  // rediriger vers un champ "nom" du schéma choisi au hasard écrirait une
+  // valeur numérique dans un champ texte sans rapport — la colonne perdante
+  // est alors simplement ignorée plutôt que mal réaffectée.
+  if (entite) {
+    const schemaFields = Object.keys(getSchema(entite)?.properties || {});
+    const claimedBy = new Map<string, { idx: number; looksLikeId: boolean }>();
+    colonnes.forEach((c, idx) => {
+      if (!c.champ) return;
+      const looksLikeId = /\bid\b/i.test(c.colonne);
+      const existing = claimedBy.get(c.champ);
+      if (!existing) {
+        claimedBy.set(c.champ, { idx, looksLikeId });
+        return;
+      }
+      const loserIdx = (looksLikeId && !existing.looksLikeId) ? existing.idx : idx;
+      if (loserIdx === existing.idx) claimedBy.set(c.champ, { idx, looksLikeId });
+      const targetIsIdField = /_id$/.test(c.champ);
+      const nameFieldPrefix = c.champ.replace(/_id$/, "_name");
+      const freeNameField = targetIsIdField && schemaFields.includes(nameFieldPrefix) && !claimedBy.has(nameFieldPrefix)
+        ? nameFieldPrefix
+        : null;
+      if (freeNameField) {
+        colonnes[loserIdx].champ = freeNameField;
+        claimedBy.set(freeNameField, { idx: loserIdx, looksLikeId: false });
+      } else {
+        colonnes[loserIdx].champ = null;
+      }
+    });
+  }
 
   // 4. Calcul du profil de qualité et décision
   const avgConfidence = recognizedCols.size > 0

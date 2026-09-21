@@ -68,13 +68,14 @@ function forceTransactionColumns(plan: PlanImport): PlanImport {
  */
 async function planPourFeuille(
   base44: any,
-  options: { matrix: any[][]; label: string; nomFichier: string; manual?: string | null },
+  options: { matrix: any[][]; label: string; nomFichier: string; manual?: string | null; companyDictionary?: Record<string, string> },
 ) {
-  const { matrix, label, nomFichier, manual } = options;
+  const { matrix, label, nomFichier, manual, companyDictionary } = options;
   const entetes = (matrix[trouverLigneEntetes(matrix)] || []).map((h: any) => String(h ?? "").trim());
   const signature = signatureFichier(entetes);
 
   // 1. Deja vu et valide par un humain.
+  // 1. Deja vu et valide par un humain (match exact de la signature).
   try {
     const memo = await base44.entities.Import.filter(
       { plan_signature: signature, plan_confirmed: true }, "-created_date", 1,
@@ -86,15 +87,30 @@ async function planPourFeuille(
     }
   } catch { /* la memoire est un confort, jamais un prerequis */ }
 
+  // 1.5. Apprentissage croisé (mémoire globale pour rattraper les colonnes uniques)
+  let mappingMemory: any[] = [];
+  try {
+    const allMemo = await base44.entities.Import.filter(
+      { plan_confirmed: true }, "-created_date", 50,
+    );
+    mappingMemory = allMemo.map((m: any) => m.read_plan).filter(Boolean);
+  } catch {}
+
   // 2. Analyse par l'IA, filet deterministe derriere.
-  const secours = planParRegles(matrix, nomFichier, manual || null);
+  // `label` (nom de la feuille, ex. "Sommaire Exécutif") et non `nomFichier`
+  // (nom du classeur entier, ex. "Entreprise_Simulation_50Ans_Canada_QC.xlsx") :
+  // la classification par nom ("sommaire", "executif"...) dans planParRegles
+  // ne matchait jamais rien tant qu'elle recevait le nom du fichier, faisant
+  // manquer la detection de type meme quand la feuille s'appelait explicitement
+  // "Sommaire Exécutif".
+  const secours = planParRegles(matrix, label, manual || null, mappingMemory);
   const res = await analyserFichier(
     (args) => base44.asServiceRole.integrations.Core.InvokeLLM({
       prompt: args.prompt,
       response_json_schema: args.response_json_schema,
       model: "gemini_3_8_flash",
     }),
-    { matrix, nomFichier: label, entitesPossibles: Object.keys(ENTITY_SCHEMAS), planDeSecours: secours },
+    { matrix, nomFichier: label, entitesPossibles: Object.keys(ENTITY_SCHEMAS), planDeSecours: secours, companyDictionary },
   );
   const entiteParNom = detectEntityByName(label);
   const entetesNormalisees = entetes.map((h) => String(h).trim());
@@ -387,7 +403,7 @@ export default async function (req: Request) {
             const planValide = plansFournis[label];
             const analyse = planValide
               ? { plan: planValide, signature: signatureFichier(matrix[planValide.ligne_entetes] || []), refus: [], erreur: undefined }
-              : await planPourFeuille(base44, { matrix, label, nomFichier: file_name, manual: entity_override });
+              : await planPourFeuille(base44, { matrix, label, nomFichier: file_name, manual: entity_override, companyDictionary });
             const plan = analyse.plan;
 
             if (analyseSeule) {

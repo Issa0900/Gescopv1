@@ -1,5 +1,5 @@
 import React from "react";
-import { Radar, Compass, CheckCircle2, AlertTriangle, ShieldCheck, Sparkles } from "lucide-react";
+import { Radar, Sparkles } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import CompetitorsManager from "@/components/settings/CompetitorsManager";

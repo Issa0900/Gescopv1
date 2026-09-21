@@ -231,7 +231,7 @@ export function validSalesOrders(orders) {
  */
 export function customerValue(orders, customers, marginPct = null) {
   const ord = validSalesOrders(orders);
-  const totalRevenue = ord.reduce((s, o) => s + (Number(o.total) || Number(o.revenue_amount) || 0), 0);
+  const totalRevenue = ord.reduce((s, o) => s + (Number(o.total_revenue) || Number(o.total) || Number(o.revenue_amount) || 0), 0);
   const buyers = new Set(ord.map((o) => o.customer_id).filter(Boolean)).size;
   const totalCustomers = (customers || []).length;
   // Prefer customers who actually ordered; fall back to the whole base.

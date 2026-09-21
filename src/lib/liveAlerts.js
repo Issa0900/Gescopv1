@@ -23,6 +23,7 @@ import {
   previousRoasWindow,
   validSalesOrders,
 } from "@/lib/metrics";
+import { financialMonthlySeries } from "@/lib/financialData";
 
 function alert(level, category, title, message) {
   return { id: `live-${category}-${title}`, level, category, title, message, live: true, status: "non_lue" };
@@ -33,19 +34,12 @@ export function computeLiveAlerts(data) {
     "transactions", "orders", "customers", "campaignDaily",
     "products", "inventory", "cashflow", "expenses", "company",
   ]);
-  const { transactions, orders, customers, campaignDaily, products, inventory, cashflow, expenses, company } = data;
+  const { transactions, orders, customers, campaignDaily, products, inventory, cashflow, expenses, company, executiveSummary } = data;
   const out = [];
 
-  const incomes = (transactions || []).filter((t) => t.type === "income");
-  const txnExpenses = (transactions || []).filter((t) => t.type === "expense");
-  const revMonthly = monthlyAggComplete(incomes, "date", "amount");
-  // Costs can live in expense-typed Transaction rows, in the dedicated
-  // Expense entity, or both - both are read so the runway/margin alerts
-  // above never miss real costs recorded in the other one.
-  const expMonthly = monthlyAggComplete(
-    [...txnExpenses, ...(expenses || []).map((e) => ({ ...e, amount: Number(e.amount) || 0 }))],
-    "date", "amount"
-  );
+  const financialMonthly = financialMonthlySeries(transactions || [], expenses || [], orders || [], executiveSummary || []);
+  const revMonthly = financialMonthly.map((p) => ({ month: p.month, val: p.income }));
+  const expMonthly = financialMonthly.map((p) => ({ month: p.month, val: p.expense }));
 
   // --- Trésorerie : runway sur le burn NET ---
   // Une entreprise rentable n'a pas de problème d'autonomie : comparer le solde
@@ -230,14 +224,15 @@ export function computeLiveAlerts(data) {
     const revenueByProduct = {};
     salesOrders.forEach(o => {
       const pid = o.product_id;
-      if (pid) revenueByProduct[pid] = (revenueByProduct[pid] || 0) + (Number(o.total) || 0);
+      // total_revenue is the field the import pipeline actually populates.
+      if (pid) revenueByProduct[pid] = (revenueByProduct[pid] || 0) + (Number(o.total_revenue) || Number(o.total) || 0);
     });
     // Trier les produits en rupture par leur revenu historique
     const rupturesWithRev = ruptures.map(r => ({ ...r, rev: revenueByProduct[r.product_id] || 0 }));
     rupturesWithRev.sort((a, b) => b.rev - a.rev);
 
     // Si le produit en rupture générait des revenus significatifs (> 5% du revenu total ou juste un top 5 absolu)
-    const totalOrderRev = salesOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    const totalOrderRev = salesOrders.reduce((sum, o) => sum + (Number(o.total_revenue) || Number(o.total) || 0), 0);
     if (totalOrderRev > 0 && rupturesWithRev[0].rev > (totalOrderRev * 0.02)) {
       out.push(
         alert(

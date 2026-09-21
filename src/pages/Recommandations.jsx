@@ -34,14 +34,14 @@ export default function Recommandations() {
       recommendation_id: r.id,
     });
     await base44.entities.Recommendation.update(r.id, { status: "convertie" });
-    qc.invalidateQueries(["recommendations-all"]);
-    qc.invalidateQueries(["tasks"]);
+    qc.invalidateQueries({ queryKey: ["recommendations-all"] });
+    qc.invalidateQueries({ queryKey: ["tasks"] });
     toast({ title: "Tâche créée" });
   };
 
   const reject = async (r) => {
     await base44.entities.Recommendation.update(r.id, { status: "rejetee" });
-    qc.invalidateQueries(["recommendations-all"]);
+    qc.invalidateQueries({ queryKey: ["recommendations-all"] });
   };
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Chargement…</p>;

@@ -13,6 +13,7 @@ import { monthlyAggComplete } from "@/lib/periods";
 import { useCompany } from "@/hooks/useCompany";
 import { computeLiveAlerts } from "@/lib/liveAlerts";
 import DataErrorState from "@/components/DataErrorState";
+import FeatureGate from "@/components/FeatureGate";
 
 /**
  * Ordinary least squares plus everything needed for a HONEST forecast band.
@@ -66,9 +67,17 @@ const metrics = [
 export default function Previsions() {
   const [metric, setMetric] = useState("ca");
 
-  const { data: transactions, isLoading, isError: transactionsError, refetch: refetchTransactions } = useQuery({
+  const { data: transactions, isLoading: loadingTransactions, isError: transactionsError, refetch: refetchTransactions } = useQuery({
     queryKey: ["transactions-summary"],
     queryFn: () => fetchAll(base44.entities.Transaction, "-date"),
+  });
+  const { data: orders, isLoading: loadingOrders } = useQuery({
+    queryKey: ["orders-summary"],
+    queryFn: () => fetchAll(base44.entities.Order, "-date"),
+  });
+  const { data: executiveSummary, isLoading: loadingExecutiveSummary } = useQuery({
+    queryKey: ["executive-summary"],
+    queryFn: () => fetchAll(base44.entities.ExecutiveSummary, "-date"),
   });
   const { data: cashflow, isError: cashflowError, refetch: refetchCashflow } = useQuery({
     queryKey: ["cashflow-summary"],
@@ -79,25 +88,27 @@ export default function Previsions() {
     queryFn: () => fetchAll(base44.entities.Expense, "-date"),
   });
 
+  const hasFinancialData = (transactions && transactions.length > 0) || (orders && orders.length > 0) || (executiveSummary && executiveSummary.length > 0);
+
   // Phase 7: Fetch live alerts to cross-reference with forecasts
   const { company } = useCompany();
   const { data: liveAlerts } = useQuery({
     queryKey: ["forecast-alerts"],
     queryFn: async () => {
-      const [customers, orders, campaignDaily, inventory, products] = await Promise.all([
+      const [customers, rawOrders, campaignDaily, inventory, products] = await Promise.all([
         fetchAll(base44.entities.Customer, "-created_date"),
-        fetchAll(base44.entities.Order, "-date"),
+        orders || fetchAll(base44.entities.Order, "-date"),
         fetchAll(base44.entities.CampaignDaily, "-date"),
         fetchAll(base44.entities.Inventory, "-date"),
         fetchAll(base44.entities.Product),
       ]);
-      return computeLiveAlerts({ transactions, orders, customers, campaignDaily, products, inventory, cashflow, expenses, company });
+      return computeLiveAlerts({ transactions, orders: rawOrders, customers, campaignDaily, products, inventory, cashflow, expenses, company, executiveSummary });
     },
-    enabled: !!transactions && !!cashflow
+    enabled: hasFinancialData && !!cashflow
   });
 
   const result = useMemo(() => {
-    const monthly = financialMonthlySeries(transactions || [], expenses || []).map((point, i) => ({ ...point, x: i }));
+    const monthly = financialMonthlySeries(transactions || [], expenses || [], orders || [], executiveSummary || []).map((point, i) => ({ ...point, x: i }));
     if (monthly.length < 3) return null;
 
     const xs = monthly.map((d) => d.x);
@@ -188,11 +199,11 @@ export default function Previsions() {
     return [...hist, ...fcst];
   }, [result, metric]);
 
-  if (isLoading) return <div className="flex h-96 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800" /></div>;
+  if (loadingTransactions || loadingOrders || loadingExecutiveSummary) return <div className="flex h-96 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800" /></div>;
   if (transactionsError || cashflowError) {
     return <DataErrorState onRetry={() => Promise.all([refetchTransactions(), refetchCashflow()])} />;
   }
-  if (!transactions || transactions.length === 0) return <EmptyState icon={Upload} title="Aucune donnée à projeter" description="Importez vos transactions pour que GESCOP calcule des prévisions basées sur vos tendances." action={<Link to="/importer" className="text-primary hover:underline">Importer des données →</Link>} />;
+  if (!hasFinancialData) return <EmptyState icon={Upload} title="Aucune donnée à projeter" description="Importez vos transactions ou vos commandes de ventes pour que GESCOP calcule des prévisions basées sur vos tendances." action={<Link to="/importer" className="text-primary hover:underline">Importer des données →</Link>} />;
   if (!result) return <EmptyState icon={TrendingUp} title="Données insuffisantes" description="Il faut au moins 3 mois de données pour calculer des prévisions fiables." />;
 
   const fmt = (v) => `${Math.round(v).toLocaleString("fr-CA")} $`;
@@ -202,14 +213,15 @@ export default function Previsions() {
   const criticalAlerts = (liveAlerts || []).filter(a => a.level === "critique" || (a.level === "important" && a.category.includes("&")));
 
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Prévisions</h1>
+    <FeatureGate feature="forecast">
+      <div className="space-y-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            <h1 className="text-2xl font-bold tracking-tight">Prévisions</h1>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">Projections basées sur l'analyse de tendance de vos {result.monthly.length} derniers mois.</p>
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">Projections basées sur l'analyse de tendance de vos {result.monthly.length} derniers mois.</p>
-      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <ForecastCard label="Chiffre d'affaires" current={fmt(result.currentIncome)} f30={fmt(result.incomeF[0].value)} f90={fmt(result.incomeF[2].value)} />
@@ -270,13 +282,14 @@ export default function Previsions() {
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
             <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-            <Tooltip formatter={(v) => (v != null ? `${Math.round(v).toLocaleString("fr-CA")} $` : "-")} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+            <Tooltip formatter={(v) => (v != null ? `${Math.round(Number(v)).toLocaleString("fr-CA")} $` : "-")} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
             <Area dataKey="range" stroke="none" fill="rgba(59, 130, 246, 0.1)" />
             <Line dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} connectNulls={false} />
             <Line dataKey="forecast" stroke="rgba(59, 130, 246, 0.6)" strokeWidth={2} strokeDasharray="5 5" dot={false} connectNulls />
           </ComposedChart>
         </ResponsiveContainer>
+        </div>
       </div>
-    </div>
+    </FeatureGate>
   );
 }
