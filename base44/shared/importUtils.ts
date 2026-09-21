@@ -2374,6 +2374,19 @@ function normalizeHeader(h: string, companyDictionary?: Record<string, string>):
   return HEADER_ALIASES[base] || FIELD_ALIASES[raw] || FIELD_ALIASES[base] || (companyDictionary && companyDictionary[base]) || base;
 }
 
+// Order imports can reconstruct these identifiers deterministically in
+// normalizeRow. Keep this exception limited to overlap detection: a filename
+// that clearly describes a transaction must not be forced to Order merely
+// because it contains sales-related wording.
+const REQUIRED_RECOVERABLE: Record<string, string[]> = {
+  Order: ["order_id", "date"],
+};
+
+function requiredSatisfied(entity: string, required: string[], fields: Set<string>): boolean {
+  const recoverable = new Set(REQUIRED_RECOVERABLE[entity] || []);
+  return required.every((field) => fields.has(field) || recoverable.has(field));
+}
+
 /**
  * Last-resort detection: which entity do these columns describe best?
  *
@@ -2391,7 +2404,7 @@ export function detectEntityByFieldOverlap(headers: string[], companyDictionary?
   let best: string | null = null;
   let bestScore = 0;
   for (const [entity, schema] of Object.entries(ENTITY_SCHEMAS)) {
-    if (!(schema.required || []).every((r) => set.has(r))) continue;
+    if (!requiredSatisfied(entity, schema.required || [], set)) continue;
     const fields = Object.keys(schema.properties).filter((f) => f !== "import_id");
     const matched = fields.filter((f) => set.has(f)).length;
     const coverage = matched / set.size;
@@ -2721,6 +2734,20 @@ export function normalizeRow(
       if (!r.order_id && (r.location_id || r.succursale || r.store || r.location)) {
         const loc = String(r.location_id || r.succursale || r.store || r.location).trim();
         r.order_id = `ORD-${stripAccents(loc).toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
+      }
+      // Dernier filet : ni identifiant, ni colonne de succursale — le cas le
+      // plus courant pour un petit commerce qui exporte ses ventes depuis un
+      // tableur sans système de caisse. Sans ce filet, chaque ligne était
+      // mise en quarantaine faute d'order_id, même quand date/client/produit/
+      // quantité/prix étaient tous lus correctement. L'identifiant est
+      // dérivé du contenu de la ligne (déterministe) : une réimportation du
+      // même fichier redonne le même order_id, donc la détection de doublons
+      // (fingerprint.ts) continue de fonctionner au lieu de dupliquer.
+      if (!r.order_id) {
+        const cle = [r.date, r.customer_id || r.customer_name, r.product_id || r.product_name, r.quantity, r.unit_price]
+          .map((v) => String(v ?? "").trim().toLowerCase())
+          .join("|");
+        r.order_id = `ORD-${stripAccents(cle).toUpperCase().replace(/[^A-Z0-9]+/g, "_").slice(0, 80)}`;
       }
     }
     if (!r.date) {

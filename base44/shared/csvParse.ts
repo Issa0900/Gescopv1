@@ -5,6 +5,7 @@
 
 import * as XLSX from "npm:xlsx@0.18.5";
 import { sheetRows } from "./sheetDetect.ts";
+import { fetchExternalFile } from "./safeFetch.ts";
 
 const SEPARATEURS = [",", ";", "\t", "|"];
 
@@ -89,7 +90,7 @@ export function matriceDepuisTexte(text: string): any[][] {
 }
 
 export async function fetchMatrice(fileUrl: string): Promise<any[][]> {
-  const resp = await fetch(fileUrl);
+  const resp = await fetchExternalFile(fileUrl);
   return matriceDepuisTexte(await resp.text());
 }
 
@@ -113,7 +114,7 @@ export function parseDelimitedText(text: string): Record<string, any>[] {
 }
 
 export async function fetchDelimitedRows(fileUrl: string): Promise<Record<string, any>[]> {
-  const resp = await fetch(fileUrl);
+  const resp = await fetchExternalFile(fileUrl);
   const text = await resp.text();
   return parseDelimitedText(text);
 }

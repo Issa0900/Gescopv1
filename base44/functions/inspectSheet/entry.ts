@@ -1,6 +1,7 @@
 import { createFixedClientFromRequest as createClientFromRequest } from "../../shared/client.ts";
 import { normalizeRow } from "../../shared/importUtils.ts";
 import { getSchema } from "../../shared/entitySchemas.ts";
+import { fetchExternalFile } from "../../shared/safeFetch.ts";
 import * as XLSX from "npm:xlsx@0.18.5";
 
 /**
@@ -15,7 +16,7 @@ export default async function (req: Request) {
   if (!user) return Response.json({ error: "Non autorisé" }, { status: 401 });
 
   const { file_url, sheets, mode, sheet, entity, key } = await req.json();
-  const ab = await (await fetch(file_url)).arrayBuffer();
+  const ab = await (await fetchExternalFile(file_url)).arrayBuffer();
   const wb = XLSX.read(new Uint8Array(ab), { type: "array" });
 
   if (mode === "backfill") {

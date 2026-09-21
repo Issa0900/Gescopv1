@@ -1,29 +1,48 @@
 import { createFixedClientFromRequest as createClientFromRequest } from "../../shared/client.ts";
 
+const ENTITY_NAMES: Record<string, string> = { anomaly: "Anomaly", risk: "Risk" };
+
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
-    // Every other Base44 function in this app gates on auth.me() before doing
-    // anything (sec17 of the audit). This one used asServiceRole for the
-    // email send and the Alert write further down without ever checking who
-    // was calling, so any request carrying a valid Base44-App-Id — no user
-    // session required — could make GESCOP send a real email and create an
-    // Alert for an arbitrary user_id taken straight from the request body.
     const caller = await base44.auth.me();
     if (!caller) return Response.json({ error: "Non autorisé" }, { status: 401 });
 
     const body = await req.json();
-    const { entity_type, entity_id, title, description, detail, financial_impact, user_id } = body;
+    const { entity_type, entity_id } = body;
 
-    if (!entity_type || !entity_id || !user_id) {
-      return Response.json({ error: "entity_type, entity_id et user_id requis" }, { status: 400 });
+    const entityName = ENTITY_NAMES[entity_type];
+    if (!entityName || !entity_id) {
+      return Response.json({ error: "entity_type et entity_id requis" }, { status: 400 });
     }
 
-    // Fetch the user (owner of the record) to get their email
-    const user = await base44.asServiceRole.entities.User.get(user_id);
+    // Re-fetch the record through the CALLER's own client (not asServiceRole):
+    // Anomaly/Risk RLS only allows reading rows the caller created, so this
+    // fails for any entity_id the caller doesn't own. That's what closes the
+    // IDOR — user_id, title, description, detail and financial_impact all
+    // used to be taken straight from the request body, letting any
+    // authenticated caller pick an arbitrary user_id to email and to plant a
+    // fake "risque majeur"/"anomalie critique" alert on. Now the recipient
+    // and the notification content both come only from the verified record.
+    let record;
+    try {
+      record = await base44.entities[entityName].get(entity_id);
+    } catch {
+      record = null;
+    }
+    if (!record || record.created_by_id !== caller.id) {
+      return Response.json({ error: "Introuvable" }, { status: 404 });
+    }
+
+    const user = await base44.asServiceRole.entities.User.get(caller.id);
     if (!user || !user.email) {
       return Response.json({ error: "Utilisateur introuvable" }, { status: 404 });
     }
+
+    const title = record.title;
+    const description = record.description;
+    const detail = entity_type === "anomaly" ? record.explanation : record.category;
+    const financial_impact = record.financial_impact;
 
     const impactStr = financial_impact
       ? `Impact financier estimé: ${financial_impact > 0 ? "+" : ""}${Math.round(financial_impact).toLocaleString("fr-CA")} $`
@@ -64,10 +83,10 @@ export default async function(req) {
       status: "non_lue",
       link_type: entity_type,
       link_id: entity_id,
-      created_by_id: user_id,
+      created_by_id: caller.id,
     });
 
-    return Response.json({ success: true, notified: user.email });
+    return Response.json({ success: true });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
