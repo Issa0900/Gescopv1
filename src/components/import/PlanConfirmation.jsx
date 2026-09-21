@@ -29,13 +29,11 @@ const CHAMP_LABELS = {
   // Commandes
   order_id: "ID Commande", customer_id: "ID Client", customer_name: "Nom du client", channel: "Canal",
   product_id: "ID Produit", product_name: "Nom du produit", quantity: "Quantité", price: "Prix unitaire", unit_price: "Prix unitaire",
-  unit_cost: "Coût unitaire", category: "Catégorie", subtotal: "Sous-total", discount: "Remise", tax: "Taxes",
   unit_cost: "Coût unitaire", category: "Catégorie", subtotal: "Sous-total", discount: "Remise", tax: "Taxes (Globales)",
   shipping: "Livraison", total: "Total", cost: "Coût", total_revenue: "Revenu total", total_cost: "Coût total",
   gross_margin: "Marge brute", gross_profit: "Bénéfice brut", employee_id: "ID Employé", employee_name: "Nom de l'employé",
   department: "Département", payment_method: "Mode de paiement", location_id: "ID Succursale", succursale: "Succursale", store: "Magasin",
   payment_status: "Statut paiement", fulfillment_status: "Statut expédition", return_status: "Statut retour",
-  region: "Région", province: "Province", tax_federal: "Taxe fédérale", tax_provincial: "Taxe provinciale",
   region: "Région", province: "Province", tax_federal: "Taxe fédérale (TPS)", tax_provincial: "Taxe provinciale (TVQ)",
   // Inventaire
   inventory_id: "ID Inventaire", opening_stock: "Stock d'ouverture", purchases: "Achats", units_sold: "Unités vendues",
@@ -107,6 +105,11 @@ const CHAMP_LABELS = {
   start_date: "Date de début", end_date: "Date de fin", url: "URL", supplier: "Fournisseur",
   // Champs internes (normalement jamais proposés au mapping)
   fingerprint: "Empreinte (interne)", original_data: "Données brutes (interne)",
+  // Custom
+  custom_field_1: "Champ perso (texte) 1", custom_field_2: "Champ perso (texte) 2", custom_field_3: "Champ perso (texte) 3",
+  custom_field_4: "Champ perso (texte) 4", custom_field_5: "Champ perso (texte) 5",
+  custom_number_1: "Champ perso (nombre) 1", custom_number_2: "Champ perso (nombre) 2", custom_number_3: "Champ perso (nombre) 3",
+  custom_number_4: "Champ perso (nombre) 4", custom_number_5: "Champ perso (nombre) 5",
 };
 
 const ORIGINE = {

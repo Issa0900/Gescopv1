@@ -320,7 +320,6 @@ export default function Parametres() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
           {hasSavedOnce && (
             <span className="hidden items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 sm:inline-flex">
@@ -340,7 +339,6 @@ export default function Parametres() {
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="shadow-sm transition-all gap-2"
             className="shadow-sm transition-all gap-2 text-xs sm:text-sm"
           >
             {saving ? (

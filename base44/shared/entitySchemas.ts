@@ -237,6 +237,20 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
   },
 };
 
+// Injection globale de champs personnalisés (custom fields) pour permettre à l'utilisateur
+// de mapper des colonnes spécifiques à son entreprise sans casser le schéma strict.
+const CUSTOM_FIELDS = {
+  custom_field_1: S, custom_field_2: S, custom_field_3: S, custom_field_4: S, custom_field_5: S,
+  custom_number_1: N, custom_number_2: N, custom_number_3: N, custom_number_4: N, custom_number_5: N
+};
+
+Object.keys(ENTITY_SCHEMAS).forEach((entityName) => {
+  ENTITY_SCHEMAS[entityName].properties = {
+    ...ENTITY_SCHEMAS[entityName].properties,
+    ...CUSTOM_FIELDS
+  };
+});
+
 export function getSchema(entityName: string) {
   return ENTITY_SCHEMAS[entityName] || null;
 }

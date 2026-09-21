@@ -18,16 +18,6 @@ export default function CompanyProfilePanel({ form, setForm, onDelete }) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-          <Building2 className="h-5 w-5 text-primary" />
-          {isEn ? "Company Reference Profile" : "Profil de référence de l'entreprise"}
-        </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          {isEn
-            ? "Fundamental business identity guiding GESCOP semantic intelligence, KPI benchmarks, and AI reasoning."
-            : "Les informations fondamentales qui définissent votre entreprise et guident l'intelligence de GESCOP."}
-        </p>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
