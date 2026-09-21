@@ -34,13 +34,10 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
     properties: {
       customer_id: S, full_name: S, name: S, first_name: S, last_name: S, email: S, city: S, region: S, province: S,
       customer_type: E("particulier", "entreprise", "b2b"),
-      customer_type: S,
       acquisition_date: D, first_purchase_date: D, last_purchase_date: D,
       total_orders: N, total_revenue: N, average_order_value: N,
       status: E("actif", "inactif", "perdu"),
       segment: E("nouveau", "regulier", "vip", "inactif", "b2b", "haute_valeur", "a_risque"),
-      status: S,
-      segment: S,
       lifetime_value: N, churn_risk: N, postal_code: S, loyalty_points: N,
       language: S, address: S, tax_exemption_number: S, credit_limit: N,
       import_id: S, fingerprint: S, original_data: S,
@@ -51,7 +48,6 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
     properties: {
       product_id: S, sku: S, product_name: S,
       category: E("decoration", "cuisine", "maison", "accessoires", "cadeaux", "lifestyle", "équipement", "accessoire", "piece", "entretien"),
-      category: S,
       subcategory: S, supplier_id: S, supplier_name: S, purchase_cost: N, selling_price: N, gross_margin: N,
       launch_date: D,
       status: E("actif", "discontinue", "rupture", "nouveau", "dormant"),
@@ -97,7 +93,6 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
     properties: {
       employee_id: S, name: S, first_name: S, last_name: S, location: S,
       department: E("direction", "ventes", "marketing", "logistique", "administration", "service_client", "atelier", "autre"),
-      department: S,
       role: S, hire_date: D,
       employment_type: E("temps_plein", "temps_partiel", "contractuel", "stagiaire"),
       hourly_rate: N, weekly_hours: N, commission_rate: N,
@@ -118,7 +113,6 @@ export const ENTITY_SCHEMAS: Record<string, { properties: Record<string, any>; r
         "linkedin", "youtube", "display", "web", "partenariat",
         "affiliation", "influenceurs", "sms", "print", "autre"
       ),
-      channel: S,
       start_date: D, end_date: D, budget: N, spend: N, impressions: N, clicks: N,
       conversions: N, revenue: N, new_customers: N, cac: N, roas: N, cpc: N, cout_clic: N, cost_per_click: N,
       status: E("active", "terminee", "pause", "planifiee"),
