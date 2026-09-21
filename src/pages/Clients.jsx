@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import StatCard from "@/components/StatCard";
 import EmptyState from "@/components/EmptyState";
+import DataTable from "@/components/ui/DataTable";
+import BadgeStatus from "@/components/ui/BadgeStatus";
+import { formatCAD, formatNumber, cn } from "@/lib/utils";
 import { Users, UserMinus, Crown, DollarSign } from "lucide-react";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
@@ -11,14 +14,17 @@ import {
 import { churnStats, customerValue, columnPresent, validSalesOrders } from "@/lib/metrics";
 import { fetchAll } from "@/lib/fetchAll";
 
+// Palette catégorielle validée CVD (ordre fixe, ne jamais réassigner par sens) —
+// voir la skill dataviz : 8 teintes espacées pour rester distinguables en
+// deutéranopie/protanopie, contrairement à des hex choisis à l'oeil.
 const segmentColors = {
-  nouveau: "#3b82f6",
-  regulier: "#10b981",
-  vip: "#f59e0b",
-  inactif: "#ef4444",
-  b2b: "#8b5cf6",
-  haute_valeur: "#06b6d4",
-  a_risque: "#f97316",
+  nouveau: "#2a78d6",
+  regulier: "#eb6834",
+  vip: "#1baf7a",
+  inactif: "#eda100",
+  b2b: "#e87ba4",
+  haute_valeur: "#008300",
+  a_risque: "#4a3aa7",
 };
 
 const segmentLabels = {
@@ -32,6 +38,10 @@ const segmentLabels = {
 };
 
 export default function Clients() {
+  // Clic sur une tuile RFM (Champions, Fidèles à réactiver, À risque) : filtre
+  // le tableau ci-dessous sur ce segment. Recliquer sur la même tuile efface
+  // le filtre.
+  const [rfmFilter, setRfmFilter] = useState(null);
   const { data: customers, isLoading } = useQuery({
     queryKey: ["customers"],
     // Paginated: a single list() call caps at 500 rows, so reading customers and
@@ -172,6 +182,84 @@ export default function Clients() {
     rfm = { champions, toReactivate, atRisk };
   }
 
+  const clientColumns = [
+    {
+      key: "name",
+      header: "Client",
+      searchValue: (c) => `${c.first_name || ""} ${c.last_name || ""} ${c.customer_id || ""}`,
+      sortValue: (c) => `${c.first_name || ""} ${c.last_name || ""}`.trim() || c.customer_id || "",
+      render: (c) => `${c.first_name || ""} ${c.last_name || ""}`.trim() || c.customer_id,
+    },
+    {
+      key: "segment",
+      header: "Segment",
+      sortValue: (c) => segmentLabels[c.segment] || c.segment || "",
+      render: (c) => (
+        <span className="inline-flex items-center gap-1.5 text-xs">
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: segmentColors[c.segment] || "#94a3b8" }} aria-hidden="true" />
+          {segmentLabels[c.segment] || c.segment || "-"}
+        </span>
+      ),
+    },
+    ...(hasPostalCode ? [{ key: "postal_code", header: "Code postal", render: (c) => c.postal_code || "-" }] : []),
+    ...(hasLoyaltyPoints ? [{ key: "loyalty_points", header: "Points fidélité", align: "right", sortValue: (c) => Number(c.loyalty_points) || 0, render: (c) => c.loyalty_points != null ? formatNumber(c.loyalty_points) : "-" }] : []),
+    { key: "_total_orders", header: "Commandes", align: "right", sortValue: (c) => c._total_orders || 0, render: (c) => formatNumber(c._total_orders || 0) },
+    { key: "_total_revenue", header: "CA total", align: "right", sortValue: (c) => c._total_revenue || 0, render: (c) => <span className="font-medium">{formatCAD(c._total_revenue || 0)}</span> },
+    { key: "_aov", header: "Panier moyen", align: "right", sortValue: (c) => c._aov || 0, render: (c) => formatCAD(c._aov || 0) },
+    {
+      key: "_churnPct",
+      header: "Risque de départ",
+      align: "right",
+      sortValue: (c) => c._churnPct ?? -1,
+      render: (c) => c._churnPct === null ? (
+        <span className="text-muted-foreground">-</span>
+      ) : (
+        <BadgeStatus status={c._churnPct > 60 ? "critical" : c._churnPct > 30 ? "warning" : "neutral"}>{c._churnPct}%</BadgeStatus>
+      ),
+    },
+    {
+      key: "status",
+      header: "Statut",
+      sortValue: (c) => c.status || "",
+      render: (c) => (
+        <BadgeStatus status={c.status === "actif" ? "good" : c.status === "inactif" ? "critical" : "warning"}>{c.status || "-"}</BadgeStatus>
+      ),
+    },
+  ];
+
+  // Une seule map construite ici plutôt qu'un `customers.find()` relancé par
+  // ligne × par accesseur (sort/search/render) : sur une longue liste
+  // d'interactions, ça remplace un balayage linéaire répété par un lookup O(1).
+  const customerLabelById = {};
+  customers.forEach((c) => {
+    customerLabelById[c.customer_id] = `${c.first_name || ""} ${c.last_name || ""}`.trim() || c.customer_id;
+  });
+  const clientLabelFor = (it) => customerLabelById[it.customer_id] || it.customer_id || "";
+
+  const interactionColumns = [
+    { key: "date", header: "Date", render: (it) => it.date || "-" },
+    {
+      key: "client",
+      header: "Client",
+      sortValue: clientLabelFor,
+      searchValue: clientLabelFor,
+      render: (it) => clientLabelFor(it) || "-",
+    },
+    { key: "channel", header: "Canal", render: (it) => it.channel || "-" },
+    { key: "subject", header: "Sujet", sortValue: (it) => it.subject || it.type || "", render: (it) => it.subject || it.type || "-" },
+    {
+      key: "sentiment",
+      header: "Sentiment",
+      sortValue: (it) => it.sentiment || "",
+      render: (it) => {
+        const neg = it.sentiment === "negatif" || it.sentiment === "tres_negatif";
+        const pos = it.sentiment === "positif";
+        return <BadgeStatus status={neg ? "critical" : pos ? "good" : "neutral"}>{it.sentiment || "-"}</BadgeStatus>;
+      },
+    },
+    { key: "resolved", header: "Résolu", sortValue: (it) => (it.resolved === true ? 1 : it.resolved === false ? 0 : -1), render: (it) => it.resolved === true ? "Oui" : it.resolved === false ? "Non" : "-" },
+  ];
+
   return (
     <div className="space-y-8">
       <div>
@@ -240,110 +328,59 @@ export default function Clients() {
           <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Scoring RFM (Récence, Fréquence, Montant)</h2>
           <p className="mb-4 text-xs text-muted-foreground">Segmentation calculée sur l'historique de commandes.</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-              <p className="text-xs font-medium uppercase text-emerald-700">Champions</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-700">{rfm.champions.length}</p>
-              <p className="mt-1 text-xs text-emerald-700/80">Achats récents (≤60j), fréquents, panier élevé — priorité B2B/revendeurs</p>
-            </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-              <p className="text-xs font-medium uppercase text-amber-700">Fidèles à réactiver</p>
-              <p className="mt-1 text-2xl font-bold text-amber-700">{rfm.toReactivate.length}</p>
-              <p className="mt-1 text-xs text-amber-700/80">Achetaient souvent, aucune commande depuis plus de 180 jours</p>
-            </div>
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-              <p className="text-xs font-medium uppercase text-red-700">Comptes à risque financier</p>
-              <p className="mt-1 text-2xl font-bold text-red-700">{rfm.atRisk.length}</p>
-              <p className="mt-1 text-xs text-red-700/80">CA élevé mais statut compromis ou crédit saturé (&gt;80%)</p>
-            </div>
+            {[
+              { key: "champions", label: "Champions", list: rfm.champions, ring: "border-emerald-200 bg-emerald-50", text: "text-emerald-700", desc: "Achats récents (≤60j), fréquents, panier élevé — priorité B2B/revendeurs" },
+              { key: "toReactivate", label: "Fidèles à réactiver", list: rfm.toReactivate, ring: "border-amber-200 bg-amber-50", text: "text-amber-700", desc: "Achetaient souvent, aucune commande depuis plus de 180 jours" },
+              { key: "atRisk", label: "Comptes à risque financier", list: rfm.atRisk, ring: "border-red-200 bg-red-50", text: "text-red-700", desc: "CA élevé mais statut compromis ou crédit saturé (>80%)" },
+            ].map((seg) => (
+              <button
+                key={seg.key}
+                type="button"
+                onClick={() => setRfmFilter((cur) => (cur === seg.key ? null : seg.key))}
+                aria-pressed={rfmFilter === seg.key}
+                className={cn(
+                  "rounded-lg border p-4 text-left transition-all focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                  seg.ring,
+                  rfmFilter === seg.key ? "ring-2 ring-offset-2" : "hover:shadow-sm"
+                )}
+              >
+                <p className={cn("text-xs font-medium uppercase", seg.text)}>{seg.label}</p>
+                <p className={cn("mt-1 text-2xl font-bold", seg.text)}>{seg.list.length}</p>
+                <p className={cn("mt-1 text-xs", seg.text, "opacity-80")}>{seg.desc}</p>
+              </button>
+            ))}
           </div>
+          {rfmFilter && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Tableau filtré sur « {rfmFilter === "champions" ? "Champions" : rfmFilter === "toReactivate" ? "Fidèles à réactiver" : "Comptes à risque financier"} » —{" "}
+              <button type="button" className="underline underline-offset-2 hover:text-foreground" onClick={() => setRfmFilter(null)}>
+                effacer le filtre
+              </button>
+            </p>
+          )}
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full min-w-[700px] text-sm">
-          <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3 font-medium">Client</th>
-              <th className="px-4 py-3 font-medium">Segment</th>
-              {hasPostalCode && <th className="px-4 py-3 font-medium">Code postal</th>}
-              {hasLoyaltyPoints && <th className="px-4 py-3 font-medium">Points fidélité</th>}
-              <th className="px-4 py-3 font-medium">Commandes</th>
-              <th className="px-4 py-3 font-medium">CA total</th>
-              <th className="px-4 py-3 font-medium">Panier moyen</th>
-              <th className="px-4 py-3 font-medium">Risque de départ</th>
-              <th className="px-4 py-3 font-medium">Statut</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {sorted.slice(0, 30).map((c) => (
-              <tr key={c.id} className="hover:bg-muted/30">
-                <td className="px-4 py-3 font-medium">{`${c.first_name || ""} ${c.last_name || ""}`.trim() || c.customer_id}</td>
-                <td className="px-4 py-3">
-                  <span className="inline-flex items-center gap-1.5 text-xs">
-                    <span className="h-2 w-2 rounded-full" style={{ background: segmentColors[c.segment] || "#94a3b8" }} />
-                    {segmentLabels[c.segment] || c.segment || "-"}
-                  </span>
-                </td>
-                {hasPostalCode && <td className="px-4 py-3">{c.postal_code || "-"}</td>}
-                {hasLoyaltyPoints && <td className="px-4 py-3">{c.loyalty_points != null ? c.loyalty_points.toLocaleString() : "-"}</td>}
-                <td className="px-4 py-3">{c._total_orders}</td>
-                <td className="px-4 py-3 font-medium">{Math.round(c._total_revenue || 0).toLocaleString()} $</td>
-                <td className="px-4 py-3">{Math.round(c._aov || 0).toLocaleString()} $</td>
-                <td className="px-4 py-3">
-                  {c._churnPct === null ? (
-                    <span className="text-muted-foreground">-</span>
-                  ) : (
-                    <span className={c._churnPct > 60 ? "text-red-600 font-medium" : c._churnPct > 30 ? "text-amber-600" : "text-muted-foreground"}>
-                      {c._churnPct}%
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={c.status === "actif" ? "text-emerald-600" : c.status === "inactif" ? "text-red-600" : "text-amber-600"}>
-                    {c.status || "-"}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={clientColumns}
+        data={rfmFilter ? rfm[rfmFilter] : sorted}
+        rowKey={(c) => c.id}
+        searchPlaceholder="Rechercher un client…"
+        emptyIcon={Users}
+        emptyTitle="Aucun client ne correspond"
+        emptyDescription={rfmFilter ? "Ce segment RFM ne contient aucun client pour le moment." : "Essayez d'élargir la recherche."}
+      />
 
       {interactions && interactions.length > 0 && (
-        <div className="overflow-x-auto rounded-xl border border-border">
-          <h2 className="px-4 pt-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Interactions récentes</h2>
-          <table className="w-full min-w-[600px] text-sm">
-            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-medium">Date</th>
-                <th className="px-4 py-3 font-medium">Client</th>
-                <th className="px-4 py-3 font-medium">Canal</th>
-                <th className="px-4 py-3 font-medium">Sujet</th>
-                <th className="px-4 py-3 font-medium">Sentiment</th>
-                <th className="px-4 py-3 font-medium">Résolu</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {interactions.slice(0, 30).map((it) => {
-                const c = customers.find((x) => x.customer_id === it.customer_id);
-                const label = c ? `${c.first_name || ""} ${c.last_name || ""}`.trim() || c.customer_id : it.customer_id;
-                return (
-                  <tr key={it.id} className="hover:bg-muted/30">
-                    <td className="px-4 py-3">{it.date || "-"}</td>
-                    <td className="px-4 py-3 font-medium">{label || "-"}</td>
-                    <td className="px-4 py-3">{it.channel || "-"}</td>
-                    <td className="px-4 py-3">{it.subject || it.type || "-"}</td>
-                    <td className="px-4 py-3">
-                      <span className={it.sentiment === "negatif" || it.sentiment === "tres_negatif" ? "text-red-600" : it.sentiment === "positif" ? "text-emerald-600" : "text-muted-foreground"}>
-                        {it.sentiment || "-"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">{it.resolved === true ? "Oui" : it.resolved === false ? "Non" : "-"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Interactions récentes</h2>
+          <DataTable
+            columns={interactionColumns}
+            data={interactions}
+            rowKey={(it) => it.id}
+            searchPlaceholder="Rechercher une interaction…"
+            emptyTitle="Aucune interaction"
+          />
         </div>
       )}
     </div>

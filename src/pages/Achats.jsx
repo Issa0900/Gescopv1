@@ -3,14 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import StatCard from "@/components/StatCard";
 import EmptyState from "@/components/EmptyState";
+import DataTable from "@/components/ui/DataTable";
+import BadgeStatus from "@/components/ui/BadgeStatus";
+import { formatCAD, formatNumber, formatPct } from "@/lib/utils";
 import { Truck, AlertTriangle, PackageCheck, Timer } from "lucide-react";
 import { fetchAll } from "@/lib/fetchAll";
 
 const statusLabels = { recu: "Reçu", en_cours: "En cours", retard: "En retard", annule: "Annulé" };
-const statusColors = {
-  recu: "text-emerald-600", en_cours: "text-amber-600",
-  retard: "text-red-600", annule: "text-muted-foreground",
-};
 const supplierStatusLabels = { actif: "Actif", inactif: "Inactif", problematique: "Problématique" };
 
 // Cette page existait comme donnée (Purchase/Supplier n'étaient consommés que
@@ -72,6 +71,74 @@ export default function Achats() {
     : null;
   const activeSuppliers = (suppliers || []).filter((s) => s.status === "actif" || !s.status).length;
 
+  const supplierColumns = [
+    { key: "name", header: "Fournisseur", searchValue: (s) => s.supplier_name || s.supplier_id || "", sortValue: (s) => s.supplier_name || s.supplier_id || "", render: (s) => s.supplier_name || s.supplier_id },
+    ...(hasCity ? [{ key: "city", header: "Ville", render: (s) => s.city || "-" }] : []),
+    { key: "country", header: "Pays", render: (s) => s.country || "-" },
+    ...(hasContact ? [{ key: "contact_name", header: "Contact", render: (s) => s.contact_name || "-" }] : []),
+    ...(hasEmail ? [{ key: "email", header: "Courriel", render: (s) => s.email || "-" }] : []),
+    ...(hasPaymentTerms ? [{ key: "payment_terms", header: "Conditions paiement", render: (s) => s.payment_terms || "-" }] : []),
+    ...(hasPurchaseVolume ? [{ key: "purchase_volume", header: "Volume d'achats", align: "right", sortValue: (s) => Number(s.purchase_volume) || 0, render: (s) => s.purchase_volume != null ? formatCAD(s.purchase_volume) : "-" }] : []),
+    { key: "average_delivery_days", header: "Délai moyen", align: "right", sortValue: (s) => Number(s.average_delivery_days) || 0, render: (s) => s.average_delivery_days != null ? `${s.average_delivery_days} j` : "-" },
+    { key: "quality_score", header: "Score qualité", align: "right", sortValue: (s) => Number(s.quality_score) || 0, render: (s) => s.quality_score ?? "-" },
+    { key: "reliability_score", header: "Fiabilité", align: "right", sortValue: (s) => Number(s.reliability_score) || 0, render: (s) => s.reliability_score ?? "-" },
+    {
+      key: "status",
+      header: "Statut",
+      sortValue: (s) => s.status || "",
+      render: (s) => (
+        <BadgeStatus status={s.status === "actif" || !s.status ? "good" : s.status === "problematique" ? "critical" : "neutral"}>
+          {supplierStatusLabels[s.status] || (s.status ? s.status : "Actif")}
+        </BadgeStatus>
+      ),
+    },
+  ];
+
+  const purchaseColumns = [
+    { key: "date", header: "Date", render: (p) => p.date || "-" },
+    { key: "supplier", header: "Fournisseur", searchValue: (p) => supplierName[p.supplier_id] || p.supplier_id || "", sortValue: (p) => supplierName[p.supplier_id] || p.supplier_id || "", render: (p) => supplierName[p.supplier_id] || p.supplier_id || "-" },
+    { key: "product_id", header: "Produit", render: (p) => p.product_id || "-" },
+    { key: "quantity", header: "Quantité", align: "right", sortValue: (p) => Number(p.quantity) || 0, render: (p) => p.quantity != null ? formatNumber(p.quantity) : "-" },
+    { key: "total_cost", header: "Coût total", align: "right", sortValue: (p) => Number(p.total_cost) || 0, render: (p) => p.total_cost != null ? formatCAD(p.total_cost) : "-" },
+    { key: "delay_days", header: "Délai", align: "right", sortValue: (p) => Number(p.delay_days) || 0, render: (p) => p.delay_days != null ? `${p.delay_days} j` : "-" },
+    {
+      key: "status",
+      header: "Statut",
+      sortValue: (p) => p.status || "",
+      render: (p) => (
+        <BadgeStatus status={p.status === "recu" ? "good" : p.status === "en_cours" ? "info" : p.status === "retard" ? "critical" : "neutral"}>
+          {statusLabels[p.status] || p.status || "-"}
+        </BadgeStatus>
+      ),
+    },
+  ];
+
+  const customsRows = (inventory || []).filter((i) => i.origin_country || i.customs_code).map((inv) => {
+    const sup = (suppliers || []).find((s) => s.supplier_id === inv.supplier_id);
+    const prod = (products || []).find((p) => p.product_id === inv.product_id);
+    let riskScore = 0;
+    if (inv.origin_country && String(inv.origin_country).toLowerCase() !== "ca" && String(inv.origin_country).toLowerCase() !== "canada") riskScore += 1;
+    if (sup && sup.country && String(sup.country).toLowerCase() !== "ca" && String(sup.country).toLowerCase() !== "canada") riskScore += 1;
+    if (prod && prod.gross_margin < 20) riskScore += 1; // Faible marge = plus sensible aux tarifs douaniers
+    const riskLabel = riskScore >= 2 ? "Élevé" : riskScore === 1 ? "Moyen" : "Faible";
+    const riskStatus = riskScore >= 2 ? "critical" : riskScore === 1 ? "warning" : "good";
+    return { ...inv, _sup: sup, _prod: prod, _riskScore: riskScore, _riskLabel: riskLabel, _riskStatus: riskStatus };
+  });
+
+  const customsColumns = [
+    { key: "product_id", header: "SKU / Produit", render: (inv) => inv.product_id },
+    { key: "customs_code", header: "Code Douanier", render: (inv) => inv.customs_code || "-" },
+    { key: "origin_country", header: "Origine", render: (inv) => inv.origin_country || "-" },
+    { key: "supplier", header: "Fournisseur (Pays)", sortValue: (inv) => inv._sup?.supplier_name || inv._sup?.supplier_id || "", render: (inv) => inv._sup ? `${inv._sup.supplier_name || inv._sup.supplier_id} (${inv._sup.country || "-"})` : "-" },
+    { key: "gross_margin", header: "Marge brute", align: "right", sortValue: (inv) => inv._prod?.gross_margin ?? -1, render: (inv) => inv._prod?.gross_margin != null ? formatPct(inv._prod.gross_margin, 0) : "-" },
+    {
+      key: "risk",
+      header: "Niveau de Risque",
+      sortValue: (inv) => inv._riskScore,
+      render: (inv) => <BadgeStatus status={inv._riskStatus}>{inv._riskLabel}</BadgeStatus>,
+    },
+  ];
+
   return (
     <div className="space-y-8">
       <div>
@@ -93,146 +160,31 @@ export default function Achats() {
       </div>
 
       {hasSuppliers && (
-        <div className="overflow-x-auto rounded-xl border border-border">
-          <h2 className="px-4 pt-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Fournisseurs</h2>
-          <table className="w-full min-w-[700px] text-sm">
-            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-medium">Fournisseur</th>
-                {hasCity && <th className="px-4 py-3 font-medium">Ville</th>}
-                <th className="px-4 py-3 font-medium">Pays</th>
-                {hasContact && <th className="px-4 py-3 font-medium">Contact</th>}
-                {hasEmail && <th className="px-4 py-3 font-medium">Courriel</th>}
-                {hasPaymentTerms && <th className="px-4 py-3 font-medium">Conditions paiement</th>}
-                {hasPurchaseVolume && <th className="px-4 py-3 font-medium">Volume d'achats</th>}
-                <th className="px-4 py-3 font-medium">Délai moyen</th>
-                <th className="px-4 py-3 font-medium">Score qualité</th>
-                <th className="px-4 py-3 font-medium">Fiabilité</th>
-                <th className="px-4 py-3 font-medium">Statut</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {suppliers.slice(0, 30).map((s) => (
-                <tr key={s.id} className="hover:bg-muted/30">
-                  <td className="px-4 py-3 font-medium">{s.supplier_name || s.supplier_id}</td>
-                  {hasCity && <td className="px-4 py-3">{s.city || "-"}</td>}
-                  <td className="px-4 py-3">{s.country || "-"}</td>
-                  {hasContact && <td className="px-4 py-3">{s.contact_name || "-"}</td>}
-                  {hasEmail && <td className="px-4 py-3">{s.email || "-"}</td>}
-                  {hasPaymentTerms && <td className="px-4 py-3">{s.payment_terms || "-"}</td>}
-                  {hasPurchaseVolume && <td className="px-4 py-3">{s.purchase_volume != null ? `${Math.round(s.purchase_volume).toLocaleString("fr-CA")} $` : "-"}</td>}
-                  <td className="px-4 py-3">{s.average_delivery_days != null ? `${s.average_delivery_days} j` : "-"}</td>
-                  <td className="px-4 py-3">{s.quality_score != null ? s.quality_score : "-"}</td>
-                  <td className="px-4 py-3">{s.reliability_score != null ? s.reliability_score : "-"}</td>
-                  <td className="px-4 py-3">
-                    <span className={s.status === "actif" || !s.status ? "text-emerald-600" : s.status === "problematique" ? "text-red-600" : "text-muted-foreground"}>
-                      {supplierStatusLabels[s.status] || (s.status ? s.status : "Actif")}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Fournisseurs</h2>
+          <DataTable columns={supplierColumns} data={suppliers} rowKey={(s) => s.id} searchPlaceholder="Rechercher un fournisseur…" emptyTitle="Aucun fournisseur" />
         </div>
       )}
 
       {hasPurchases && (
-        <div className="overflow-x-auto rounded-xl border border-border">
-          <h2 className="px-4 pt-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Commandes</h2>
-          <table className="w-full min-w-[700px] text-sm">
-            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-medium">Date</th>
-                <th className="px-4 py-3 font-medium">Fournisseur</th>
-                <th className="px-4 py-3 font-medium">Produit</th>
-                <th className="px-4 py-3 font-medium">Quantité</th>
-                <th className="px-4 py-3 font-medium">Coût total</th>
-                <th className="px-4 py-3 font-medium">Délai</th>
-                <th className="px-4 py-3 font-medium">Statut</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {purchases.slice(0, 30).map((p) => (
-                <tr key={p.id} className="hover:bg-muted/30">
-                  <td className="px-4 py-3">{p.date || "-"}</td>
-                  <td className="px-4 py-3 font-medium">{supplierName[p.supplier_id] || p.supplier_id || "-"}</td>
-                  <td className="px-4 py-3">{p.product_id || "-"}</td>
-                  <td className="px-4 py-3">{p.quantity != null ? p.quantity : "-"}</td>
-                  <td className="px-4 py-3">{p.total_cost != null ? `${Math.round(p.total_cost).toLocaleString()} $` : "-"}</td>
-                  <td className="px-4 py-3">{p.delay_days != null ? `${p.delay_days} j` : "-"}</td>
-                  <td className="px-4 py-3">
-                    <span className={statusColors[p.status] || "text-muted-foreground"}>{statusLabels[p.status] || p.status || "-"}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Commandes</h2>
+          <DataTable columns={purchaseColumns} data={purchases} rowKey={(p) => p.id} searchPlaceholder="Rechercher une commande…" emptyTitle="Aucune commande" />
         </div>
       )}
+
       {hasInventory && (
-        <div className="overflow-x-auto rounded-xl border border-border mt-8">
-          <h2 className="px-4 pt-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+        <div>
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             <AlertTriangle className="h-4 w-4" />
             Matrice de Risque Douanier
           </h2>
-          <table className="w-full min-w-[800px] text-sm mt-2">
-            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-medium">SKU / Produit</th>
-                <th className="px-4 py-3 font-medium">Code Douanier</th>
-                <th className="px-4 py-3 font-medium">Origine</th>
-                <th className="px-4 py-3 font-medium">Fournisseur (Pays)</th>
-                <th className="px-4 py-3 font-medium">Marge brute</th>
-                <th className="px-4 py-3 font-medium">Niveau de Risque</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {inventory
-                .filter(i => i.origin_country || i.customs_code)
-                .slice(0, 30)
-                .map((inv) => {
-                  const sup = (suppliers || []).find(s => s.supplier_id === inv.supplier_id);
-                  const prod = (products || []).find(p => p.product_id === inv.product_id);
-                  
-                  // Calcul de risque simpliste
-                  let riskScore = 0;
-                  if (inv.origin_country && String(inv.origin_country).toLowerCase() !== "ca" && String(inv.origin_country).toLowerCase() !== "canada") riskScore += 1;
-                  if (sup && sup.country && String(sup.country).toLowerCase() !== "ca" && String(sup.country).toLowerCase() !== "canada") riskScore += 1;
-                  if (prod && prod.gross_margin < 20) riskScore += 1; // Faible marge = plus sensible aux tarifs douaniers
-                  
-                  let riskLabel = "Faible";
-                  let riskColor = "text-emerald-600 bg-emerald-50";
-                  if (riskScore === 1) {
-                    riskLabel = "Moyen";
-                    riskColor = "text-amber-600 bg-amber-50";
-                  } else if (riskScore >= 2) {
-                    riskLabel = "Élevé";
-                    riskColor = "text-red-600 bg-red-50";
-                  }
-
-                  return (
-                    <tr key={inv.id} className="hover:bg-muted/30">
-                      <td className="px-4 py-3 font-medium">{inv.product_id}</td>
-                      <td className="px-4 py-3">{inv.customs_code || "-"}</td>
-                      <td className="px-4 py-3">{inv.origin_country || "-"}</td>
-                      <td className="px-4 py-3">
-                        {sup ? `${sup.supplier_name || sup.supplier_id} (${sup.country || "-"})` : "-"}
-                      </td>
-                      <td className="px-4 py-3">{prod && prod.gross_margin != null ? `${prod.gross_margin} %` : "-"}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${riskColor}`}>
-                          {riskLabel}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-          {inventory.filter(i => i.origin_country || i.customs_code).length === 0 && (
-            <div className="p-4 text-center text-sm text-muted-foreground">
+          {customsRows.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
               Aucune donnée d'origine ou de code douanier disponible pour l'analyse de risque.
             </div>
+          ) : (
+            <DataTable columns={customsColumns} data={customsRows} rowKey={(inv) => inv.id} searchPlaceholder="Rechercher un produit…" emptyTitle="Aucun résultat" />
           )}
         </div>
       )}

@@ -14,9 +14,25 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/lib/AuthContext";
+import { useLanguage } from "@/lib/LanguageContext";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function PreferencesPanel({ form, setForm }) {
   const { logout } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
+  const { toast } = useToast();
+  const isEn = language === "en";
+
+  const handleLanguageChange = (newLang) => {
+    setForm((f) => ({ ...f, language: newLang }));
+    setLanguage(newLang);
+    toast({
+      title: newLang === "en" ? "Language updated" : "Langue mise à jour",
+      description: newLang === "en"
+        ? "Interface, navigation and AI engine switched to English (Canada / US)."
+        : "L'interface, la navigation et le moteur IA sont configurés en Français (Canada).",
+    });
+  };
 
   const updatePreference = (key, val) => {
     setForm({
@@ -42,9 +58,15 @@ export default function PreferencesPanel({ form, setForm }) {
         <div className="flex items-center gap-2">
           <Sliders className="h-5 w-5 text-primary" />
           <h2 className="font-semibold text-foreground">Préférences Régionales & Affichage</h2>
+          <h2 className="font-semibold text-foreground">
+            {isEn ? "Regional & Display Preferences" : "Préférences Régionales & Affichage"}
+          </h2>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           Personnalisez la devise, la langue de restitution et les paramètres de formatage de GESCOP.
+          {isEn
+            ? "Customize currency, display language, and formatting preferences across GESCOP."
+            : "Personnalisez la devise, la langue de restitution et les paramètres de formatage de GESCOP."}
         </p>
 
         <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -53,15 +75,23 @@ export default function PreferencesPanel({ form, setForm }) {
             <Label className="flex items-center gap-2 text-xs font-semibold text-foreground">
               <Globe className="h-4 w-4 text-primary" />
               Langue de l'interface et des analyses
+              {isEn ? "Interface & Analytics Language" : "Langue de l'interface et des analyses"}
             </Label>
             <select
               value={form.language || "fr"}
               onChange={(e) => setForm({ ...form, language: e.target.value })}
+              value={form.language || language || "fr"}
+              onChange={(e) => handleLanguageChange(e.target.value)}
               className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <option value="fr">Français (Canada - Français québécois)</option>
               <option value="en">English (Canada / US)</option>
             </select>
+            <p className="text-[11px] text-muted-foreground">
+              {isEn
+                ? "Active mode: English (Canada / US). Navigation, KPIs and AI analysis reflect this choice."
+                : "Mode actif : Français (Canada). La navigation, les KPI et l'IA s'adaptent instantanément."}
+            </p>
           </div>
 
           {/* Devise */}

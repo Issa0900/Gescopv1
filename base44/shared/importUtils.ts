@@ -90,6 +90,18 @@ export const FIELD_ALIASES: Record<string, string> = {
   "role_poste": "role", "poste": "role", "titre_poste": "role", "taux_commission": "commission_rate",
   "nb_transactions": "total_orders", "points_fidelite": "loyalty_points", "points_de_fidelite": "loyalty_points",
   "valeur_stock_cout": "inventory_value", "valeur_stock_vente": "selling_inventory_value",
+  // Alias de la feuille Ventes/Commandes, liés au fix de collision unit_price
+  // de cette session (voir normalizeKeys ci-dessous) : sans eux, ces colonnes
+  // ne résolvent plus du tout et le revenu retombe à 0 $ par une autre voie.
+  "valeur_stock_cout_cad": "inventory_value", "qte_en_stock": "inventory_level", "quantite_en_stock": "inventory_level",
+  "quantite_disponible": "available_qty", "seuil_reapprovisionnement": "reorder_point",
+  "taxe_federale_tps": "tax_federal", "taxe_provinciale_tvq_tvh": "tax_provincial",
+  "montant_taxes_total": "tax", "total_ttc_cad": "total", "prix_unitaire_brut": "unit_price",
+  "sous_total_ht": "subtotal", "province_livraison": "region",
+  "prix_net": "unit_price", "sous_total_ht": "subtotal", "province_livraison": "region",
+  "id_transaction": "order_id", "canal_vente": "channel",
+  "nom_du_fournisseur": "supplier_name", "fournisseur": "supplier_name",
+  "nom_du_contact": "contact_name", "contact": "contact_name",
   "id_immobilisation": "asset_id", "description_actif": "description",
   "classe_dpa": "dpa_class", "classe_dpa_fiscale": "dpa_class",
   "taux_amortissement_dpa": "dpa_rate", "taux_dpa": "dpa_rate",
@@ -97,6 +109,7 @@ export const FIELD_ALIASES: Record<string, string> = {
   "amortissement_cumule_cad": "accumulated_depreciation", "amortissement_cumule": "accumulated_depreciation",
   "valeur_nette_comptable_cad": "net_book_value", "valeur_nette_comptable": "net_book_value", "vnc": "net_book_value",
   "commentaire_historique": "historical_comment",
+  "province": "province", "prov": "province", "province_client": "province", "etat_province": "province", "state_province": "province",
 };
 
 /**
@@ -1583,7 +1596,6 @@ export const ALIAS_CANONIQUES: Record<string, string> = {
   "canal_vente": "channel",
   "id_vendeur": "employee_id",
   "remise_ligne": "discount",
-  "prix_net": "unit_price",
   "province_livraison": "province",
   "mode_paiement": "payment_method",
   "id_ligne": "notes",
@@ -1682,9 +1694,17 @@ export function normalizeKeys(
         || (schemaFields.includes(canon) ? canon : lower);
     }
 
-    // Si on a un targetField valide direct, on l'écrit
+    // Si on a un targetField valide direct, on l'écrit — sauf si une colonne
+    // precedente a deja pose une vraie valeur sur ce meme champ et que celle-ci
+    // est vide : deux colonnes source distinctes peuvent partager un alias
+    // (ex. Prix_Unitaire_Brut et Prix_Net -> unit_price), et une colonne vide
+    // traitee apres ne doit jamais effacer la valeur reelle deja ecrite.
     if (targetField && schemaFields.includes(targetField)) {
-      out[targetField] = v;
+      const existing = out[targetField];
+      const isEmpty = (val: any) => val === null || val === undefined || val === "";
+      if (isEmpty(existing) || !isEmpty(v)) {
+        out[targetField] = v;
+      }
       continue;
     }
 
@@ -1843,6 +1863,18 @@ const ENUM_TRANSLATIONS: Record<string, string[]> = {
   // Levels, Priorities, Risks
   "low": ["faible", "bas", "basse", "inferieur"], "medium": ["moyenne", "modere", "moyen", "egal"], "high": ["elevee", "eleve", "important", "superieur", "haute"], "urgent": ["urgente", "critique"],
   "critical": ["critique", "urgente"],
+  "low": ["faible", "bas", "basse", "inferieur"], "basse": ["faible"], "bas": ["faible"], "faible": ["faible"],
+  "medium": ["moyenne", "modere", "moyen", "egal"], "moyenne": ["moyenne"], "moyen": ["moyenne"], "normale": ["moyenne"], "normal": ["moyenne"], "standard": ["moyenne"], "modere": ["moyenne"], "moderee": ["moyenne"],
+  "high": ["elevee", "eleve", "important", "superieur", "haute"], "haute": ["elevee"], "haut": ["elevee"], "eleve": ["elevee"], "elevee": ["elevee"], "important": ["elevee"], "importante": ["elevee"], "majeure": ["elevee"],
+  "urgent": ["urgente", "critique"], "urgente": ["urgente"], "critical": ["critique", "urgente"], "critique": ["urgente", "elevee"], "immediate": ["urgente"],
+  "strategique": ["strategique", "elevee", "urgente"], "strategic": ["strategique", "elevee", "urgente"],
+  "prioritaire": ["elevee", "urgente"], "vital": ["urgente", "elevee"], "vitale": ["urgente", "elevee"],
+  "p1": ["urgente", "elevee"], "p2": ["elevee"], "p3": ["moyenne"], "p4": ["faible"],
+
+  // Goals & KPIs statuses
+  "atteint": ["atteint"], "atteinte": ["atteint"], "achieved": ["atteint"], "reached": ["atteint"], "realise": ["atteint"], "realisee": ["atteint"], "succes": ["atteint"], "reussi": ["atteint"],
+  "depasse": ["depasse"], "depassee": ["depasse"], "exceeded": ["depasse"], "surpassed": ["depasse"], "surperforme": ["depasse"],
+  "non_atteint": ["non_atteint"], "non atteint": ["non_atteint"], "non-atteint": ["non_atteint"], "not achieved": ["non_atteint"], "missed": ["non_atteint"], "echoue": ["non_atteint", "echoue"], "retard": ["non_atteint"], "en retard": ["non_atteint"],
 
   // States
   "new": ["nouveau", "nouvelle"], "seen": ["vu", "lue"], "resolved": ["resolu"], "archived": ["archivee", "archive"],
@@ -2285,9 +2317,11 @@ export function buildCompanyDictionaryIndex(raw: Record<string, string> | null |
 const HEADER_SIGNATURES: { entity: string; must: string[] }[] = [
   { entity: "CampaignDaily", must: ["campaign_id", "date"] },
   { entity: "Campaign", must: ["campaign_id"] },
+  { entity: "Inventory", must: ["inventory_id"] },
   { entity: "Inventory", must: ["product_id", "closing_stock"] },
   { entity: "Inventory", must: ["product_id", "opening_stock"] },
-  { entity: "Purchase", must: ["supplier_id", "product_id"] },
+  { entity: "Purchase", must: ["purchase_id"] },
+  { entity: "Purchase", must: ["date", "supplier_id", "product_id"] },
   { entity: "Order", must: ["order_id"] },
   { entity: "Customer", must: ["customer_id"] },
   { entity: "Product", must: ["product_id"] },
@@ -2295,6 +2329,7 @@ const HEADER_SIGNATURES: { entity: string; must: string[] }[] = [
   { entity: "Payroll", must: ["employee_id", "period"] },
   { entity: "Employee", must: ["employee_id"] },
   { entity: "Cashflow", must: ["closing_cash"] },
+  { entity: "Cashflow", must: ["opening_cash", "net_cash_flow"] },
   { entity: "Cashflow", must: ["cash_in", "cash_out"] },
   { entity: "Expense", must: ["expense_id"] },
   { entity: "Interaction", must: ["interaction_id"] },
@@ -2312,12 +2347,18 @@ const HEADER_ALIASES: Record<string, string> = {
   "id_employe": "employee_id", "employe_id": "employee_id",
   "id_campagne": "campaign_id", "campagne_id": "campaign_id",
   "id_depense": "expense_id", "depense_id": "expense_id",
+  "id_achat": "purchase_id", "achat_id": "purchase_id", "no_achat": "purchase_id",
+  "id_inventaire": "inventory_id", "inventaire_id": "inventory_id",
   "montant": "amount", "date_operation": "date", "periode": "period",
-  "stock_cloture": "closing_stock", "stock_final": "closing_stock",
+  "stock_cloture": "closing_stock", "stock_final": "closing_stock", "quantite_en_stock": "closing_stock", "qte_en_stock": "closing_stock",
   "stock_ouverture": "opening_stock", "stock_initial": "opening_stock",
-  "solde_cloture": "closing_cash", "solde_final": "closing_cash",
+  "solde_cloture": "closing_cash", "solde_final": "closing_cash", "solde_de_cloture": "closing_cash",
+  "solde_ouverture": "opening_cash", "solde_d_ouverture": "opening_cash",
+  "flux_net_de_tresorerie": "net_cash_flow", "flux_net": "net_cash_flow",
   "encaissements": "cash_in", "decaissements": "cash_out",
   "entrees": "cash_in", "sorties": "cash_out",
+  "entrees_de_fonds": "cash_in", "sorties_de_fonds": "cash_out",
+  "numero_neq": "neq_number", "numero_tps": "gst_number", "numero_tvq": "qst_number",
 };
 
 function normalizeHeader(h: string, companyDictionary?: Record<string, string>): string {
@@ -2518,6 +2559,20 @@ export function normalizeRow(
     }
   }
 
+  if (entityName === "Customer") {
+    const CANADIAN_PROVINCES = new Set([
+      "QC", "ON", "BC", "AB", "MB", "SK", "NS", "NB", "NL", "PE", "YT", "NT", "NU",
+      "QUEBEC", "QUÉBEC", "ONTARIO", "ALBERTA"
+    ]);
+    const rawStatus = stripAccents(String(r.status || "")).toUpperCase().trim();
+    if (CANADIAN_PROVINCES.has(rawStatus)) {
+      if (!r.province) {
+        r.province = r.status;
+      }
+      r.status = "actif";
+    }
+  }
+
   if (entityName === "Transaction") {
     // Meme principe que la date ci-dessous : un montant absent ou illisible ne
     // doit pas devenir 0 en silence. Le `|| 0` faisait passer la validation a
@@ -2608,6 +2663,54 @@ export function normalizeRow(
       const sal = parseNumber(r.annual_salary);
       const hours = parseNumber(r.weekly_hours) || 37.5;
       if (sal) r.hourly_rate = Math.round((sal / (52 * hours)) * 100) / 100;
+    }
+  }
+
+  // --- GOAL RESCUE HOOKS ---
+  if (entityName === "Goal") {
+    if (r.priority) {
+      const pRaw = stripAccents(String(r.priority).toLowerCase().trim());
+      if (["strategique", "strategic", "strategie"].includes(pRaw)) {
+        r.priority = "strategique";
+      } else if (["critique", "urgent", "urgente", "critical", "p1", "immediate"].includes(pRaw)) {
+        r.priority = "urgente";
+      } else if (["eleve", "elevee", "high", "haute", "haut", "important", "importante", "majeur", "majeure", "p2", "prioritaire"].includes(pRaw)) {
+        r.priority = "elevee";
+      } else if (["moyen", "moyenne", "medium", "normal", "normale", "standard", "modere", "moderee", "p3"].includes(pRaw)) {
+        r.priority = "moyenne";
+      } else if (["faible", "low", "bas", "basse", "mineur", "mineure", "p4"].includes(pRaw)) {
+        r.priority = "faible";
+      }
+    }
+    if (r.status) {
+      const sRaw = stripAccents(String(r.status).toLowerCase().trim());
+      if (["atteint", "atteinte", "achieved", "reached", "completed", "realise", "realisee", "succes", "reussi"].includes(sRaw)) {
+        r.status = "atteint";
+      } else if (["depasse", "depassee", "exceeded", "surpassed", "surperforme"].includes(sRaw)) {
+        r.status = "depasse";
+      } else if (["non_atteint", "non atteint", "non-atteint", "not achieved", "failed", "missed", "echoue", "retard", "en retard"].includes(sRaw)) {
+        r.status = "non_atteint";
+      } else if (["en_cours", "en cours", "in progress", "in_progress", "ongoing", "actif", "active", "en attente"].includes(sRaw)) {
+        r.status = "en_cours";
+      }
+    }
+    if (r.domain) {
+      const dRaw = stripAccents(String(r.domain).toLowerCase().trim());
+      if (["finance", "financier", "comptabilite", "tresorerie"].includes(dRaw)) {
+        r.domain = dRaw === "tresorerie" ? "tresorerie" : "finance";
+      } else if (["ventes", "vente", "sales", "commercial"].includes(dRaw)) {
+        r.domain = "ventes";
+      } else if (["marketing", "mktg", "acquisition", "communication"].includes(dRaw)) {
+        r.domain = "marketing";
+      } else if (["clients", "client", "customer", "crm", "service client"].includes(dRaw)) {
+        r.domain = "clients";
+      } else if (["operations", "operation", "logistique", "atelier", "supply", "chaine"].includes(dRaw)) {
+        r.domain = "operations";
+      } else if (["rh", "ressources humaines", "personnel", "staff"].includes(dRaw)) {
+        r.domain = "rh";
+      } else if (["achats", "approvisionnement", "fournisseurs", "procurement"].includes(dRaw)) {
+        r.domain = "achats";
+      }
     }
   }
 

@@ -138,18 +138,34 @@ export default function KpiOverview({ monthlyData, isLoading, dimensions }) {
                     <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-chart-5" />Dépenses</span>
                   </div>
                 </div>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={combinedData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
-                      <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} width={45} tickFormatter={formatK} />
-                      <Tooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
-                      <Bar dataKey="revenue" name="Revenus" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} barSize={18} animationDuration={800} />
-                      <Bar dataKey="expenses" name="Dépenses" fill="hsl(var(--chart-5))" radius={[4, 4, 0, 0]} barSize={18} animationDuration={800} animationBegin={200} />
-                      <Line type="monotone" dataKey="margin" name="Marge %" stroke="hsl(var(--chart-2))" strokeWidth={2.5} dot={{ r: 3 }} animationDuration={1000} animationBegin={400} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
+                {/* $ et % ne partagent pas d'échelle : un seul axe pour les deux
+                    aplatissait la marge en quasi-ligne droite près de zéro à côté
+                    des barres en milliers de dollars. Deux panneaux, un axe chacun. */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div className="h-56 sm:col-span-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={combinedData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                        <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} width={45} tickFormatter={formatK} />
+                        <Tooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
+                        <Bar dataKey="revenue" name="Revenus" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} barSize={18} animationDuration={800} />
+                        <Bar dataKey="expenses" name="Dépenses" fill="hsl(var(--chart-5))" radius={[4, 4, 0, 0]} barSize={18} animationDuration={800} animationBegin={200} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="h-56">
+                    <p className="mb-1 text-xs font-medium text-muted-foreground">Marge %</p>
+                    <ResponsiveContainer width="100%" height="90%">
+                      <ComposedChart data={combinedData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                        <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} width={32} tickFormatter={(v) => `${v}%`} />
+                        <Tooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
+                        <Line type="monotone" dataKey="margin" name="Marge %" stroke="hsl(var(--chart-2))" strokeWidth={2.5} dot={{ r: 3 }} animationDuration={1000} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </motion.div>
             )}

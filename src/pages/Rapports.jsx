@@ -5,7 +5,7 @@ import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { FileText, Trash2, Download, Clock, GitCompareArrows, Database, Activity, MessagesSquare, Radio } from "lucide-react";
-import { downloadCSV } from "@/lib/exportUtils";
+import { downloadCSV, downloadReportPDF } from "@/lib/exportUtils";
 import ReportTypeCard from "@/components/reports/ReportTypeCard";
 import ReportViewer from "@/components/reports/ReportViewer";
 import { cn } from "@/lib/utils";
@@ -53,6 +53,15 @@ export default function Rapports() {
     queryKey: ["executive-summaries"],
     queryFn: async () => { const l = await base44.entities.ExecutiveSummary.list("-date", 50); return l || []; },
   });
+  // Beaucoup d'exports "Sommaire Exécutif" stockent des paires
+  // indicateur/valeur (indicator_name/metric_value), pas les colonnes
+  // financières par succursale que ce tableau affiche : une ligne "SIEGE"
+  // sans aucun de ces champs remplis n'apporte rien, juste une rangée de
+  // tirets qui prend de la place. On ne montre que les lignes qui ont
+  // vraiment au moins un chiffre.
+  const summariesWithData = (summaries || []).filter((s) =>
+    s.total_revenue != null || s.total_cost != null || s.gross_margin != null || s.total_orders != null
+  );
 
   const generate = async (type) => {
     setGenerating(type);
@@ -73,17 +82,7 @@ export default function Rapports() {
     }
   };
 
-  const exportReport = (report) => {
-    const rows = [
-      { Champ: "Type", Valeur: report.type || "" },
-      { Champ: "Période", Valeur: report.period || "" },
-      { Champ: "Date de génération", Valeur: report.created_date ? new Date(report.created_date).toLocaleString("fr-CA") : "" },
-      { Champ: "Résumé exécutif", Valeur: report.summary || "" },
-      { Champ: "Contenu", Valeur: report.content || "" },
-    ];
-    const safePeriod = (report.period || "rapport").replace(/[^a-zA-Z0-9]/g, "_");
-    downloadCSV(`GESCOP_Rapport_${safePeriod}`, rows, { Champ: "Champ", Valeur: "Valeur" });
-  };
+  const exportReport = (report) => downloadReportPDF(report);
 
   const exportReportsList = () => {
     const rows = (reports || []).map((r) => ({
@@ -145,7 +144,7 @@ export default function Rapports() {
         </div>
       </div>
 
-      {summaries && summaries.length > 0 && (
+      {summariesWithData.length > 0 && (
         <div className="overflow-x-auto rounded-xl border border-border">
           <h2 className="px-4 pt-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Synthèse par succursale</h2>
           <table className="w-full min-w-[700px] text-sm">
@@ -160,7 +159,7 @@ export default function Rapports() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {summaries.map((s) => (
+              {summariesWithData.map((s) => (
                 <tr key={s.id} className="hover:bg-muted/30">
                   <td className="px-4 py-3 font-medium">{s.succursale || s.store || s.location_id}</td>
                   <td className="px-4 py-3">{s.period || s.date || "-"}</td>
@@ -173,6 +172,11 @@ export default function Rapports() {
             </tbody>
           </table>
         </div>
+      )}
+      {summaries && summaries.length > 0 && summariesWithData.length === 0 && (
+        <p className="text-xs text-muted-foreground">
+          {summaries.length} ligne(s) de sommaire exécutif importée(s), mais aucune ne contient de CA, coûts, marge ou nombre de commandes par succursale — rien d'utile à synthétiser ici pour l'instant.
+        </p>
       )}
 
       {/* Comparison toggle */}
@@ -228,7 +232,7 @@ export default function Rapports() {
           <div className="space-y-2">
             {reports.map((r) => (
               <div key={r.id} className="group flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-accent/30">
-                <button onClick={() => setSelected(r)} className="flex flex-1 items-center gap-3 text-left">
+                <button onClick={() => setSelected(r)} className="flex flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
                     <FileText className="h-4.5 w-4.5 text-muted-foreground" />
                   </div>
@@ -247,10 +251,10 @@ export default function Rapports() {
                 </button>
                 <div className="flex items-center gap-1 opacity-60 transition-opacity group-hover:opacity-100">
                   <Button size="sm" variant="ghost" onClick={() => setSelected(r)}>Consulter</Button>
-                  <button onClick={() => exportReport(r)} className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground" title="Exporter CSV">
+                  <button onClick={() => exportReport(r)} className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" title="Exporter PDF">
                     <Download className="h-4 w-4" />
                   </button>
-                  <button onClick={() => remove(r.id)} className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600" title="Supprimer">
+                  <button onClick={() => remove(r.id)} className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" title="Supprimer">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>

@@ -237,6 +237,9 @@ export default function ImportPage() {
       await base44.entities.Payroll.deleteMany({});
       await base44.entities.Expense.deleteMany({});
       await base44.entities.Cashflow.deleteMany({});
+      await base44.entities.Asset.deleteMany({});
+      await base44.entities.ExecutiveSummary.deleteMany({});
+      await base44.entities.Observation.deleteMany({});
       await base44.entities.Interaction.deleteMany({});
       await base44.entities.Competitor.deleteMany({});
       await base44.entities.Goal.deleteMany({});

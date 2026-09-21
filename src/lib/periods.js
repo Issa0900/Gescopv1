@@ -67,13 +67,32 @@ export function densify(series, endMonth = null) {
   return out;
 }
 
+export function extractMonthKey(val) {
+  if (val === null || val === undefined || val === "") return null;
+  if (val instanceof Date && !isNaN(val.getTime())) return val.toISOString().slice(0, 7);
+  if (typeof val === "number" || /^\d{5}(\.\d+)?$/.test(String(val).trim())) {
+    const serial = Number(val);
+    if (serial > 20000 && serial < 60000) {
+      const ms = Math.round((serial - 25569) * 86400 * 1000);
+      const d = new Date(ms);
+      if (!isNaN(d.getTime())) return d.toISOString().slice(0, 7);
+    }
+  }
+  const s = String(val).trim();
+  const iso = s.match(/^(\d{4})[-\/.](\d{1,2})/);
+  if (iso) return `${iso[1]}-${iso[2].padStart(2, "0")}`;
+  const dmy = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/);
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, "0")}`;
+  return null;
+}
+
 /** Aggregate records into ascending monthly buckets (sparse - gaps are absent). */
 export function monthlyAgg(items, dateField, valueField, mode = "sum") {
   const map = {};
   const lastDate = {};
   (items || []).forEach((it) => {
-    const raw = it[dateField] || "";
-    const m = raw.slice(0, 7);
+    const raw = it[dateField];
+    const m = extractMonthKey(raw);
     if (!m) return;
     if (!map[m]) map[m] = 0;
     const v = Number(it[valueField]) || 0;
@@ -82,7 +101,8 @@ export function monthlyAgg(items, dateField, valueField, mode = "sum") {
     else if (mode === "last") {
       // Keep the value of the latest DATE in the month, not the last row the
       // iteration happened to reach - row order is not date order.
-      if (!lastDate[m] || raw >= lastDate[m]) { lastDate[m] = raw; map[m] = v; }
+      const dateStr = String(raw || "");
+      if (!lastDate[m] || dateStr >= lastDate[m]) { lastDate[m] = dateStr; map[m] = v; }
     }
   });
   return Object.entries(map)
@@ -91,18 +111,33 @@ export function monthlyAgg(items, dateField, valueField, mode = "sum") {
 }
 
 /**
- * Monthly buckets ready for analysis: the in-progress month is dropped and
- * missing months are filled with zero. This is the series every calculation
- * should use; monthlyAgg stays sparse for data-quality gap detection.
+ * Monthly buckets ready for analysis: the in-progress month is dropped when
+ * sufficient prior history exists, and missing months are filled with zero.
+ * Historical datasets (ending in past years) are densified over their actual
+ * active range rather than padded with dozens of empty zero months up to today.
  */
 export function monthlyAggComplete(items, dateField, valueField, mode = "sum") {
+  const allMonthly = monthlyAgg(items, dateField, valueField, mode);
+  if (allMonthly.length === 0) return [];
+
   const cm = currentMonthKey();
-  const sparse = monthlyAgg(items, dateField, valueField, mode).filter((x) => x.month !== cm);
-  // Prolonge jusqu'au dernier mois complet pour que le decoupage positionnel
-  // designe de vrais mois calendaires, meme quand les imports se sont arretes.
-  // Tous les appelants agregent des FLUX (sommes, comptes) : un mois sans
-  // donnee vaut donc zero. Ne pas utiliser pour un solde, qui se reporte.
-  return densify(sparse, previousMonthKey());
+  const prevMonth = previousMonthKey();
+
+  // On n'exclut le mois en cours que si la série dispose d'au moins 3 mois
+  // complets antérieurs. Si l'import ne contient que 3 mois au total, rejeter
+  // le mois courant ferait chuter le volume à 2 mois et bloquerait les analyses.
+  const withoutCurrent = allMonthly.filter((x) => x.month !== cm);
+  const sparse = withoutCurrent.length >= 3 ? withoutCurrent : allMonthly;
+
+  const dernier = sparse[sparse.length - 1].month;
+  // Pour un fichier historique (ex: 2024, 2025) qui s'arrête dans le passé,
+  // ne pas combler de zéros jusqu'à la date système d'aujourd'hui : densifier
+  // sur la période réelle d'activité.
+  const targetEnd = (monthDiff(dernier, prevMonth) > 0 && monthDiff(dernier, prevMonth) <= 2)
+    ? prevMonth
+    : dernier;
+
+  return densify(sparse, targetEnd);
 }
 
 export function dropCurrentMonth(series) {

@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { useCompany } from "@/hooks/useCompany";
 import CompetitorsManager from "@/components/settings/CompetitorsManager";
 import RadarScanButton from "@/components/radar/RadarScanButton";
+import FeatureGate from "@/components/FeatureGate";
 import {
   RADAR_FAMILIES_META,
   detectRelevantDomains,
@@ -98,9 +99,10 @@ export default function Radar() {
   }, [signals, domainProfile]);
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* ── En-tête principal avec profil sectoriel ──────────────────────────── */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <FeatureGate feature="radar">
+      <div className="space-y-8 pb-12">
+        {/* ── En-tête principal avec profil sectoriel ──────────────────────────── */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -417,6 +419,7 @@ export default function Radar() {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </FeatureGate>
   );
 }

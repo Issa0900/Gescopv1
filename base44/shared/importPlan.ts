@@ -488,50 +488,125 @@ export function planParRegles(
 
     // 3. Adaptations ciblées par entité (Order, Product, Inventory, Customer, Campaign, Supplier, Employee, ExecutiveSummary)
     if (entite === 'Order') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
       if (champ === 'transaction_id') champ = 'order_id';
-      if (champ === 'succursale' || champ === 'store') champ = 'location_id';
-      if (champ === 'taxe_federale_tps') champ = 'tax_federal';
-      if (champ === 'taxe_provinciale_tvq_tvh') champ = 'tax_provincial';
-      {
-        const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
-        const mot = (s: string) => new RegExp(`(^|_)${s}(_|$)`).test(normC);
-        if (mot("profit") && !mot("marge") && !mot("margin") && !mot("pct")) champ = 'gross_profit';
-        else if ((mot("marge") || mot("margin")) && champ !== 'gross_profit') champ = 'gross_margin';
-      }
+      if (champ === 'taxe_federale_tps' || normC.includes('taxe_fed') || normC.includes('tps')) champ = 'tax_federal';
+      if (champ === 'taxe_provinciale_tvq_tvh' || normC.includes('taxe_prov') || normC.includes('tvq')) champ = 'tax_provincial';
+      if (normC === 'succursale' || normC === 'store') champ = 'succursale';
+      if (normC.includes('id_succursale') || normC.includes('succursale_id')) champ = 'location_id';
+      if (normC.includes('livraison')) champ = 'fulfillment_status';
+      if (normC.includes('nom') && normC.includes('employe')) champ = 'employee_name';
+      if (normC.includes('departement')) champ = 'department';
+      const mot = (s: string) => new RegExp(`(^|_)${s}(_|$)`).test(normC);
+      if (mot("profit") || (mot("benefice") && mot("brut"))) champ = 'gross_profit';
+      else if (mot("marge") || mot("margin") || mot("pct")) champ = 'gross_margin';
     }
     if (entite === 'Product') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
       if (champ === 'closing_stock' || champ === 'stock_quantity') champ = 'inventory_level';
-      if (champ === 'unit_cost') champ = 'purchase_cost';
+      if (champ === 'unit_cost' || normC.includes('cout_d_achat')) champ = 'purchase_cost';
+      if (champ === 'unit_price' || normC.includes('prix_de_vente')) champ = 'selling_price';
       if (champ === 'qte_en_stock' || champ === 'quantity_on_hand') champ = 'inventory_level';
       if (champ === 'description') champ = 'product_name';
+      if (normC.includes('sous_cat') || normC.includes('subcat')) champ = 'subcategory';
     }
     if (entite === 'Inventory') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      if (normC.includes('id_inventaire') || normC.includes('inventaire_id')) champ = 'inventory_id';
+      if (normC.includes('id_entrepot') || normC.includes('entrepot_id')) champ = 'warehouse_id';
+      if (normC.includes('nom') && normC.includes('entrepot')) champ = 'warehouse_name';
       if (champ === 'inventory_level' || champ === 'stock_quantity' || champ === 'qte_en_stock') champ = 'closing_stock';
       if (champ === 'valeur_stock_cout_cad' || champ === 'valeur_stock_cout' || champ === 'valeur_stock') champ = 'inventory_value';
+      if (champ === 'unit_price' || normC.includes('prix_de_vente')) champ = 'selling_price';
       if (champ === 'seuil_d_alerte' || champ === 'seuil_alerte') champ = 'reorder_point';
       if (champ === 'fournisseur' || champ === 'supplier_name') champ = 'supplier_id';
       if (champ === 'description') champ = 'product_name';
     }
     if (entite === 'Customer') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
       if (champ === 'nom_complet' || champ === 'nom_client' || champ === 'client') champ = 'full_name';
       if (champ === 'code_postal') champ = 'postal_code';
       if (champ === 'points_fidelite') champ = 'loyalty_points';
+      if (normC.includes('1er_achat') || normC.includes('premier_achat')) champ = 'first_purchase_date';
+      if (normC.includes('dernier_achat')) champ = 'last_purchase_date';
+      if (normC.includes('commandes_totales') || normC.includes('total_commandes')) champ = 'total_orders';
+      if (normC.includes('risque') || normC.includes('depart') || normC.includes('churn')) champ = 'churn_risk';
     }
     if (entite === 'Supplier') {
-      if (champ === 'contact_principal' || champ === 'contact') champ = 'contact_name';
-      if (champ === 'conditions_paiement' || champ === 'condition_paiement' || champ === 'termes_paiement') champ = 'payment_terms';
-      if (champ === 'ville') champ = 'city';
-      if (champ === 'courriel') champ = 'email';
+      const normCol = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      if ((normCol.includes('id') || normCol.includes('num') || normCol.includes('code')) && (normCol.includes('fourn') || normCol.includes('suppl'))) {
+        champ = 'supplier_id';
+      } else if (normCol.includes('nom') && (normCol.includes('fourn') || normCol.includes('suppl'))) {
+        champ = 'supplier_name';
+      } else if (champ === 'supplier' || champ === 'supplier_id') {
+        champ = (normCol.includes('id') || normCol.includes('code')) ? 'supplier_id' : 'supplier_name';
+      }
+      if (champ === 'contact_principal' || champ === 'contact' || champ === 'nom_du_contact' || normCol.includes('contact')) champ = 'contact_name';
+      if (champ === 'conditions_paiement' || champ === 'condition_paiement' || champ === 'termes_paiement' || normCol.includes('condition') || normCol.includes('paiement')) champ = 'payment_terms';
+      if (champ === 'ville' || normCol === 'ville') champ = 'city';
+      if (champ === 'pays' || normCol === 'pays') champ = 'country';
+      if (champ === 'courriel' || normCol === 'email' || normCol === 'courriel') champ = 'email';
+      if (normCol.includes('neq')) champ = 'neq_number';
+      if (normCol.includes('tps') || normCol.includes('gst')) champ = 'gst_number';
+      if (normCol.includes('tvq') || normCol.includes('qst')) champ = 'qst_number';
+      if (normCol.includes('delai') || normCol.includes('livraison')) champ = 'average_delivery_days';
+      if (normCol.includes('evolution') || normCol.includes('prix')) champ = 'price_change_last_12_months';
+      if (normCol.includes('fiabilite')) champ = 'reliability_score';
+      if (normCol.includes('qualite')) champ = 'quality_score';
+      if (normCol.includes('esg')) champ = 'esg_score';
+      if (normCol.includes('devise')) champ = 'purchase_currency';
+      if (normCol.includes('volume')) champ = 'purchase_volume';
+    }
+    if (entite === 'Purchase') {
+      const normCol = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      if ((normCol.includes('id') || normCol.includes('num') || normCol.includes('code') || normCol.includes('no')) && normCol.includes('achat')) champ = 'purchase_id';
+      if (normCol.includes('date') && !normCol.includes('livraison')) champ = 'date';
+      if ((normCol.includes('id') || normCol.includes('num') || normCol.includes('code')) && (normCol.includes('fourn') || normCol.includes('suppl'))) champ = 'supplier_id';
+      if ((normCol.includes('id') || normCol.includes('num') || normCol.includes('code') || normCol.includes('sku')) && (normCol.includes('prod') || normCol.includes('art'))) champ = 'product_id';
+      if (normCol.includes('prevu') || (normCol.includes('livraison') && normCol.includes('attendu'))) champ = 'expected_delivery';
+      if (normCol.includes('reel') || (normCol.includes('livraison') && normCol.includes('effectiv'))) champ = 'actual_delivery';
+      if (normCol.includes('retard')) champ = 'delay_days';
+      if (normCol.includes('cout_total') || normCol.includes('montant_total') || normCol.includes('total')) champ = 'total_cost';
+      if (normCol.includes('cout_unit') || normCol.includes('prix_unit')) champ = 'unit_cost';
+      if (normCol.includes('qte') || normCol.includes('quantite')) champ = 'quantity';
     }
     if (entite === 'Campaign') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
       if (champ === 'cout_clic' || champ === 'cout_par_clic' || champ === 'cost_per_click') champ = 'cpc';
       if (champ === 'budget_cad' || champ === 'budget_total') champ = 'budget';
+      if (normC.includes('date_de_debut') || normC.includes('date_debut') || normC.includes('start_date')) champ = 'start_date';
+      if (normC.includes('date_de_fin') || normC.includes('date_fin') || normC.includes('end_date')) champ = 'end_date';
+      if (normC === 'depense' || normC === 'depenses' || champ === 'amount') champ = 'spend';
+      if (normC.includes('nouveaux_clients') || normC.includes('new_customers')) champ = 'new_customers';
     }
     if (entite === 'Employee') {
-      if (champ === 'store' || champ === 'location_id' || champ === 'succursale') champ = 'location';
-      if (champ === 'category') champ = 'department';
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      if (champ === 'store' || champ === 'location_id' || normC === 'emplacement') champ = 'location';
+      if (normC === 'succursale') champ = 'branch';
+      if (champ === 'category' || normC.includes('departement')) champ = 'department';
       if (champ === 'role_poste' || champ === 'poste' || champ === 'titre_poste') champ = 'role';
       if (champ === 'taux_commission') champ = 'commission_rate';
+      if (normC.includes('heures_hebdo')) champ = 'weekly_hours';
+      if (normC === 'salaire') champ = 'salary';
+      if (normC.includes('salaire_annuel')) champ = 'annual_salary';
+      if (normC.includes('rrq')) champ = 'cpp_employer';
+      if (normC.includes('rqap')) champ = 'qpip_employer';
+      if (normC.includes('charges_sociales')) champ = 'total_social_charges';
+      if (normC.includes('cout_employeur')) champ = 'total_employer_cost';
+    }
+    if (entite === 'Expense') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      if (normC.includes('departement')) champ = 'department';
+      if (normC.includes('categorie')) champ = 'category';
+      if (normC.includes('recurrent')) champ = 'recurring';
+    }
+    if (entite === 'Cashflow') {
+      const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");
+      if (normC.includes('entree')) champ = 'cash_in';
+      if (normC.includes('sortie')) champ = 'cash_out';
+      if (normC.includes('cloture')) champ = 'closing_cash';
+      if (normC.includes('ouverture')) champ = 'opening_cash';
+      if (normC.includes('flux_net')) champ = 'net_cash_flow';
     }
     if (entite === 'ExecutiveSummary') {
       const normC = stripAccents(c.toLowerCase()).replace(/[^a-z0-9]+/g, "_");

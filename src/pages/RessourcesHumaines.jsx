@@ -6,9 +6,11 @@ import EmptyState from "@/components/EmptyState";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { Users, Banknote, Upload, PieChart, TrendingUp, Building2, UserCircle, Briefcase, Percent } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { motion } from "@/lib/fake-framer-motion.jsx";
 import DataErrorState from "@/components/DataErrorState";
+import DataTable from "@/components/ui/DataTable";
+import BadgeStatus from "@/components/ui/BadgeStatus";
 import { fetchAll } from "@/lib/fetchAll";
 import { validSalesOrders, columnPresent } from "@/lib/metrics";
 
@@ -194,6 +196,65 @@ export default function RessourcesHumaines() {
     );
   }
 
+  const hasCommission = columnPresent(data.employees, "commission_rate");
+  const employeeColumns = [
+    {
+      key: "employee_id",
+      header: "Collaborateur",
+      searchValue: (emp) => emp.employee_id || "",
+      sortValue: (emp) => emp.employee_id || "",
+      render: (emp) => (
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold shadow-sm">
+            {String(emp.employee_id || "?").slice(0, 2).toUpperCase()}
+          </div>
+          <div className="font-medium text-slate-900">{emp.employee_id || "Inconnu"}</div>
+        </div>
+      ),
+    },
+    {
+      key: "department",
+      header: "Département",
+      sortValue: (emp) => emp.department || "",
+      render: (emp) => (
+        <div className="flex items-center gap-2 text-slate-600">
+          <Building2 className="h-3.5 w-3.5 text-slate-400" />
+          {emp.department || "-"}
+        </div>
+      ),
+    },
+    { key: "role", header: "Rôle", sortValue: (emp) => emp.role || "", render: (emp) => <span className="font-medium text-slate-700">{emp.role || "-"}</span> },
+    {
+      key: "employment_type",
+      header: "Contrat",
+      sortValue: (emp) => emp.employment_type || "",
+      render: (emp) => (
+        <div className="flex items-center gap-2 text-slate-600">
+          <Briefcase className="h-3.5 w-3.5 text-slate-400" />
+          {emp.employment_type ? String(emp.employment_type).replace("_", " ") : "-"}
+        </div>
+      ),
+    },
+    ...(hasCommission ? [{
+      key: "commission_rate",
+      header: "Commission",
+      align: "right",
+      sortValue: (emp) => Number(emp.commission_rate) || 0,
+      render: (emp) => emp.commission_rate != null ? `${(emp.commission_rate <= 1 ? emp.commission_rate * 100 : emp.commission_rate).toFixed(1)}%` : "-",
+    }] : []),
+    {
+      key: "status",
+      header: "Statut",
+      align: "right",
+      sortValue: (emp) => emp.status || "",
+      render: (emp) => (
+        <BadgeStatus status={emp.status === "actif" ? "good" : emp.status === "depart" ? "critical" : "neutral"}>
+          {String(emp.status || "Actif").toUpperCase()}
+        </BadgeStatus>
+      ),
+    },
+  ];
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -256,23 +317,24 @@ export default function RessourcesHumaines() {
                 <AreaChart data={timeSeries} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorPayroll" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#b45309" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#b45309" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#15803d" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#15803d" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <XAxis dataKey="date" tick={{ fontSize: 12, fill: "#6b7280" }} tickMargin={10} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 12, fill: "#6b7280" }} tickFormatter={(v) => `${v / 1000}k`} axisLine={false} tickLine={false} />
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
-                    formatter={(value) => formatCurrency(value)} 
+                    formatter={(value) => formatCurrency(value)}
                   />
-                  <Area type="monotone" dataKey="total_revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" name="Chiffre d'affaires" />
-                  <Area type="monotone" dataKey="payroll_total" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorPayroll)" name="Masse salariale" />
+                  <Legend wrapperStyle={{ fontSize: 12 }} iconType="circle" />
+                  <Area type="monotone" dataKey="total_revenue" stroke="#15803d" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" name="Chiffre d'affaires" />
+                  <Area type="monotone" dataKey="payroll_total" stroke="#b45309" strokeWidth={3} fillOpacity={1} fill="url(#colorPayroll)" name="Masse salariale" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
@@ -302,7 +364,7 @@ export default function RessourcesHumaines() {
                     cursor={{ fill: '#f8fafc' }}
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}
                   />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} name="Effectif" barSize={24} />
+                  <Bar dataKey="value" fill="#2a78d6" radius={[0, 4, 4, 0]} name="Effectif" barSize={24} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -325,74 +387,15 @@ export default function RessourcesHumaines() {
             <span>{data.employees.length} collaborateurs</span>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-white text-muted-foreground border-b border-slate-100">
-              <tr>
-                <th className="px-6 py-4 font-medium">Collaborateur</th>
-                <th className="px-6 py-4 font-medium">Département</th>
-                <th className="px-6 py-4 font-medium">Rôle</th>
-                <th className="px-6 py-4 font-medium">Contrat</th>
-                {columnPresent(data.employees, "commission_rate") && (
-                  <th className="px-6 py-4 font-medium">Commission</th>
-                )}
-                <th className="px-6 py-4 font-medium text-right">Statut</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border bg-white">
-              {data.employees.map((emp) => (
-                <tr key={emp.id} className="transition-colors hover:bg-slate-50/80 group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold shadow-sm">
-                        {String(emp.employee_id || "?").slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className="font-medium text-slate-900">{emp.employee_id || "Inconnu"}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-slate-600">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-3.5 w-3.5 text-slate-400 hidden group-hover:block transition-all" />
-                      {emp.department || "-"}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-medium text-slate-700">{emp.role || "-"}</td>
-                  <td className="px-6 py-4 text-slate-600">
-                    <div className="flex items-center gap-2">
-                      <Briefcase className="h-3.5 w-3.5 text-slate-400" />
-                      {emp.employment_type ? String(emp.employment_type).replace('_', ' ') : "-"}
-                    </div>
-                  </td>
-                  {columnPresent(data.employees, "commission_rate") && (
-                    <td className="px-6 py-4 text-slate-600">
-                      {emp.commission_rate != null
-                        ? `${(emp.commission_rate <= 1 ? emp.commission_rate * 100 : emp.commission_rate).toFixed(1)}%`
-                        : "-"}
-                    </td>
-                  )}
-                  <td className="px-6 py-4 text-right">
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      emp.status === 'actif' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20' :
-                      emp.status === 'depart' ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/20' :
-                      'bg-slate-50 text-slate-700 ring-1 ring-slate-600/20'
-                    }`}>
-                      {emp.status === 'actif' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>}
-                      {emp.status === 'depart' && <span className="h-1.5 w-1.5 rounded-full bg-rose-500"></span>}
-                      {String(emp.status || "Actif").toUpperCase()}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {data.employees.length === 0 && (
-                <tr>
-                  <td colSpan={columnPresent(data.employees, "commission_rate") ? 6 : 5} className="px-6 py-12 text-center">
-                    <UserCircle className="mx-auto h-12 w-12 text-slate-200 mb-3" />
-                    <p className="text-muted-foreground">Aucun employé enregistré dans l'annuaire.</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <div className="p-4">
+          <DataTable
+            columns={employeeColumns}
+            data={data.employees}
+            rowKey={(emp, i) => emp.id || i}
+            searchPlaceholder="Rechercher un collaborateur…"
+            emptyIcon={UserCircle}
+            emptyTitle="Aucun employé enregistré dans l'annuaire."
+          />
         </div>
       </div>
     </motion.div>

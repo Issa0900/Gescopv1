@@ -23,6 +23,7 @@ import {
   previousRoasWindow,
   validSalesOrders,
 } from "@/lib/metrics";
+import { financialMonthlySeries } from "@/lib/financialData";
 
 function alert(level, category, title, message) {
   return { id: `live-${category}-${title}`, level, category, title, message, live: true, status: "non_lue" };
@@ -33,19 +34,12 @@ export function computeLiveAlerts(data) {
     "transactions", "orders", "customers", "campaignDaily",
     "products", "inventory", "cashflow", "expenses", "company",
   ]);
-  const { transactions, orders, customers, campaignDaily, products, inventory, cashflow, expenses, company } = data;
+  const { transactions, orders, customers, campaignDaily, products, inventory, cashflow, expenses, company, executiveSummary } = data;
   const out = [];
 
-  const incomes = (transactions || []).filter((t) => t.type === "income");
-  const txnExpenses = (transactions || []).filter((t) => t.type === "expense");
-  const revMonthly = monthlyAggComplete(incomes, "date", "amount");
-  // Costs can live in expense-typed Transaction rows, in the dedicated
-  // Expense entity, or both - both are read so the runway/margin alerts
-  // above never miss real costs recorded in the other one.
-  const expMonthly = monthlyAggComplete(
-    [...txnExpenses, ...(expenses || []).map((e) => ({ ...e, amount: Number(e.amount) || 0 }))],
-    "date", "amount"
-  );
+  const financialMonthly = financialMonthlySeries(transactions || [], expenses || [], orders || [], executiveSummary || []);
+  const revMonthly = financialMonthly.map((p) => ({ month: p.month, val: p.income }));
+  const expMonthly = financialMonthly.map((p) => ({ month: p.month, val: p.expense }));
 
   // --- Trésorerie : runway sur le burn NET ---
   // Une entreprise rentable n'a pas de problème d'autonomie : comparer le solde

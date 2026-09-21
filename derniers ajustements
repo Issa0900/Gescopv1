@@ -1,0 +1,15 @@
+[33m91d92c3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mclaude/beautiful-lamport-kj5ilf[m[33m, [m[1;31morigin/claude/beautiful-lamport-kj5ilf[m[33m)[m docs(manuel): complete rewrite according to 4-pillar action-oriented documentation rules
+M	src/pages/Manuel.jsx
+[33m85a1ea2[m fix(analyzeBusiness): clean up prompt header and syntax
+M	base44/functions/analyzeBusiness/entry.ts
+[33m01a41ab[m feat(assistant): elevate GESCOP Analyst prompt, executive suggestions, and classification badges
+M	base44/functions/analyzeBusiness/entry.ts
+M	base44/functions/chatAssistant/entry.ts
+M	src/pages/Assistant.jsx
+[33m1533dc5[m feat(ai): elevate GESCOP Analyst system prompt to CFO-grade strategic standards
+M	base44/functions/analyzeBusiness/entry.ts
+M	base44/functions/chatAssistant/entry.ts
+[33m9fadbc3[m fix(shared): resolve duplicate declarations and syntax errors in importUtils and contextualRecognition
+M	base44/shared/core/contextualRecognition.ts
+M	base44/shared/importPlan.ts
+M	base44/shared/importUtils.ts

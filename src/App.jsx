@@ -5,12 +5,14 @@ import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import { LanguageProvider } from '@/lib/LanguageContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 // Add page imports here
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Layout from '@/components/Layout';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import FeatureGate from '@/components/FeatureGate';
 const Login = lazy(() => import('@/pages/Login'));
 const Register = lazy(() => import('@/pages/Register'));
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
@@ -45,6 +47,8 @@ const Achats = lazy(() => import('@/pages/Achats'));
 const Immobilisations = lazy(() => import('@/pages/Immobilisations'));
 const Succursales = lazy(() => import('@/pages/Succursales'));
 const Audit = lazy(() => import('@/pages/Audit'));
+const Tarifs = lazy(() => import('@/pages/Tarifs'));
+const Facturation = lazy(() => import('@/pages/Facturation'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -86,8 +90,8 @@ const AuthenticatedApp = () => {
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/insights" element={<Insights />} />
-          <Route path="/previsions" element={<Previsions />} />
-          <Route path="/simulateur" element={<Simulateur />} />
+          <Route path="/previsions" element={<FeatureGate feature="forecast"><Previsions /></FeatureGate>} />
+          <Route path="/simulateur" element={<FeatureGate feature="simulator"><Simulateur /></FeatureGate>} />
           <Route path="/decisions" element={<Decisions />} />
           <Route path="/historique" element={<Historique />} />
           <Route path="/importer" element={<ImportPage />} />
@@ -106,16 +110,20 @@ const AuthenticatedApp = () => {
           <Route path="/anomalies" element={<Anomalies />} />
           <Route path="/risques" element={<Risques />} />
           <Route path="/recommandations" element={<Recommandations />} />
-          <Route path="/radar" element={<Radar />} />
+          <Route path="/radar" element={<FeatureGate feature="radar"><Radar /></FeatureGate>} />
           <Route path="/taches" element={<Taches />} />
           <Route path="/alertes" element={<Alertes />} />
           <Route path="/rapports" element={<Rapports />} />
           <Route path="/assistant" element={<Assistant />} />
+          <Route path="/tarifs" element={<Tarifs />} />
+          <Route path="/facturation" element={<Facturation />} />
+          <Route path="/parametres/facturation" element={<Facturation />} />
           <Route path="/parametres" element={<Parametres />} />
           <Route path="/manuel" element={<Manuel />} />
           <Route path="/politique-confidentialite" element={<PolitiqueConfidentialite />} />
         </Route>
       </Route>
+      <Route path="/tarifs" element={<Tarifs />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
     </Suspense>
@@ -128,16 +136,18 @@ function App() {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <ErrorBoundary>
-            <ScrollToTop />
-            <AuthenticatedApp />
-          </ErrorBoundary>
-        </Router>
-        <Toaster />
+        <LanguageProvider>
+          <Router>
+            <ErrorBoundary>
+              <ScrollToTop />
+              <AuthenticatedApp />
+            </ErrorBoundary>
+          </Router>
+          <Toaster />
+        </LanguageProvider>
       </QueryClientProvider>
     </AuthProvider>
-  )
+  );
 }
 
 export default App

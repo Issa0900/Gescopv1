@@ -1,0 +1,10 @@
+[33m91d92c3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mclaude/beautiful-lamport-kj5ilf[m[33m, [m[1;31morigin/claude/beautiful-lamport-kj5ilf[m[33m)[m docs(manuel): complete rewrite according to 4-pillar action-oriented documentation rules
+[33m85a1ea2[m fix(analyzeBusiness): clean up prompt header and syntax
+[33m01a41ab[m feat(assistant): elevate GESCOP Analyst prompt, executive suggestions, and classification badges
+[33m1533dc5[m feat(ai): elevate GESCOP Analyst system prompt to CFO-grade strategic standards
+[33m9fadbc3[m fix(shared): resolve duplicate declarations and syntax errors in importUtils and contextualRecognition
+[33m13d3ce7[m fix(modules): verify and wire 100% of data flow across all GESCOP modules and fix Asset column mapping
+[33m3209dbb[m feat(import): resilient multi-variant header recognition, schema alignment and zero unmapped warnings
+[33m8578544[m feat(import): full Canadian tax & business formula auto-calculation, taxonomy enrichment, and 0-error typecheck
+[33mc224c68[m Update AGENTS.md: typecheck widening finished at 0 errors
+[33md7bc77f[m Fix the import upload's wrong SDK method name; typecheck now clean (0 errors)

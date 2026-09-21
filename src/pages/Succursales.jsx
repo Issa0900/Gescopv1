@@ -3,6 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import StatCard from "@/components/StatCard";
 import EmptyState from "@/components/EmptyState";
+import DataTable from "@/components/ui/DataTable";
+import BadgeStatus from "@/components/ui/BadgeStatus";
+import { formatCAD, formatPct } from "@/lib/utils";
 import { fetchAll } from "@/lib/fetchAll";
 import { Building, MapPin, DollarSign, TrendingUp } from "lucide-react";
 
@@ -34,7 +37,18 @@ export default function Succursales() {
 
   const getLoc = (loc) => {
     if (!loc) return "Non assigné";
-    return String(loc).trim() || "Non assigné";
+    const s = String(loc).trim();
+    // Le fichier RH nomme parfois une succursale "Ville (Succursale)" (ex.
+    // "Québec (Sainte-Foy)") alors que les ventes utilisent seulement
+    // "Sainte-Foy" : on garde la partie entre parenthèses pour que les deux
+    // rejoignent la même clé, sinon le coût employeur de cette succursale
+    // atterrit dans un groupe que les revenus ne touchent jamais.
+    // S'applique à toute source (Order/Employee/Asset) qui passe par ici : si
+    // une vraie succursale contient un jour des parenthèses pour une autre
+    // raison, elle sera tronquée de la même façon — accepté pour l'instant,
+    // aucune donnée observée ne fait ça hors du cas RH ci-dessus.
+    const m = s.match(/\(([^)]+)\)\s*$/);
+    return (m ? m[1].trim() : s) || "Non assigné";
   };
 
   const ensureLoc = (loc) => {
@@ -73,7 +87,13 @@ export default function Succursales() {
   }
 
   (employees || []).forEach(e => {
-    const loc = ensureLoc(e.location || e.branch || e.succursale || e.department);
+    // `branch` porte le vrai nom de succursale (celui que suivent les
+    // ventes) ; `location` n'est souvent qu'une catégorie générique
+    // ("Magasin", "Siège social") qui ne correspond à aucune succursale
+    // précise — la préférer en premier regroupait tout le coût employeur
+    // sous des clés que les revenus ne touchaient jamais, gonflant chaque
+    // EBIT en négatif.
+    const loc = ensureLoc(e.branch || e.location || e.succursale || e.department);
     loc.employerCost += Number(e.total_employer_cost) || 0;
   });
 
@@ -94,6 +114,38 @@ export default function Succursales() {
   const totalEbitda = locations.reduce((sum, l) => sum + l.ebitda, 0);
   const totalEbit = locations.reduce((sum, l) => sum + l.ebit, 0);
   const totalRev = locations.reduce((sum, l) => sum + l.revenue, 0);
+  const totalGrossProfit = locations.reduce((sum, l) => sum + l.grossProfit, 0);
+  const totalEmployerCost = locations.reduce((sum, l) => sum + l.employerCost, 0);
+  const totalDepreciation = locations.reduce((sum, l) => sum + l.depreciation, 0);
+  // Marge nette consolidée pondérée par le CA de chaque succursale, pas une
+  // simple moyenne des pourcentages (qui surpondérerait les petites
+  // succursales).
+  const weightedMarginPct = totalRev > 0 ? (totalEbit / totalRev) * 100 : 0;
+
+  const locationColumns = [
+    { key: "name", header: "Succursale", render: (l) => l.name },
+    { key: "revenue", header: "Revenus", align: "right", sortValue: (l) => l.revenue, render: (l) => formatCAD(l.revenue), footer: () => formatCAD(totalRev) },
+    { key: "grossProfit", header: "Marge Brute (Ventes)", align: "right", sortValue: (l) => l.grossProfit, render: (l) => formatCAD(l.grossProfit), footer: () => formatCAD(totalGrossProfit) },
+    { key: "employerCost", header: "Coût Employeur (RH)", align: "right", sortValue: (l) => l.employerCost, render: (l) => <span className="text-red-600/80">{formatCAD(l.employerCost)}</span>, footer: () => <span className="text-red-600/80">{formatCAD(totalEmployerCost)}</span> },
+    { key: "ebitda", header: "EBITDA", align: "right", sortValue: (l) => l.ebitda, render: (l) => <span className="font-semibold">{formatCAD(l.ebitda)}</span>, footer: () => formatCAD(totalEbitda) },
+    { key: "depreciation", header: "Amortissement (Actifs)", align: "right", sortValue: (l) => l.depreciation, render: (l) => <span className="text-red-600/80">{formatCAD(l.depreciation)}</span>, footer: () => <span className="text-red-600/80">{formatCAD(totalDepreciation)}</span> },
+    {
+      key: "ebit",
+      header: "EBIT (Résultat)",
+      align: "right",
+      sortValue: (l) => l.ebit,
+      render: (l) => <span className={`font-bold ${l.ebit >= 0 ? "text-emerald-600" : "text-red-600"}`}>{formatCAD(l.ebit)}</span>,
+      footer: () => <span className={`font-bold ${totalEbit >= 0 ? "text-emerald-600" : "text-red-600"}`}>{formatCAD(totalEbit)}</span>,
+    },
+    {
+      key: "marginPct",
+      header: "Marge Nette %",
+      align: "right",
+      sortValue: (l) => l.marginPct,
+      render: (l) => <BadgeStatus status={l.marginPct >= 10 ? "good" : l.marginPct >= 0 ? "warning" : "critical"}>{formatPct(l.marginPct, 1)}</BadgeStatus>,
+      footer: () => <BadgeStatus status={weightedMarginPct >= 10 ? "good" : weightedMarginPct >= 0 ? "warning" : "critical"}>{formatPct(weightedMarginPct, 1)}</BadgeStatus>,
+    },
+  ];
 
   return (
     <div className="space-y-8">
@@ -109,42 +161,15 @@ export default function Succursales() {
         <StatCard label="EBIT total (après amort.)" value={`${Math.round(totalEbit).toLocaleString("fr-CA")} $`} icon={TrendingUp} accent={totalEbit > 0 ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"} />
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full min-w-[900px] text-sm">
-          <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3 font-medium">Succursale</th>
-              <th className="px-4 py-3 font-medium text-right">Revenus</th>
-              <th className="px-4 py-3 font-medium text-right">Marge Brute (Ventes)</th>
-              <th className="px-4 py-3 font-medium text-right">Coût Employeur (RH)</th>
-              <th className="px-4 py-3 font-medium text-right">EBITDA</th>
-              <th className="px-4 py-3 font-medium text-right">Amortissement (Actifs)</th>
-              <th className="px-4 py-3 font-medium text-right">EBIT (Résultat)</th>
-              <th className="px-4 py-3 font-medium text-right">Marge Nette %</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {locations.map((loc) => (
-              <tr key={loc.name} className="hover:bg-muted/30">
-                <td className="px-4 py-3 font-medium">{loc.name}</td>
-                <td className="px-4 py-3 text-right">{Math.round(loc.revenue).toLocaleString("fr-CA")} $</td>
-                <td className="px-4 py-3 text-right">{Math.round(loc.grossProfit).toLocaleString("fr-CA")} $</td>
-                <td className="px-4 py-3 text-right text-red-600/80">{Math.round(loc.employerCost).toLocaleString("fr-CA")} $</td>
-                <td className="px-4 py-3 text-right font-semibold">{Math.round(loc.ebitda).toLocaleString("fr-CA")} $</td>
-                <td className="px-4 py-3 text-right text-red-600/80">{Math.round(loc.depreciation).toLocaleString("fr-CA")} $</td>
-                <td className={`px-4 py-3 text-right font-bold ${loc.ebit >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                  {Math.round(loc.ebit).toLocaleString("fr-CA")} $
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${loc.marginPct >= 10 ? "bg-emerald-100 text-emerald-700" : loc.marginPct >= 0 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
-                    {loc.marginPct.toFixed(1)} %
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={locationColumns}
+        data={locations}
+        rowKey={(l) => l.name}
+        searchPlaceholder="Rechercher une succursale…"
+        footer
+        emptyIcon={Building}
+        emptyTitle="Aucune succursale"
+      />
     </div>
   );
 }

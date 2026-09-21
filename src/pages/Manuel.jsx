@@ -4,7 +4,8 @@ import {
   ShieldAlert, Radar as RadarIcon, CheckSquare, Bell, FileText, MessageSquare, 
   Settings, Sparkles, Rocket, Brain, TrendingUp, Calculator, Target, History, 
   Users, Package, Megaphone, Wallet, ShieldCheck, CheckCircle2, HelpCircle, 
-  ArrowRight, Check, AlertCircle, Info, Building2, Landmark, Truck, Wrench
+  ArrowRight, Check, AlertCircle, Info, Building2, Landmark, Truck, Wrench,
+  ShoppingCart, Columns3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ManualTableOfContents from "@/components/ManualTableOfContents";
@@ -156,6 +157,128 @@ const groups = [
         ]
       }
     ]
+  },
+  {
+    label: "2bis. Référence : Nommage des colonnes d'import",
+    sections: [
+      {
+        id: "nommage-ventes",
+        title: "Nommer vos colonnes — Ventes, Clients, Produits & Stocks",
+        icon: ShoppingCart,
+        badge: "Référence",
+        objective: "Donner à chaque colonne de vos fichiers un en-tête proche de la liste ci-dessous pour que le mapping automatique n'ait rien à deviner.",
+        content: [
+          {
+            h: "Commandes / Ventes (Order)",
+            action: "Une ligne par vente ou transaction commerciale. Le moteur reconnaît aussi de nombreux synonymes courants (Qte, Mnt, Tx, Ca...) — ces en-têtes restent la valeur la plus sûre.",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Bénéfice brut","gross_profit"],["Catégorie","category"],["Coût","cost"],["Coût total","total_cost"],["Coût unitaire","unit_cost"],["Date","date"],["Département","department"],["ID Client","customer_id"],["ID Commande","order_id"],["ID Employé","employee_id"],["ID Produit","product_id"],["ID Succursale","location_id"],["Livraison","shipping"],["Magasin","store"],["Marge brute","gross_margin"],["Mode de paiement","payment_method"],["Nom de l'employé","employee_name"],["Nom du client","customer_name"],["Nom du produit","product_name"],["Prix unitaire","price"],["Prix unitaire","unit_price"],["Province","province"],["Quantité","quantity"],["Région","region"],["Remise","discount"],["Revenu total","total_revenue"],["Sous-total","subtotal"],["Statut","status"],["Succursale","succursale"],["Taxe fédérale","tax_federal"],["Taxe provinciale","tax_provincial"],["Taxes","tax"],["Total","total"]]},
+          },
+          {
+            h: "Clients (Customer)",
+            action: "Une ligne par client.",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Adresse","address"],["Code postal","postal_code"],["Commandes totales","total_orders"],["Date 1er achat","first_purchase_date"],["Date d'acquisition","acquisition_date"],["Date dernier achat","last_purchase_date"],["Email","email"],["ID Client","customer_id"],["Langue","language"],["Limite de crédit","credit_limit"],["Nom","name"],["Nom complet","full_name"],["Nom de famille","last_name"],["Numéro exemption taxe","tax_exemption_number"],["Panier moyen","average_order_value"],["Points fidélité","loyalty_points"],["Prénom","first_name"],["Province","province"],["Région","region"],["Revenu total","total_revenue"],["Risque de départ (%)","churn_risk"],["Valeur à vie (LTV)","lifetime_value"],["Ville","city"]]},
+          },
+          {
+            h: "Produits (Product)",
+            action: "Catalogue produit — un produit par ligne.",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Coût d'achat","purchase_cost"],["Date de lancement","launch_date"],["ID Fournisseur","supplier_id"],["ID Produit","product_id"],["Marge brute","gross_margin"],["Niveau de stock","inventory_level"],["Nom du fournisseur","supplier_name"],["Nom du produit","product_name"],["Point de commande","reorder_point"],["Prix de vente","selling_price"],["SKU","sku"],["Sous-catégorie","subcategory"],["Ventes mensuelles","monthly_sales"]]},
+          },
+          {
+            h: "Inventaire / Stocks (Inventory)",
+            action: "Un relevé de stock par produit et par date.",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Achats","purchases"],["Catégorie","category"],["Code douanier","customs_code"],["Coût unitaire","unit_cost"],["Date","date"],["Endommagés","damaged"],["ID Entrepôt","warehouse_id"],["ID Fournisseur","supplier_id"],["ID Inventaire","inventory_id"],["ID Produit","product_id"],["Jours en inventaire","days_in_inventory"],["Niveau de stock","inventory_level"],["Nom de l'entrepôt","warehouse_name"],["Nom du fournisseur","supplier_name"],["Nom du produit","product_name"],["Pays d'origine","origin_country"],["Point de commande","reorder_point"],["Prix de vente","selling_price"],["Qté disponible","available_qty"],["Qté en transit","in_transit_qty"],["Qté réappro","reorder_qty_eoq"],["Qté réservée","reserved_qty"],["Quantité disponible","quantite_disponible"],["Quantité en stock","qte_en_stock"],["Retours","returns"],["Stock d'ouverture","opening_stock"],["Stock final","closing_stock"],["Unités vendues","units_sold"],["Valeur du stock","inventory_value"],["Valeur stock (vente)","selling_inventory_value"],["Valeur stock (vente)","valeur_stock_vente"]]},
+          },
+        ],
+      },
+      {
+        id: "nommage-finance",
+        title: "Nommer vos colonnes — Finance, Trésorerie, RH & Fournisseurs",
+        icon: Landmark,
+        badge: "Référence",
+        content: [
+          {
+            h: "Transactions financières (Transaction)",
+            action: "Mouvements bancaires ou comptables bruts (revenu/dépense).",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Catégorie","category"],["Client","client"],["Date","date"],["Description","description"],["Devise","currency"],["Montant","amount"],["Produit","product"],["Source","source"]]},
+          },
+          {
+            h: "Dépenses (Expense)",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Catégorie","category"],["Date","date"],["Département","department"],["Description","description"],["Fournisseur","supplier"],["ID Dépense","expense_id"],["Mode de paiement","payment_method"],["Montant","amount"],["Récurrent","recurring"]]},
+          },
+          {
+            h: "Trésorerie (Cashflow)",
+            action: "Un solde de caisse par date.",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Comptes clients","accounts_receivable"],["Comptes fournisseurs","accounts_payable"],["Date","date"],["Entrées de fonds","cash_in"],["Flux net de trésorerie","net_cash_flow"],["Solde d'ouverture","opening_cash"],["Solde de clôture","closing_cash"],["Sorties de fonds","cash_out"]]},
+          },
+          {
+            h: "Employés (Employee)",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Années d'ancienneté","seniority_years"],["Assurance collective","group_insurance"],["Charges sociales totales","total_social_charges"],["CNESST","cnesst"],["Coût employeur total","total_employer_cost"],["Date d'embauche","hire_date"],["Emplacement","location"],["FSS (QC)","fss_qc"],["Heures hebdo","weekly_hours"],["ID Employé","employee_id"],["Nom","name"],["Nom complet","full_name"],["Nom de famille","last_name"],["Prénom","first_name"],["REER employeur","rrsp_employer"],["Rôle","role"],["RQAP employeur","qpip_employer"],["RRQ employeur","cpp_employer"],["Salaire","salary"],["Salaire annuel","annual_salary"],["Statut syndical","union_status"],["Succursale","branch"],["Taux commission","commission_rate"],["Taux horaire","hourly_rate"]]},
+          },
+          {
+            h: "Paie (Payroll)",
+            action: "Un relevé de paie par employé et par période.",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Bonus","bonus"],["Coût employeur","employer_cost"],["Coût total","total_cost"],["Heures","hours"],["Heures supplémentaires","overtime"],["ID Employé","employee_id"],["ID Paie","payroll_id"],["Période","period"],["Salaire régulier","regular_pay"]]},
+          },
+          {
+            h: "Fournisseurs (Supplier)",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Catégorie","category"],["Conditions de paiement","payment_terms"],["Délai livraison moyen (j)","average_delivery_days"],["Devise d'achat","purchase_currency"],["Email","email"],["Évolution prix (12m)","price_change_last_12_months"],["ID Fournisseur","supplier_id"],["Nom du contact","contact_name"],["Nom du fournisseur","supplier_name"],["Numéro NEQ","neq_number"],["Numéro TPS","gst_number"],["Numéro TVQ","qst_number"],["Pays","country"],["Score de fiabilité","reliability_score"],["Score de qualité","quality_score"],["Score ESG","esg_score"],["Ville","city"],["Volume d'achat","purchase_volume"]]},
+          },
+          {
+            h: "Achats fournisseurs (Purchase)",
+            action: "Une commande fournisseur par ligne.",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Coût total","total_cost"],["Coût unitaire","unit_cost"],["Date","date"],["ID Achat","purchase_id"],["ID Fournisseur","supplier_id"],["ID Produit","product_id"],["Jours de retard","delay_days"],["Livraison prévue","expected_delivery"],["Livraison réelle","actual_delivery"],["Quantité","quantity"]]},
+          },
+        ],
+      },
+      {
+        id: "nommage-autres",
+        title: "Nommer vos colonnes — Marketing, Immobilisations & Modules avancés",
+        icon: Columns3,
+        badge: "Référence",
+        content: [
+          {
+            h: "Campagnes marketing (Campaign)",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Budget","budget"],["CAC","cac"],["Clics","clicks"],["Conversions","conversions"],["Coût par clic","cout_clic"],["Coût par clic","cost_per_click"],["CPC","cpc"],["Date de début","start_date"],["Date de fin","end_date"],["Dépense","spend"],["ID Campagne","campaign_id"],["Impressions","impressions"],["Nom de la campagne","campaign_name"],["Nouveaux clients","new_customers"],["Revenu","revenue"],["ROAS","roas"]]},
+          },
+          {
+            h: "Performance quotidienne (CampaignDaily)",
+            action: "Détail jour par jour des mêmes campagnes.",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Clics","clicks"],["Conversions","conversions"],["CPC","cpc"],["Date","date"],["Dépense","spend"],["ID Campagne","campaign_id"],["Impressions","impressions"],["Portée","reach"],["Revenu","revenue"],["ROAS","roas"],["Taux de clic (CTR)","ctr"],["Taux de conversion","conversion_rate"]]},
+          },
+          {
+            h: "Immobilisations (Asset)",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Amortissement cumulé","accumulated_depreciation"],["Classe DPA","dpa_class"],["Commentaire historique","historical_comment"],["Coût initial","initial_cost"],["Date d'acquisition","acquisition_date"],["Description","description"],["ID Immobilisation","asset_id"],["ID Succursale","location_id"],["Taux d'amortissement","dpa_rate"],["Valeur nette comptable","net_book_value"]]},
+          },
+          {
+            h: "Sommaire exécutif (ExecutiveSummary)",
+            action: "Feuille de synthèse déjà calculée (ex. export comptable) plutôt que des lignes détaillées.",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Amortissement cumulé","accumulated_depreciation"],["Bénéfice brut","gross_profit"],["Classe DPA","dpa_class"],["Commandes totales","total_orders"],["Commentaire historique","historical_comment"],["Coût","cost"],["Coût initial","initial_cost"],["Coût total","total_cost"],["Date","date"],["Date d'acquisition","acquisition_date"],["Description","description"],["ID Immobilisation","asset_id"],["ID Sommaire","summary_id"],["ID Succursale","location_id"],["Magasin","store"],["Marge brute","gross_margin"],["Nom de l'indicateur","indicator_name"],["Notes","notes"],["Période","period"],["Revenu total","total_revenue"],["Succursale","succursale"],["Taux d'amortissement","dpa_rate"],["Taux de marge brute","gross_margin_rate"],["Total","total"],["Unité / Formule","unit_formula"],["Valeur de la métrique","metric_value"],["Valeur nette comptable","net_book_value"]]},
+          },
+          {
+            h: "Interactions clients (Interaction)",
+            action: "Contacts service client : appel, courriel, plainte.",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Date","date"],["Délai de résolution","resolution_time"],["ID Client","customer_id"],["ID Interaction","interaction_id"],["Résolu","resolved"],["Score de satisfaction","satisfaction_score"],["Sujet","subject"]]},
+          },
+          {
+            h: "Concurrents (Competitor)",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Emplacement","location"],["ID Concurrent","competitor_id"],["Nom","name"],["Nombre d'employés","employee_count"],["Note moyenne","average_rating"],["Revenu estimé","estimated_revenue"],["Secteur","sector"],["Site web","website"]]},
+          },
+          {
+            h: "Objectifs (Goal)",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Cible","target"],["ID Objectif","goal_id"],["Indicateur","metric"],["Période","period"],["Valeur actuelle","current"]]},
+          },
+          {
+            h: "Événements (Event)",
+            action: "Journal des événements marquants (promotion, rupture, incident...).",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Date","date"],["Description","description"],["Domaine d'impact","impact_area"],["ID Événement","event_id"],["Type d'événement","event_type"]]},
+          },
+          {
+            h: "Signaux externes (ExternalSignal)",
+            table: {"headers":["En-tête recommandé","Champ interne (référence)"],"rows":[["Action recommandée","recommended_action"],["Date","date"],["Description","description"],["Motif de pertinence","relevance_reason"],["Score de pertinence","relevance_score"],["Source","source"],["Titre","title"],["URL","url"]]},
+          },
+        ],
+      },
+    ],
   },
   {
     label: "3. Pilotage opérationnel & Modules",
@@ -568,6 +691,34 @@ export default function Manuel() {
                             <span className="leading-relaxed">{st}</span>
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {/* Table de référence (ex. guide de nommage des colonnes) */}
+                    {block.table && (
+                      <div className="pl-8">
+                        <div className="overflow-x-auto rounded-xl border border-border">
+                          <table className="w-full min-w-[420px] text-sm">
+                            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
+                              <tr>
+                                {block.table.headers.map((h, hIdx) => (
+                                  <th key={hIdx} className="px-3 py-2 font-medium">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                              {block.table.rows.map((row, rIdx) => (
+                                <tr key={rIdx} className="hover:bg-muted/30">
+                                  {row.map((cell, cIdx) => (
+                                    <td key={cIdx} className={cn("px-3 py-2 align-top", cIdx === 0 ? "font-mono text-xs font-medium text-foreground" : "text-muted-foreground")}>
+                                      {cell}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )}
 

@@ -30,12 +30,7 @@
       "type": "string"
     },
     "customer_type": {
-      "type": "string",
-      "enum": [
-        "particulier",
-        "entreprise",
-        "b2b"
-      ]
+      "type": "string"
     },
     "acquisition_date": {
       "type": "string",
@@ -59,24 +54,10 @@
       "type": "number"
     },
     "status": {
-      "type": "string",
-      "enum": [
-        "actif",
-        "inactif",
-        "perdu"
-      ]
+      "type": "string"
     },
     "segment": {
-      "type": "string",
-      "enum": [
-        "nouveau",
-        "regulier",
-        "vip",
-        "inactif",
-        "b2b",
-        "haute_valeur",
-        "a_risque"
-      ]
+      "type": "string"
     },
     "lifetime_value": {
       "type": "number"

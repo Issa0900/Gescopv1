@@ -163,15 +163,15 @@ export default function Tresorerie() {
           <AreaChart data={chartData} margin={{ left: 10, right: 10 }}>
             <defs>
               <linearGradient id="cashGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                <stop offset="5%" stopColor="#2a78d6" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#2a78d6" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="mois" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 11 }} />
             <Tooltip formatter={(v) => `${v.toLocaleString()} $`} />
-            <Area type="monotone" dataKey="solde" stroke="#3b82f6" strokeWidth={2} fill="url(#cashGrad)" name="Solde" />
+            <Area type="monotone" dataKey="solde" stroke="#2a78d6" strokeWidth={2} fill="url(#cashGrad)" name="Solde" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -186,8 +186,8 @@ export default function Tresorerie() {
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => `${v.toLocaleString()} $`} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="entrées" fill="#10b981" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="sorties" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="entrées" fill="#15803d" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="sorties" fill="#b45309" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -201,7 +201,7 @@ export default function Tresorerie() {
                 <XAxis dataKey="mois" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v) => `${v.toLocaleString()} $`} />
-                <Bar dataKey="paie" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="paie" fill="#4a3aa7" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (

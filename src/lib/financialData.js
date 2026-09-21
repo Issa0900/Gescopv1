@@ -9,27 +9,38 @@ export function prepareTransactions(transactions) {
   };
 }
 
-export function financialSummary(transactions = [], expenseEntityRows = [], orderRows = []) {
+export function financialSummary(transactions = [], expenseEntityRows = [], orderRows = [], executiveSummaryRows = []) {
   const { incomes: txnIncomes, expenses: txnExpenses } = prepareTransactions(transactions);
 
   const orderIncomes = (orderRows || []).filter(Boolean).map((o) => ({
     ...o,
-    _amount: Number(o?.total_revenue) || Number(o?.total) || (Number(o?.quantity) * Number(o?.unit_price)) || 0,
+    _amount: Number(o?.total_revenue) || Number(o?.total) || ((Number(o?.quantity) || 1) * (Number(o?.unit_price) || Number(o?.price) || 0)) || 0,
   })).filter((o) => o._amount > 0);
 
   const orderExpenses = (txnExpenses.length === 0)
     ? (orderRows || []).filter(Boolean).map((o) => ({
         ...o,
-        _amount: Number(o?.total_cost) || Number(o?.cost) || (Number(o?.quantity) * Number(o?.unit_cost)) || 0,
+        _amount: Number(o?.total_cost) || Number(o?.cost) || ((Number(o?.quantity) || 1) * (Number(o?.unit_cost) || Number(o?.cost) || 0)) || 0,
       })).filter((o) => o._amount > 0)
     : [];
 
-  const incomes = [...txnIncomes, ...orderIncomes];
-  const expenses = [
+  let incomes = [...txnIncomes, ...orderIncomes];
+  let expenses = [
     ...txnExpenses,
     ...(expenseEntityRows || []).filter(Boolean).map((e) => ({ ...e, _amount: Number(e?.amount) || 0 })),
     ...orderExpenses,
   ];
+
+  if (incomes.length === 0 && (executiveSummaryRows || []).length > 0) {
+    incomes = (executiveSummaryRows || []).filter(Boolean).map((e) => ({
+      ...e,
+      _amount: Number(e?.total_revenue) || Number(e?.total) || 0,
+    })).filter((e) => e._amount > 0);
+    expenses = (executiveSummaryRows || []).filter(Boolean).map((e) => ({
+      ...e,
+      _amount: Number(e?.total_cost) || Number(e?.cost) || 0,
+    })).filter((e) => e._amount > 0);
+  }
 
   const revenue = incomes.reduce((sum, row) => sum + row._amount, 0);
   const expense = expenses.reduce((sum, row) => sum + row._amount, 0);
@@ -55,14 +66,14 @@ export function financialMonthlySeries(transactions = [], expenseEntityRows = []
 
   const orderIncomes = (orderRows || []).filter(Boolean).map((o) => ({
     ...o,
-    _amount: Number(o?.total_revenue) || Number(o?.total) || (Number(o?.quantity) * Number(o?.unit_price)) || 0,
+    _amount: Number(o?.total_revenue) || Number(o?.total) || ((Number(o?.quantity) || 1) * (Number(o?.unit_price) || Number(o?.price) || 0)) || 0,
   })).filter((o) => o._amount > 0);
 
   // If no bank transactions exist, orders COGS are treated as expenses
   const orderExpenses = (txnExpenses.length === 0)
     ? (orderRows || []).filter(Boolean).map((o) => ({
         ...o,
-        _amount: Number(o?.total_cost) || Number(o?.cost) || (Number(o?.quantity) * Number(o?.unit_cost)) || 0,
+        _amount: Number(o?.total_cost) || Number(o?.cost) || ((Number(o?.quantity) || 1) * (Number(o?.unit_cost) || Number(o?.cost) || 0)) || 0,
       })).filter((o) => o._amount > 0)
     : [];
 

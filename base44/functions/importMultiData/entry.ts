@@ -75,6 +75,7 @@ async function planPourFeuille(
   const signature = signatureFichier(entetes);
 
   // 1. Deja vu et valide par un humain.
+  // 1. Deja vu et valide par un humain (match exact de la signature).
   try {
     const memo = await base44.entities.Import.filter(
       { plan_signature: signature, plan_confirmed: true }, "-created_date", 1,
@@ -86,6 +87,15 @@ async function planPourFeuille(
     }
   } catch { /* la memoire est un confort, jamais un prerequis */ }
 
+  // 1.5. Apprentissage croisé (mémoire globale pour rattraper les colonnes uniques)
+  let mappingMemory: any[] = [];
+  try {
+    const allMemo = await base44.entities.Import.filter(
+      { plan_confirmed: true }, "-created_date", 50,
+    );
+    mappingMemory = allMemo.map((m: any) => m.read_plan).filter(Boolean);
+  } catch {}
+
   // 2. Analyse par l'IA, filet deterministe derriere.
   // `label` (nom de la feuille, ex. "Sommaire Exécutif") et non `nomFichier`
   // (nom du classeur entier, ex. "Entreprise_Simulation_50Ans_Canada_QC.xlsx") :
@@ -93,7 +103,7 @@ async function planPourFeuille(
   // ne matchait jamais rien tant qu'elle recevait le nom du fichier, faisant
   // manquer la detection de type meme quand la feuille s'appelait explicitement
   // "Sommaire Exécutif".
-  const secours = planParRegles(matrix, label, manual || null);
+  const secours = planParRegles(matrix, label, manual || null, mappingMemory);
   const res = await analyserFichier(
     (args) => base44.asServiceRole.integrations.Core.InvokeLLM({
       prompt: args.prompt,

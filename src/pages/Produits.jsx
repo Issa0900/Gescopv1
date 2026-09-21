@@ -1,9 +1,11 @@
-import { formatPct } from "@/lib/utils";
+import { formatPct, formatCAD, formatNumber } from "@/lib/utils";
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import StatCard from "@/components/StatCard";
 import EmptyState from "@/components/EmptyState";
+import DataTable from "@/components/ui/DataTable";
+import BadgeStatus from "@/components/ui/BadgeStatus";
 import ProductSalesTrend from "@/components/produits/ProductSalesTrend";
 import ProductFilters from "@/components/produits/ProductFilters";
 import StockThresholdSettings from "@/components/produits/StockThresholdSettings";
@@ -19,13 +21,16 @@ import {
   PieChart, Pie, Cell,
 } from "recharts";
 
+// Palette de statut (fixe, jamais réutilisée pour une catégorie) : ces valeurs
+// décrivent un état de santé de stock, pas une identité — good/warning/
+// serious/critical, plus un gris neutre pour "dormant" (ni bon ni mauvais).
 const stockColors = {
-  optimal: "#10b981",
-  rupture: "#ef4444",
-  surstock: "#f59e0b",
-  dormant: "#94a3b8",
-  faible: "#f97316",
-  proche_rupture: "#dc2626",
+  optimal: "#0ca30c",
+  faible: "#fab219",
+  surstock: "#fab219",
+  proche_rupture: "#ec835a",
+  rupture: "#d03b3b",
+  dormant: "#898781",
 };
 
 const stockLabels = {
@@ -294,6 +299,55 @@ export default function Produits() {
     return true;
   });
 
+  const productColumns = [
+    {
+      key: "product_name",
+      header: "Produit",
+      searchValue: (p) => `${p.product_name || ""} ${p.product_id || ""}`,
+      render: (p) => (
+        <span className="block max-w-[220px] truncate" title={p.product_name}>{p.product_name || p.product_id}</span>
+      ),
+    },
+    { key: "category", header: "Catégorie", render: (p) => p.category || "-" },
+    ...(hasSupplier ? [{ key: "supplier", header: "Fournisseur", sortValue: (p) => p.supplier_name || p.supplier_id || "", render: (p) => p.supplier_name || p.supplier_id || "-" }] : []),
+    { key: "purchase_cost", header: "Coût", align: "right", sortValue: (p) => Number(p.purchase_cost) || 0, render: (p) => formatCAD(p.purchase_cost || 0) },
+    { key: "selling_price", header: "Prix vente", align: "right", sortValue: (p) => Number(p.selling_price) || 0, render: (p) => formatCAD(p.selling_price || 0) },
+    {
+      key: "gross_margin",
+      header: "Marge",
+      align: "right",
+      sortValue: (p) => Number(p.gross_margin) || 0,
+      render: (p) => (
+        <span className={(p.gross_margin || 0) < 15 ? "font-medium text-red-600" : ""}>{formatPct(p.gross_margin || 0, 0)}</span>
+      ),
+    },
+    { key: "_totalSales", header: "Unités vendues", align: "right", sortValue: (p) => p._totalSales || 0, render: (p) => formatNumber(p._totalSales || 0) },
+    {
+      key: "stock",
+      header: "Stock analytique estimé *",
+      align: "right",
+      headerClassName: "text-blue-600",
+      sortValue: (p) => stockOf(p),
+      render: (p) => formatNumber(stockOf(p)),
+    },
+    {
+      key: "status",
+      header: "Statut",
+      sortValue: (p) => statusOf(p) || "",
+      render: (p) => {
+        const st = statusOf(p);
+        const variant = ["rupture", "proche_rupture"].includes(st)
+          ? "critical"
+          : ["faible", "surstock", "dormant"].includes(st)
+            ? "warning"
+            : st === "optimal" || st === "actif"
+              ? "good"
+              : "neutral";
+        return <BadgeStatus status={variant}>{stockLabels[st] || st || "-"}</BadgeStatus>;
+      },
+    },
+  ];
+
   return (
     <div className="space-y-8">
       <div>
@@ -343,7 +397,7 @@ export default function Produits() {
 
       <div className="rounded-xl border border-border bg-card p-6">
         <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Évolution des ventes par mois</h2>
-        <p className="mb-4 text-xs text-muted-foreground">Quantité vendue (axe gauche) - revenu $ (axe droit) · 12 derniers mois</p>
+        <p className="mb-4 text-xs text-muted-foreground">Quantité vendue et revenu · 12 derniers mois</p>
         <ProductSalesTrend orders={orders} />
       </div>
 
@@ -441,58 +495,17 @@ export default function Produits() {
           statusLabels={stockLabels}
           count={filteredRows.length}
         />
-        <div className="overflow-x-auto">
-        <table className="w-full min-w-[700px] text-sm">
-          <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3 font-medium">Produit</th>
-              <th className="px-4 py-3 font-medium">Catégorie</th>
-              {hasSupplier && <th className="px-4 py-3 font-medium">Fournisseur</th>}
-              <th className="px-4 py-3 font-medium">Coût</th>
-              <th className="px-4 py-3 font-medium">Prix vente</th>
-              <th className="px-4 py-3 font-medium">Marge</th>
-              <th className="px-4 py-3 font-medium">Unités vendues</th>
-              <th className="px-4 py-3 font-medium text-blue-600" title="ESTIMATION : Stock observé - Ventes récentes admissibles">
-                Stock analytique estimé *
-              </th>
-              <th className="px-4 py-3 font-medium">Statut</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {filteredRows.slice(0, 50).map((p) => (
-              <tr key={p.id} className="hover:bg-muted/30">
-                <td className="max-w-[180px] truncate px-4 py-3 font-medium" title={p.product_name}>{p.product_name || p.product_id}</td>
-                <td className="px-4 py-3 text-muted-foreground">{p.category || "-"}</td>
-                {hasSupplier && <td className="px-4 py-3 text-muted-foreground">{p.supplier_name || p.supplier_id || "-"}</td>}
-                <td className="px-4 py-3">{Math.round(p.purchase_cost || 0)} $</td>
-                <td className="px-4 py-3">{Math.round(p.selling_price || 0)} $</td>
-                <td className="px-4 py-3">
-                  <span className={(p.gross_margin || 0) < 15 ? "text-red-600 font-medium" : ""}>{Math.round(p.gross_margin || 0)}%</span>
-                </td>
-                <td className="px-4 py-3">{p._totalSales}</td>
-                <td className="px-4 py-3">{stockOf(p)}</td>
-                <td className="px-4 py-3">
-                  {/* Real stock state from the latest inventory snapshot, falling
-                      back to the imported product status when none exists. */}
-                  {(() => {
-                    const st = invByProduct[p.product_id]?.stock_status || p.status;
-                    const cls = ["rupture", "proche_rupture"].includes(st)
-                      ? "text-red-600"
-                      : ["faible", "surstock", "dormant"].includes(st)
-                        ? "text-amber-600"
-                        : st === "optimal" || st === "actif"
-                          ? "text-emerald-600"
-                          : "text-muted-foreground";
-                    return <span className={cls}>{stockLabels[st] || st || "-"}</span>;
-                  })()}
-                </td>
-              </tr>
-            ))}
-            {filteredRows.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-muted-foreground">Aucun produit ne correspond aux filtres</td></tr>
-            )}
-          </tbody>
-        </table>
+        <div className="p-3">
+          <DataTable
+            columns={productColumns}
+            data={filteredRows}
+            rowKey={(p) => p.id}
+            searchable={false}
+            defaultPageSize={25}
+            emptyIcon={Package}
+            emptyTitle="Aucun produit ne correspond aux filtres"
+            emptyDescription="Essayez d'élargir la recherche, la catégorie ou le statut sélectionnés."
+          />
         </div>
       </div>
     </div>

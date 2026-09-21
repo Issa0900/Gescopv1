@@ -3,6 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import StatCard from "@/components/StatCard";
 import EmptyState from "@/components/EmptyState";
+import DataTable from "@/components/ui/DataTable";
+import BadgeStatus from "@/components/ui/BadgeStatus";
+import { formatCAD, formatNumber } from "@/lib/utils";
 import { Megaphone, TrendingUp, UserPlus, DollarSign } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -139,6 +142,46 @@ export default function Marketing() {
     roas: v.spend > 0 ? Number((v.revenue / v.spend).toFixed(2)) : 0,
   }));
 
+  const campaignRows = [...campaigns].sort((a, b) => num(b.spend || b.budget) - num(a.spend || a.budget)).map((c) => {
+    const spend = num(c.spend || c.budget);
+    const revenue = num(c.revenue);
+    const newCustomers = num(c.new_customers);
+    const conversions = num(c.conversions);
+    const roas = spend > 0 ? Number((revenue / spend).toFixed(1)) : null;
+    const cac = newCustomers > 0 ? Math.round(spend / newCustomers)
+      : conversions > 0 ? Math.round(spend / conversions)
+        : null;
+    return { ...c, _spend: spend, _revenue: revenue, _conversions: conversions, _roas: roas, _cac: cac };
+  });
+
+  const campaignColumns = [
+    { key: "campaign_name", header: "Campagne", searchValue: (c) => c.campaign_name || "", sortValue: (c) => c.campaign_name || "", render: (c) => <span className="block max-w-[180px] truncate" title={c.campaign_name}>{c.campaign_name}</span> },
+    { key: "channel", header: "Canal", render: (c) => <span className="uppercase text-muted-foreground">{c.channel}</span> },
+    { key: "budget", header: "Budget", align: "right", sortValue: (c) => Number(c.budget) || 0, render: (c) => formatCAD(c.budget || 0) },
+    { key: "spend", header: "Dépenses", align: "right", sortValue: (c) => c._spend, render: (c) => formatCAD(c._spend) },
+    { key: "revenue", header: "Revenus", align: "right", sortValue: (c) => c._revenue, render: (c) => formatCAD(c._revenue) },
+    {
+      key: "roas",
+      header: "ROAS",
+      align: "right",
+      sortValue: (c) => c._roas ?? -1,
+      render: (c) => c._roas === null ? "-" : (
+        <span className={c._roas >= 2 ? "font-medium text-emerald-600" : c._roas < 1 ? "font-medium text-red-600" : ""}>{c._roas}</span>
+      ),
+    },
+    { key: "cac", header: "CAC", align: "right", sortValue: (c) => c._cac ?? -1, render: (c) => c._cac === null ? "-" : formatCAD(c._cac) },
+    ...(hasCpc ? [{ key: "cpc", header: "CPC", align: "right", sortValue: (c) => Number(c.cpc) || 0, render: (c) => c.cpc != null ? formatCAD(Number(c.cpc), 2) : "-" }] : []),
+    { key: "conversions", header: "Conversions", align: "right", sortValue: (c) => c._conversions, render: (c) => formatNumber(c._conversions) },
+    {
+      key: "status",
+      header: "Statut",
+      sortValue: (c) => c.status || "",
+      render: (c) => (
+        <BadgeStatus status={c.status === "active" ? "good" : c.status === "terminee" ? "neutral" : "warning"}>{c.status || "-"}</BadgeStatus>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-8">
       <div>
@@ -188,8 +231,10 @@ export default function Marketing() {
             <YAxis tick={{ fontSize: 11 }} />
             <Tooltip formatter={(v) => `${v.toLocaleString()} $`} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Bar dataKey="dépenses" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="revenus" fill="#10b981" radius={[4, 4, 0, 0]} />
+            {/* Vert forêt / ambre-cuivré plutôt que vert/orange purs : cohérent
+                avec Finance et distinguable en deutéranopie/protanopie. */}
+            <Bar dataKey="dépenses" fill="#b45309" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="revenus" fill="#15803d" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -206,7 +251,7 @@ export default function Marketing() {
               <XAxis dataKey="mois" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip />
-              <Line type="monotone" dataKey="roas" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} name="ROAS" />
+              <Line type="monotone" dataKey="roas" stroke="#2a78d6" strokeWidth={2} dot={{ r: 4 }} name="ROAS" />
             </LineChart>
           </ResponsiveContainer>
         ) : (
@@ -214,56 +259,14 @@ export default function Marketing() {
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full min-w-[700px] text-sm">
-          <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3 font-medium">Campagne</th>
-              <th className="px-4 py-3 font-medium">Canal</th>
-              <th className="px-4 py-3 font-medium">Budget</th>
-              <th className="px-4 py-3 font-medium">Dépenses</th>
-              <th className="px-4 py-3 font-medium">Revenus</th>
-              <th className="px-4 py-3 font-medium">ROAS</th>
-              <th className="px-4 py-3 font-medium">CAC</th>
-              {hasCpc && <th className="px-4 py-3 font-medium">CPC</th>}
-              <th className="px-4 py-3 font-medium">Conversions</th>
-              <th className="px-4 py-3 font-medium">Statut</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {[...campaigns].sort((a, b) => num(b.spend || b.budget) - num(a.spend || a.budget)).map((c) => {
-              const spend = num(c.spend || c.budget);
-              const revenue = num(c.revenue);
-              const newCustomers = num(c.new_customers);
-              const conversions = num(c.conversions);
-              const roas = spend > 0 ? (revenue / spend).toFixed(1) : "-";
-              const cac = newCustomers > 0 ? Math.round(spend / newCustomers)
-                : conversions > 0 ? Math.round(spend / conversions)
-                  : "-";
-              return (
-                <tr key={c.id} className="hover:bg-muted/30">
-                  <td className="max-w-[180px] truncate px-4 py-3 font-medium" title={c.campaign_name}>{c.campaign_name}</td>
-                  <td className="px-4 py-3 uppercase text-muted-foreground">{c.channel}</td>
-                  <td className="px-4 py-3">{Math.round(c.budget || 0).toLocaleString()} $</td>
-                  <td className="px-4 py-3">{Math.round(spend).toLocaleString()} $</td>
-                  <td className="px-4 py-3">{Math.round(revenue).toLocaleString()} $</td>
-                  <td className="px-4 py-3">
-                    <span className={Number(roas) >= 2 ? "text-emerald-600 font-medium" : Number(roas) < 1 ? "text-red-600 font-medium" : ""}>{roas}</span>
-                  </td>
-                  <td className="px-4 py-3">{cac === "-" ? "-" : `${cac} $`}</td>
-                  {hasCpc && <td className="px-4 py-3">{c.cpc != null ? `${Number(c.cpc).toFixed(2)} $` : "-"}</td>}
-                  <td className="px-4 py-3">{conversions}</td>
-                  <td className="px-4 py-3">
-                    <span className={c.status === "active" ? "text-emerald-600" : c.status === "terminee" ? "text-muted-foreground" : "text-amber-600"}>
-                      {c.status || "-"}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={campaignColumns}
+        data={campaignRows}
+        rowKey={(c, i) => c.id || i}
+        searchPlaceholder="Rechercher une campagne…"
+        emptyIcon={Megaphone}
+        emptyTitle="Aucune campagne"
+      />
     </div>
   );
 }

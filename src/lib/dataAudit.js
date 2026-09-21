@@ -3,6 +3,7 @@
 // Read-only - it never modifies data, it only reports what the metrics are built on.
 
 import { monthlyAgg, monthlyAggComplete, currentMonthKey, sumLast, sumPrev, latestByKey, meanOf } from "@/lib/periods";
+import { financialMonthlySeries } from "@/lib/financialData";
 import {
   aggregateMarginPct,
   netBurnRate,
@@ -398,13 +399,12 @@ export function runQualityChecks(d) {
 
 /** Level 1 - traceability: formula, source, period and intermediate values per metric. */
 export function buildMetricTraces(d) {
-  const { transactions = [], orders = [], customers = [], products = [], inventory = [], cashflow = [], campaignDaily = [], campaigns = [] } = d;
+  const { transactions = [], orders = [], customers = [], products = [], inventory = [], cashflow = [], campaignDaily = [], campaigns = [], expenses = [], executiveSummary = [] } = d;
   const traces = [];
 
-  const incomes = transactions.filter((t) => t.type === "income");
-  const txnExp = transactions.filter((t) => t.type === "expense");
-  const revM = monthlyAggComplete(incomes, "date", "amount");
-  const expM = monthlyAggComplete(txnExp, "date", "amount");
+  const financialMonthly = financialMonthlySeries(transactions, expenses, orders, executiveSummary);
+  const revM = financialMonthly.map((p) => ({ month: p.month, val: p.income }));
+  const expM = financialMonthly.map((p) => ({ month: p.month, val: p.expense }));
   const rev3 = sumLast(revM, 3);
   const exp3 = sumLast(expM, 3);
 
@@ -413,7 +413,7 @@ export function buildMetricTraces(d) {
     domain: "Finance",
     metric: "Marge nette (3 mois)",
     formula: "(revenus − dépenses) ÷ revenus, agrégé sur les 3 derniers mois complets",
-    source: `Transactions - ${incomes.length} revenus, ${txnExp.length} dépenses`,
+    source: `Finance consolidée (${transactions.length} transactions, ${orders.length} commandes, ${expenses.length} dépenses)`,
     period: revM.length >= 3 ? revM.slice(-3).map((m) => m.month).join(", ") : "-",
     steps: [
       ["Revenus 3 mois", fmt$(rev3)],

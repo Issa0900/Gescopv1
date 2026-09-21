@@ -159,7 +159,7 @@ function EventsSection({ events }) {
     <div>
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Journal des événements ({events.length})</h2>
       <div className="space-y-2">
-        {events.slice(0, 30).map((e) => (
+        {events.map((e) => (
           <div key={e.id} className="flex items-start justify-between rounded-xl border border-border bg-card p-4">
             <div>
               <p className="text-sm font-medium">{e.event_type}{e.impact_area ? ` · ${e.impact_area}` : ""}</p>

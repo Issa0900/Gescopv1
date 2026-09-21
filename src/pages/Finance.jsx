@@ -98,8 +98,11 @@ export default function Finance() {
             <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
             <Tooltip formatter={(v) => `${v.toLocaleString()} $`} cursor={{fill: '#f3f4f6'}} />
             <Legend wrapperStyle={{ fontSize: 12, paddingTop: '10px' }} />
-            <Bar dataKey="revenus" fill="#10b981" radius={[4, 4, 0, 0]} name="Revenus" />
-            <Bar dataKey="dépenses" fill="#ef4444" radius={[4, 4, 0, 0]} name="Dépenses" />
+            {/* Vert forêt / ambre-cuivré plutôt que vert/rouge purs : distinguable
+                en deutéranopie/protanopie, et la légende ci-dessus porte déjà le
+                nom de chaque série (la couleur ne porte jamais seule l'info). */}
+            <Bar dataKey="revenus" fill="#15803d" radius={[4, 4, 0, 0]} name="Revenus" />
+            <Bar dataKey="dépenses" fill="#b45309" radius={[4, 4, 0, 0]} name="Dépenses" />
           </BarChart>
         </ResponsiveContainer>
       </div>

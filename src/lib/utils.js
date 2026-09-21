@@ -20,3 +20,25 @@ export function formatPct(value, decimals = 1) {
     }) + "\u00a0%"
   );
 }
+
+// Montant en dollars canadiens, format standard de l'app ("52 000 $"). Les
+// espaces de `toLocaleString("fr-CA")` sont deja insecables, donc le nombre
+// entier ne se coupe jamais au milieu en fin de ligne.
+export function formatCAD(amount, decimals = 0) {
+  if (amount === null || amount === undefined || Number.isNaN(amount)) return "\u2014";
+  return (
+    Number(amount).toLocaleString("fr-CA", {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    }) + "\u00a0$"
+  );
+}
+
+// Nombre simple (quantites, compteurs) avec separateur de milliers fr-CA.
+export function formatNumber(num, decimals = 0) {
+  if (num === null || num === undefined || Number.isNaN(num)) return "\u2014";
+  return Number(num).toLocaleString("fr-CA", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}

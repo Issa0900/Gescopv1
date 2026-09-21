@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import StatCard from "@/components/StatCard";
 import EmptyState from "@/components/EmptyState";
+import DataTable from "@/components/ui/DataTable";
+import { formatCAD } from "@/lib/utils";
 import { fetchAll } from "@/lib/fetchAll";
 import { Building2, Calculator, TrendingDown, Landmark } from "lucide-react";
 
@@ -32,6 +34,17 @@ export default function Immobilisations() {
   // Taux de vétusté : Amortissements cumulés / Valeur brute
   const vetustePct = initialValueTotal > 0 ? (accumulatedDpa / initialValueTotal) * 100 : 0;
 
+  const assetColumns = [
+    { key: "asset_id", header: "Identifiant", render: (a) => a.asset_id || "-" },
+    { key: "description", header: "Description", searchValue: (a) => a.description || "", render: (a) => a.description || "-" },
+    { key: "acquisition_date", header: "Date d'acquisition", render: (a) => a.acquisition_date || "-" },
+    { key: "dpa_class", header: "Classe DPA", sortValue: (a) => a.dpa_class || "", render: (a) => a.dpa_class ? `${a.dpa_class} (${a.dpa_rate ? Math.round(a.dpa_rate * 100) : 0}%)` : "-" },
+    { key: "initial_cost", header: "Valeur d'acquisition", align: "right", sortValue: (a) => Number(a.initial_cost) || 0, render: (a) => a.initial_cost != null ? formatCAD(a.initial_cost) : "-" },
+    { key: "accumulated_depreciation", header: "Amort. Cumulé", align: "right", sortValue: (a) => Number(a.accumulated_depreciation) || 0, render: (a) => a.accumulated_depreciation != null ? <span className="text-red-600/80">{formatCAD(a.accumulated_depreciation)}</span> : "-" },
+    { key: "net_book_value", header: "VNC", align: "right", sortValue: (a) => Number(a.net_book_value) || 0, render: (a) => a.net_book_value != null ? <span className="font-semibold">{formatCAD(a.net_book_value)}</span> : "-" },
+    { key: "location_id", header: "Succursale", render: (a) => a.location_id || "-" },
+  ];
+
   return (
     <div className="space-y-8">
       <div>
@@ -52,36 +65,14 @@ export default function Immobilisations() {
         />
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full min-w-[800px] text-sm">
-          <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3 font-medium">Identifiant</th>
-              <th className="px-4 py-3 font-medium">Description</th>
-              <th className="px-4 py-3 font-medium">Date d'acquisition</th>
-              <th className="px-4 py-3 font-medium">Classe DPA</th>
-              <th className="px-4 py-3 font-medium">Valeur d'acquisition</th>
-              <th className="px-4 py-3 font-medium">Amort. Cumulé</th>
-              <th className="px-4 py-3 font-medium">VNC</th>
-              <th className="px-4 py-3 font-medium">Succursale</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {assets.slice(0, 100).map((a, i) => (
-              <tr key={a.id || i} className="hover:bg-muted/30">
-                <td className="px-4 py-3">{a.asset_id || "-"}</td>
-                <td className="px-4 py-3 font-medium">{a.description || "-"}</td>
-                <td className="px-4 py-3">{a.acquisition_date || "-"}</td>
-                <td className="px-4 py-3">{a.dpa_class ? `${a.dpa_class} (${a.dpa_rate ? Math.round(a.dpa_rate * 100) : 0}%)` : "-"}</td>
-                <td className="px-4 py-3">{a.initial_cost != null ? `${Math.round(a.initial_cost).toLocaleString()} $` : "-"}</td>
-                <td className="px-4 py-3 text-red-600/80">{a.accumulated_depreciation != null ? `${Math.round(a.accumulated_depreciation).toLocaleString()} $` : "-"}</td>
-                <td className="px-4 py-3 font-semibold">{a.net_book_value != null ? `${Math.round(a.net_book_value).toLocaleString()} $` : "-"}</td>
-                <td className="px-4 py-3">{a.location_id || "-"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={assetColumns}
+        data={assets}
+        rowKey={(a, i) => a.id || i}
+        searchPlaceholder="Rechercher un actif…"
+        defaultPageSize={50}
+        emptyTitle="Aucune immobilisation"
+      />
     </div>
   );
 }
